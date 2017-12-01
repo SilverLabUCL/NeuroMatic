@@ -8,4 +8,5 @@ Put NeuroMatic’s folder, or its shortcut, inside the Igor Procedures folder. S
 Begin by opening a data file (NeuroMatic > Data Folder > Open Data Files).
 
 http://www.neuromatic.thinkrandom.com/
+
 https://www.wavemetrics.com/
