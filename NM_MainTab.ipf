@@ -59,7 +59,7 @@
 
 StrConstant NMMainDF = "root:Packages:NeuroMatic:Main:"
 
-StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Print Notes;Print Names;Print Missing Seq #;" // keep extra space after Graph
+StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Add Note;Print Notes;Print Names;Print Missing Seq #;" // keep extra space after Graph
 StrConstant NMMainEditList = "Edit;---;Make;Move;Copy;Save;Kill;---;Concatenate;2D Wave;Split;---;Redimension;Delete Points;Insert Points;---;Rename;Renumber;"
 StrConstant NMMainXScaleList = "X-scale;---;Align;StartX;DeltaX;XLabel;Xwave;Make Xwave;---;Resample;Decimate;Interpolate;---;Continuous;Episodic;---;sec;msec;usec;"
 StrConstant NMMainOperationsList = "Operations;---;Baseline;dF/Fo;Normalize;Scale By Num;Scale By Wave;Rescale;Smooth;FilterFIR;FilterIIR;Add Noise;Reverse;Rotate;Sort;Integrate;Differentiate;FFT;Replace Value;Delete NANs;Clip Events;"
@@ -628,10 +628,14 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 			returnStr = zCall_NMMainWaveList()
 			break
 			
+		case "Add Note":
+			returnStr = zCall_NMMainWaveNotesAdd()
+			break
+		
 		case "Notes":
 		case "Print Notes":
 		case "Wave Notes":
-			returnStr = zCall_NMMainWaveNotes()
+			returnStr = zCall_NMMainWaveNotesPrint()
 			break
 			
 		case "Print Missing Seq #":
@@ -3698,7 +3702,25 @@ End // NMMainTable2
 //****************************************************************
 //****************************************************************
 
-Static Function /S zCall_NMMainWaveNotes()
+Static Function /S zCall_NMMainWaveNotesAdd()
+
+	String notestr = ""
+	
+	Prompt notestr, "enter note:"
+	DoPrompt NMPromptStr( "NM Wave Notes" ), notestr
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	return NMMainWaveNotes( notestr = notestr, history = 1 )
+
+End // zCall_NMMainWaveNotesAdd
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S zCall_NMMainWaveNotesPrint()
 
 	Variable toNotebook = 1 + NumVarOrDefault( NMMainDF + "WaveNotes2Notebook", 0 )
 	
@@ -3715,19 +3737,34 @@ Static Function /S zCall_NMMainWaveNotes()
 	
 	return NMMainWaveNotes( toNotebook = toNotebook, history = 1 )
 
-End // zCall_NMMainWaveNotes
+End // zCall_NMMainWaveNotesPrint
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainWaveNotes( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, toNotebook ] )
+Function /S NMMainWaveNotes( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, toNotebook, notestr ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
-	Variable toNotebook // ( 0 ) no, print to history ( 1 ) print to notebook
+	Variable toNotebook // print wave notes to ( 0 ) Igor history ( 1 ) notebook
+	String notestr // or add note to wave notes (ignores toNotebook )
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
+	
+	if ( ParamIsDefault( notestr ) )
+	
+		notestr = ""
+		
+	else
+	
+		if ( strlen( notestr ) == 0 )
+			return "" // nothing to do
+		endif
+		
+		NMLoopExecStrAdd( "notestr", notestr, nm )
+	
+	endif
 	
 	if ( toNotebook )
 		NMLoopExecVarAdd( "toNotebook", toNotebook, nm, integer = 1 )
@@ -3765,15 +3802,22 @@ End // NMMainWaveNotes
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNotebook ] )
+Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNotebook, notestr ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
 	
-	Variable toNotebook // ( 0 ) no, print to history ( 1 ) print to notebook
+	Variable toNotebook // print wave notes to ( 0 ) Igor history ( 1 ) notebook
+	String notestr // or add note to wave notes
 	
 	String nbName, nbTitle, fxn = "NMWaveNotes"
 	
 	STRUCT NMParams nm
+	
+	if ( ParamIsDefault( notestr ) )
+		notestr = ""
+	elseif ( strlen( notestr ) == 0 )
+		return "" // nothing to do
+	endif
 	
 	if ( ParamIsDefault( folder ) )
 		folder = ""
@@ -3795,6 +3839,10 @@ Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNoteb
 		return ""
 	endif
 	
+	if ( strlen( notestr ) > 0 )
+		return NMWaveNotes2( nm, notestr = notestr, history = 1 )
+	endif
+	
 	if ( toNotebook )
 	
 		nbName = NMMainWindowName( folder, wavePrefix, chanNum, waveSelect, "notebook" )
@@ -3802,11 +3850,9 @@ Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNoteb
 	
 		return NMWaveNotes2( nm, nbName = nbName, nbTitle = nbTitle, history = 1 )
 		
-	else
-	
-		return NMWaveNotes2( nm, history = 1 )
-		
 	endif
+	
+	return NMWaveNotes2( nm, history = 1 )
 
 End // NMMainWaveNotes2
 
