@@ -241,6 +241,10 @@ Function ClampSpikeCompute( mode, currentWave, nwaves [ updateRaster ] )
 	
 	String chanWaveName = ChanDisplayWave( currentChan )
 	
+	if ( ParamIsDefault( updateRaster ) )
+		updateRaster = 1
+	endif
+	
 	if ( NMStimSpikeOn() )
 	
 		Make /O/N=0 SP_xtimes=Nan
@@ -273,7 +277,7 @@ Function ClampSpikeFinish( mode, currentWave )
 	Variable currentWave
 	
 	if ( mode == 1 )
-		ClampSpikeCompute( mode, currentWave, -1 )
+		ClampSpikeCompute( mode, currentWave, -1, updateRaster = 0 )
 	endif
 	
 	KillWaves /Z SP_xtimes

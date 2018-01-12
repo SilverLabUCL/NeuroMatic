@@ -1394,12 +1394,14 @@ Function ClampGraphsFinish()
 	
 	String fname = NMFolderListName( "" )
 	
+	Variable currentWave = CurrentNMWave()
+	
 	for ( ccnt = 0; ccnt < NMNumChannels(); ccnt += 1 )
 	
 		NMChannelGraphDisable( channel = ccnt, all = 0 )
 		
 		gname = ChanGraphName( ccnt )
-		wname = NMChanWaveName( ccnt, -1 )
+		wname = GetWaveName( "default", ccnt, currentWave )
 		
 		if ( strlen( fName ) > 0 )
 			DoWindow /T $gname, fname + " : Ch " + ChanNum2Char( ccnt ) + " : " + wname
