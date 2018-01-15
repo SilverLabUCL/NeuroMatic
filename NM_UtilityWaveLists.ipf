@@ -2253,9 +2253,10 @@ End // NMLabel2
 //****************************************************************
 //****************************************************************
 
-Function /S NMWaveNotes( wList [ folder, matchStr, nbName, nbTitle ] ) // see NMWaveNotes2
+Function /S NMWaveNotes( wList [ folder, matchStr, notestr, nbName, nbTitle ] ) // see NMWaveNotes2
 	String wList, folder // see description at top
 	String matchStr // create wave list based on this matching string
+	String notestr // add note to wave notes
 	String nbName, nbTitle // notebook name and title
 	
 	Variable toNotebook
@@ -2274,6 +2275,12 @@ Function /S NMWaveNotes( wList [ folder, matchStr, nbName, nbTitle ] ) // see NM
 		return ""
 	endif
 	
+	if ( ParamIsDefault( notestr ) )
+		notestr = ""
+	else
+		return NMWaveNotes2( nm, notestr = notestr )
+	endif
+	
 	if ( ParamIsDefault( nbName ) )
 		return NMWaveNotes2( nm )
 	endif
@@ -2289,8 +2296,9 @@ End // NMWaveNotes
 //****************************************************************
 //****************************************************************
 
-Function /S NMWaveNotes2( nm [ nbName, nbTitle, history ] )
+Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
+	String notestr // add note to wave notes
 	String nbName, nbTitle // notebook name and title
 	Variable history
 	
@@ -2307,6 +2315,12 @@ Function /S NMWaveNotes2( nm [ nbName, nbTitle, history ] )
 	
 	numWaves = ItemsInList( nm.wList )
 	
+	if ( ParamIsDefault( notestr ) )
+		notestr = ""
+	elseif ( strlen( notestr ) == 0 )
+		return "" // nothing to do
+	endif
+	
 	if ( ParamIsDefault( nbName ) )
 		nbName = ""
 	else
@@ -2314,10 +2328,37 @@ Function /S NMWaveNotes2( nm [ nbName, nbTitle, history ] )
 	endif
 	
 	if ( ParamIsDefault( nbTitle ) )
-		nbTitle = "NM Wave Notes : " + NMChild( nm.folder )
+		nbTitle = "NM Wave Notes : " + NMChild( nm.folder ) // also used with Igor history
 	endif
 	
-	if ( !toNotebook )
+	if ( strlen( notestr ) > 0 )
+	
+		for ( wcnt = 0; wcnt < numWaves; wcnt += 1 )
+	
+			wName = StringFromList( wcnt, nm.wList )
+			
+			notestr = ReplaceString( "  ", notestr, " " )
+			notestr = ReplaceString( "  ", notestr, " " )
+			
+			Note $wName, "NMNote:" + notestr
+			
+			nm.successList += wName + ";"
+		
+		endfor
+		
+		NMParamsComputeFailures( nm )
+		
+		if ( history )
+			NMLoopHistory( nm )
+		endif
+		
+		SetNMstr( NMDF + "OutputWaveList", nm.successList )
+		
+		return nm.successList
+	
+	endif
+	
+	if ( toNotebook == 0 ) // print notes to Igor history
 	
 		if ( numWaves > 1 )
 			Print nbTitle + NMCR + NMCR

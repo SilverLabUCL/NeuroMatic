@@ -150,7 +150,7 @@ Function ClampStatsRetrieveFromStim() // retrieve Stats waves from stim folder
 		Wave chan = $( stdf+"ChanSelect" )
 		
 		if ( 0 < numpnts( chan ) )
-			NMChanSelect( num2istr( chan[ 0 ] ) )
+			NMChanSelect( num2istr( chan[ 0 ] ), update = 0 )
 		endif
 		
 	endif
@@ -196,7 +196,7 @@ Function ClampStatsInit()
 		
 		StatsDisplayClear()
 		ClampStatsDisplaySavePositions()
-		NMChanSelect( num2istr( StatsChanSelect( -1 ) ) )
+		NMChanSelect( num2istr( StatsChanSelect( -1 ) ), update = 0 )
 		
 	else
 	
@@ -233,27 +233,36 @@ End // ClampStatsStart
 //****************************************************************
 //****************************************************************
 
-Function ClampStatsCompute( mode, currentWave, numWaves )
+Function ClampStatsCompute( mode, currentWave, numWaves [ updateGraphs ] )
 	Variable mode // ( 0 ) preview ( 1 ) record
 	Variable currentWave
 	Variable numWaves
-	Variable chan
+	Variable updateGraphs
 	
+	Variable chan
 	String wName = ""
 
 	if ( NMStimStatsOn() == 0 )
 		return 0
 	endif
 	
+	if ( ParamIsDefault( updateGraphs ) )
+		updateGraphs = 1
+	endif
+	
 	chan = StatsChanSelect( -1 )
 	
 	if ( mode == 0 )
-		wName = NMChanWaveName( chan, 0 )
+		wName = GetWaveName( "default", chan, 0 )
+	else
+		wName = GetWaveName( "default", chan, currentWave )
 	endif
 	
 	StatsCompute( wName, chan, currentWave, -1, 1, 1 )
 	
-	ClampStatsDisplaysUpdate( currentWave, numWaves )
+	if ( updateGraphs )
+		ClampStatsDisplaysUpdate( currentWave, numWaves )
+	endif
 
 End // ClampStatsCompute()
 
@@ -264,18 +273,11 @@ End // ClampStatsCompute()
 Function ClampStatsFinish( currentWave )
 	Variable currentWave
 	
-	String stdf = NMStatsDF
-	
-	if ( ( NMStimStatsOn() == 0 ) || ( DataFolderExists( stdf ) == 0 ) )
+	if ( NMStimStatsOn() == 0 )
 		return 0
 	endif
 	
-	Variable saveAuto = NumVarOrDefault( stdf+"AutoPlot", 0 )
-	
 	ClampStatsResize( CurrentWave + 1 )
-	
-	SetNMvar( stdf+"AutoPlot", 0 ) // temporarily turn off auto-plot
-	SetNMvar( stdf+"AutoPlot", saveAuto )
 	
 End // ClampStatsFinish
 

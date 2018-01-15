@@ -1617,7 +1617,7 @@ Function NMStatsVarGet( varName )
 			break
 			
 		case "AutoPlots": // All Waves
-			defaultVal = NumVarOrDefault( df+"AutoPlot", 1 )
+			defaultVal = NumVarOrDefault( df+"AutoPlots", 1 )
 			break
 			
 		case "AutoStats2": // All Waves
@@ -5325,8 +5325,10 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 			transformLast = si.transform[ icnt ]
 		endif
 		
-		if ( newWave && ( ChanWaveMake( chan, wName, dName, xWave = xWave ) < 0 ) )
-			continue
+		if ( newWave )
+			if ( ChanWaveMake( chan, wName, dName, xWave = xWave ) < 0 )
+				continue
+			endif
 		endif
 		
 		if ( icnt == AmpNV )

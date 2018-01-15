@@ -1459,7 +1459,7 @@ Static Function RCstepDisplay()
 	
 	String cdf = NMClampDF, stdf = NMStatsDF
 	
-	if ( WaveExists( $"CT_Rm" ) )
+	if ( WaveExists( $"CT_Rm" ) == 0 )
 		return -1
 	endif
 	
