@@ -5,7 +5,7 @@ Available Tool Tabs: Main, Stats, Spike, Event, Fit, Pulse, Model, Clamp, Demo
 
 How To Install: Put NeuroMatic’s folder, or its shortcut, inside the Igor Procedures folder. Start WaveMetrics Igor Pro. NeuroMatic’s menu should appear within Igor’s main menu bar and NeuroMatic's panel should appear on the right side of Igor. Begin by opening a data file (NeuroMatic > Data Folder > Open Data Files).
 
-How To Contribute: Fork the NeuroMatic GitHub repository branch you would like to make changes to (e.g. Master or Jason-Development). You will need to contact jasonsethrothman to obtain permission to fork Jason-Development. Make your changes with commits of logical units and good commit messages. Push your changes to a topic branch in your fork of the repository. Submit a pull request. We will review your changes and hopeully accept them.
+How To Contribute: Fork the NeuroMatic GitHub repository branch you would like to make changes to (e.g. Master or Jason-Development). You will need to contact jasonsethrothman to obtain permission to fork Jason-Development. Make your changes with commits of logical units and good commit messages. Push your changes to a topic branch in your fork of the repository. Submit a pull request. We will review your changes and hopefully accept them.
 
 https://github.com/SilverLabUCL/NeuroMatic
 
