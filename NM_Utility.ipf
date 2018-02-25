@@ -3662,7 +3662,7 @@ Function NMGaussWidthConvertCall()
 	Variable gaussFitType, gaussFitWidth, rvalue
 	String convertTo
 
-	String df = NMFitDF
+	String df = "root:Packages:NeuroMatic:Fit:"
 
 	Variable gaussConvertSelect = NumVarOrDefault( df + "GaussConvertSelect", 1 )
 	

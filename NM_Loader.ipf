@@ -60,7 +60,7 @@ Function LoadNM()
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_ModelTab2_IAF_AdEx\""
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_ModelTab3_HodgkinHuxley1952\""
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_ModelTab4_Rothman2003\""
-	
+			
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_Panel\""
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_Progress\""
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_PulseGen\""
@@ -103,73 +103,6 @@ Function LoadNM()
 	Execute/P/Q/Z "NMon( 1 )"
 	
 End // LoadNM
-
-//****************************************************************
-//****************************************************************
-
-Function UnloadNM()
-
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_aMenu\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ChanGraphs\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampLog\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampNotes\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampStim\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Configurations\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_DemoTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Deprecated\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_EventTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_EventTabOld\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_FileIO\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_FitTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Folders\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_FoldersPrefix\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Groups\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Import\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ImportAxograph\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ImportPclamp\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Main\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_MainTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_MainTabScalePanel\""
-	
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ModelTab0\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ModelTab1_IAF\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ModelTab2_IAF_AdEx\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ModelTab3_HodgkinHuxley1952\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ModelTab4_Rothman2003\""
-	
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Panel\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Progress\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_PulseGen\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_PulseGenOld\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_PulseTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Sets\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_SpikeTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_StatsTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_StatsTabKolmogorov\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_StatsTabStability\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_TabManager\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Utility\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_UtilityWaveLists\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_UtilityWaveStats\""
-	
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_Clamp\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampAcquire\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampAcquireDemo\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampBoardConfigs\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampFolders\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampITC\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampNIDAQmx\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampNotes2\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampSpike\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampStats\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampStim2\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampTab\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampTelegraphs\""
-	Execute/P/Q/Z "DELETEINCLUDE \"NM_ClampUtility\""
-	
-	Execute/P/Q/Z "COMPILEPROCEDURES "		// Note the space before final quote
-	
-End // UnloadNM
 
 //****************************************************************
 //****************************************************************
