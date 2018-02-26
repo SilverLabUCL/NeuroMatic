@@ -57,6 +57,8 @@ Function NMFileCall( select )
 		case "Import Data":
 		case "Load":
 		case "Load Waves":
+		case "Load From Files":
+		case "Load Waves From Files":
 			NMImportWavesCall()
 			break
 			

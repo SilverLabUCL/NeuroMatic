@@ -119,6 +119,7 @@ Function /S NMFolderCall( fxn )
 		case "Import Data":
 		case "Import Waves":
 		case "Load Waves":
+		case "Load Waves From Files":
 			NMImportWavesCall()
 			break
 			
