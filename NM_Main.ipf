@@ -461,6 +461,7 @@ Function ResetNM( killFirst [ quiet, history, oldVersionStr ] ) // use this func
 	NMChanWaveListSet( 0 )
 	
 	SetNMstr( NMDF + "NMVersionStr", NMVersionStr )
+	SetNMstr( NMDF + "NMMenuLoad", "" )
 	
 	if ( WinType( NMPanelName ) != 7 )
 		MakeNMPanel()
@@ -693,8 +694,14 @@ Function NMProceduresKill( [ quiet ] )
 	
 	for ( icnt = 0 ; icnt < ItemsInList( windowList ) ; icnt += 1 )
 		windowName = StringFromList( icnt, windowList )
-		Execute /P "CloseProc /NAME=" + NMQuotes( windowName ) + " /COMP=0 /D=0"
+		Execute /P/Q/Z "CloseProc /NAME=" + NMQuotes( windowName ) + " /COMP=0 /D=0"
+		windowName = ReplaceString( ".ipf", windowName, "" )
+		Execute /P/Q/Z "DELETEINCLUDE \"" + windowName + "\""
 	endfor
+	
+	Execute/P/Q/Z "COMPILEPROCEDURES "		// Note the space before final quote
+	
+	DoWindow /K $NMPanelName
 	
 End // NMProceduresKill
 

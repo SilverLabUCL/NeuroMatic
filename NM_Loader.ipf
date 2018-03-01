@@ -27,9 +27,12 @@
 //****************************************************************
 //****************************************************************
 
-Menu "Macros"
-	"Load NeuroMatic", /Q, LoadNM()
+Menu "NeuroMatic"
+	StrVarOrDefault( "root:Packages:NeuroMatic:" + "NMMenuLoad", "Load Procedures" ), /Q, LoadNM() // only appears when NM is not initialized
 End
+
+//****************************************************************
+//****************************************************************
 
 Function LoadNM()
 
