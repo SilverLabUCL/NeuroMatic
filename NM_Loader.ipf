@@ -26,6 +26,15 @@
 //
 //****************************************************************
 //****************************************************************
+//
+//	For users who do not want NeuroMatic procedure files loaded automatically,
+// this procedure file contains code to load the files via a "Load Procedures" menu item. 
+//
+//	To use this code, place an alias of NeuroMatic's folder in the User Procedures
+//	folder, and place an alias of this procedure file (NM_Loader.ipf) in the Igor Procedures folder.
+//
+//****************************************************************
+//****************************************************************
 
 Menu "NeuroMatic"
 	StrVarOrDefault( "root:Packages:NeuroMatic:" + "NMMenuLoad", "Load Procedures" ), /Q, LoadNM() // only appears when NM is not initialized
