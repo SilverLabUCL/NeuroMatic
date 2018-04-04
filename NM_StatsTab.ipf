@@ -93,7 +93,7 @@ Function StatsTab( enable )
 
 	if ( enable )
 		CheckNMPackage( "Stats", 1 ) // declare globals if necessary
-		StatsChanCheck()
+		StatsChanCheck( updateStats = 0 )
 		StatsAmpWinBegin()
 		MakeStats( 0 ) // make controls if necessary
 	endif
@@ -1895,7 +1895,8 @@ Function MakeStats( force ) // create Stats tab controls
 		return 0
 	endif
 	
-	ControlInfo /W=$NMPanelName ST_AmpSelect
+	//ControlInfo /W=$NMPanelName ST_AmpSelect
+	ControlInfo /W=$NMPanelName ST_AmpBSet
 	
 	if ( ( V_Flag != 0 ) && !force )
 		return 0 // Stats tab controls exist
@@ -2054,7 +2055,7 @@ Function UpdateStats1() // update/display current window result values
 	select =	StatsAmpMenuSwitch( select )
 	
 	sprintf sp.yStr, formatStr, so.y
-	
+
 	tstr = " "
 	
 	if ( si.filterNum > 0 )
@@ -2995,11 +2996,16 @@ End // StatsTimeStampCompare
 //****************************************************************
 //****************************************************************
 
-Function StatsChanCheck() // check to see if current channel has changed
+Function StatsChanCheck( [ updateStats ] ) // check to see if current channel has changed
+	Variable updateStats // compute auto stats
 
 	Variable currentChan = CurrentNMChannel()
 	
 	String wName = NMStatsDF + "ChanSelect"
+	
+	if ( ParamIsDefault( updateStats ) )
+		updateStats = 1
+	endif
 	
 	if ( !WaveExists( $wName ) || ( numpnts( $wName ) == 0 ) )
 		return 0 // nothing to do
@@ -3008,7 +3014,7 @@ Function StatsChanCheck() // check to see if current channel has changed
 	Wave wtemp = $wName
 
 	if ( wtemp[ 0 ] != currentChan )
-		StatsChan( -1, currentChan )
+		StatsChan( -1, currentChan, updateStats = updateStats )
 	endif
 	
 	return 0
@@ -3028,14 +3034,19 @@ End // StatsChanCall
 //****************************************************************
 //****************************************************************
 
-Function StatsChan( win, chanNum [ history ] )
+Function StatsChan( win, chanNum [ updateStats, history ] )
 	Variable win // Stats window number ( -1 ) for currently selected window
 	Variable chanNum // channel number
+	Variable updateStats // compute auto stats
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
 	String vlist = ""
 	String df = NMStatsDF
 	String wName = df + "ChanSelect"
+	
+	if ( ParamIsDefault( updateStats ) )
+		updateStats = 1
+	endif
 	
 	if ( history )
 		vlist = NMCmdNum( win, vlist, integer = 1 )
@@ -3065,7 +3076,10 @@ Function StatsChan( win, chanNum [ history ] )
 	
 	wtemp = chanNum // for now, only allow one channel to be selected
 	
-	NMStatsAuto( force = 1 )
+	if ( updateStats )
+		NMStatsAuto( force = 1 )
+	endif
+	
 	StatsTimeStamp( df )
 	
 	return 0

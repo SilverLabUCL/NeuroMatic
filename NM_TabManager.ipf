@@ -193,7 +193,7 @@ Function EnableTab( tabNum, tabList, enable ) // enable/disable a tab window
 	
 	Variable configsOn = NMVarGet( "ConfigsDisplay" )
 	
-	String cList
+	String cList, tPrefix
 	String windowName = TabWinName( tabList )
 	
 	if ( TabExists( tabList ) == 0 )
@@ -212,7 +212,8 @@ Function EnableTab( tabNum, tabList, enable ) // enable/disable a tab window
 		EnableTabList( windowName, cList, 0 )
 	endif
 	
-	cList = ControlList( windowName, TabPrefix( tabNum, tabList ) + "*", ";" )
+	tPrefix = TabPrefix( tabNum, tabList )
+	cList = ControlList( windowName, tPrefix + "*", ";" )
 	
 	EnableTabList( windowName, cList, enable )
 
@@ -274,6 +275,8 @@ Function EnableTabList( windowName, cList, enable )
 			case 11:
 				ListBox $cname, disable=( !enable ), win=$windowName
 				break
+			default:
+				Print "Unknown NM control:", cname, enable
 		endswitch
 		
 	endfor

@@ -763,7 +763,7 @@ Function /S NMDuplicate2( nm [ xbgn, xend, toFolder, newPrefix, overwrite, copyS
 			if ( !xflag )
 				pbgn = x2pnt( wtemp, xbgn )
 				pend = x2pnt( wtemp, xend )
-				pbgn = max( xbgn, 0 )
+				pbgn = max( pbgn, 0 )
 				pend = min( pend, numpnts( wtemp ) - 1 )
 			endif
 		
