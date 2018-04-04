@@ -49,7 +49,7 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0b"
+StrConstant NMVersionStr = "3.0c"
 StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
 StrConstant NMRights = "Copyright (c) 2017 Jason Rothman"
 StrConstant NMEmail = "Jason@ThinkRandom.com"
