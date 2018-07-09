@@ -2417,9 +2417,9 @@ Function NMTab( tabName ) // change NMPanel tab
 	if ( ( tab != lastTab ) || configsOn )
 	
 		SetNMvar( NMDF + "CurrentTab", tab )
-		NMConfigsListBoxWavesUpdate( "" )
 		
 		if ( configsOn )
+			NMConfigsListBoxWavesUpdate( "" )
 			Execute /Z "NM" + tabName + "ConfigEdit()"
 		endif
 		
