@@ -61,7 +61,7 @@ StrConstant NMStatsDF = "root:Packages:NeuroMatic:Stats:"
 StrConstant NMStats2FxnList = "Functions;---;Plot;Edit;Wave Stats;Print Note;Print Name;Histogram;Inequality <>;Stability;Significant Difference;MPFA Stats; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;" // extra at end to create scrollbar
 StrConstant NMStats2AllFxnList = "Functions;---;Plot;Edit;Wave Stats;Print Notes;Print Names;"
 
-Static StrConstant StatsFxnList = "Off;Max;Min;Avg;Avg+SDev;Avg+SEM;Median;SDev;SEM;Var;RMS;NumPnts;Area;Sum;PathLength;Slope;Onset;Level;Level+;Level-;MaxAvg;MinAvg;RiseTime+;RTslope+;DecayTime+;FWHM+;RiseTime-;RTslope-;DecayTime-;FWHM-;"
+Static StrConstant StatsFxnList = "Off;Max;Min;Avg;Avg+SDev;Avg+SEM;Median;SDev;SEM;Var;RMS;NumPnts;Area;Sum;PathLength;Slope;Onset;Level;Level+;Level-;MaxAvg;MinAvg;Value@xbgn;Value@xend;RiseTime+;RTslope+;DecayTime+;FWHM+;RiseTime-;RTslope-;DecayTime-;FWHM-;"
 Static StrConstant BslnFxnList = "Max;Min;Avg;Median;SDev;SEM;Var;RMS;Area;Sum;PathLength;Slope;"
 
 Static StrConstant InputWaveList = "AmpSlct;AmpB;AmpE;AmpY;Bflag;BslnSlct;BslnB;BslnE;BslnSubt;RiseBP;RiseEP;DcayP;FilterNum;FilterAlg;Transform;OffsetW;ChanSelect;"
@@ -2118,6 +2118,8 @@ Function UpdateStats1() // update/display current window result values
 		
 	strswitch( select )
 	
+		case "Value@xbgn":
+		case "Value@xend":
 		case "Max":
 		case "Min":
 			break
@@ -5723,6 +5725,74 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			ay = minavg.avg
 			ax = minavg.minLoc
 			apnt = minavg.minRowLoc
+			break
+			
+		case "Value@xbgn":
+		
+			Wave wtemp = $wName
+		
+			if ( WaveExists( $xwave ) )
+			
+				Wave xtemp = $xwave
+				
+				if ( numtype( si.xbgn ) == 0 )
+					ax = si.xbgn
+					apnt = NMX2Pnt( xwave, si.xbgn )
+				else
+					apnt = 0
+					ax = xtemp[ apnt ]
+				endif
+			
+				ay = wtemp[ apnt ]
+				
+			else
+				
+				if ( numtype( si.xbgn ) == 0 )
+					ax = si.xbgn
+					apnt = x2pnt( wtemp, ax )
+				else
+					ax = leftx( wtemp )
+					apnt = 0
+				endif
+				
+				ay = wtemp[ apnt ]
+				
+			endif
+			
+			break
+			
+		case "Value@xend":
+		
+			Wave wtemp = $wName
+		
+			if ( WaveExists( $xwave ) )
+				
+				Wave xtemp = $xwave
+				
+				if ( numtype( si.xend ) == 0 )
+					ax = si.xend
+					apnt = NMX2Pnt( xwave, si.xend )
+				else
+					apnt = numpnts( xtemp ) - 1
+					ax = xtemp[ apnt ]
+				endif
+			
+				ay = wtemp[ apnt ]
+				
+			else
+				
+				if ( numtype( si.xend ) == 0 )
+					ax = si.xend
+					apnt = x2pnt( wtemp, ax )
+				else
+					ax = rightx( wtemp )
+					apnt = numpnts( wtemp ) - 1
+				endif
+				
+				ay = wtemp[ apnt ]
+				
+			endif
+			
 			break
 	
 		case "RiseTime+":
