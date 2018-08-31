@@ -62,7 +62,7 @@ StrConstant NMMainDF = "root:Packages:NeuroMatic:Main:"
 StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Add Note;Print Notes;Print Names;Print Missing Seq #;" // keep extra space after Graph
 StrConstant NMMainEditList = "Edit;---;Make;Move;Copy;Save;Kill;---;Concatenate;2D Wave;Split;---;Redimension;Delete Points;Insert Points;---;Rename;Renumber;"
 StrConstant NMMainXScaleList = "X-scale;---;Align;StartX;DeltaX;XLabel;Xwave;Make Xwave;---;Resample;Decimate;Interpolate;---;Continuous;Episodic;---;sec;msec;usec;"
-StrConstant NMMainOperationsList = "Operations;---;Baseline;dF/Fo;Normalize;Scale By Num;Scale By Wave;Rescale;Smooth;FilterFIR;FilterIIR;Add Noise;Reverse;Rotate;Sort;Integrate;Differentiate;FFT;Replace Value;Delete NANs;Clip Events;"
+StrConstant NMMainOperationsList = "Operations;---;Baseline;dF/Fo;Normalize;Scale By Num;Scale By Wave;Rescale;Smooth;FilterFIR;FilterIIR;Rs Correction;Add Noise;Reverse;Rotate;Sort;Integrate;Differentiate;FFT;Replace Value;Delete NANs;Clip Events;"
 StrConstant NMMainFunctionList = "Functions;---;Wave Stats;Average;Sum;SumSqrs;Histogram;Inequality <>;"
 Static StrConstant NMInterpolateAlgList = "linear;cubic spline;smoothing spline;"
 
@@ -863,6 +863,10 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 			
 		case "FilterIIR":
 			returnStr = zCall_NMMainFilterIIR()
+			break
+			
+		case "Rs Correction":
+			returnStr = zCall_NMMainRsCorrection()
 			break
 			
 		case "Add Noise":
@@ -8555,6 +8559,198 @@ Function /S NMMainFilterIIR2( [ folder, wavePrefix, chanNum, waveSelect, fLow, f
 	return NMFilterIIR2( nm, fLow = fLow, fHigh = fHigh, fNotch = fNotch, notchQ = notchQ, history = 1 )
 	
 End // NMMainFilterIIR2
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S zCall_NMMainRsCorrection()
+
+	STRUCT NMRsCorr rc
+
+	String txt = "Warning: this correction (Traynellis assumes your voltage-clamp data is recorded from "
+	txt += "a one-compartment cell containing a linear membrane conductance. "
+	txt += "Do you want to continue?"
+
+	DoAlert /T="NM Series-Resistance Correction" 1, txt
+	
+	if ( V_flag == 2 )
+		return "" // cancel
+	endif
+	
+	Variable Vhold = NumVarOrDefault( NMDF + "RsCorrVhold", -80 ) // mV
+	Variable Vrev = NumVarOrDefault( NMDF + "RsCorrVrev", 0 ) // mV
+	Variable Rs = NumVarOrDefault( NMDF + "RsCorrRs", 20 ) // MOhms
+	Variable Cm = NumVarOrDefault( NMDF + "RsCorrCm", 10 ) // pF
+	
+	Variable Vcomp = NumVarOrDefault( NMDF + "RsCorrVcomp", 1 ) // 0 - 1
+	Variable Ccomp = NumVarOrDefault( NMDF + "RsCorrCcomp", 1 ) // 0 - 1
+	Variable Fc = NumVarOrDefault( NMDF + "RsCorrFc", 100 ) // kHz
+	
+	Prompt Vhold, "voltage-clamp holding potential (mV)"
+	Prompt Vrev, "membrane conductance reversal potential (mV)"
+	Prompt Rs, "electrode series resistance (MOhms)"
+	Prompt Cm, "membrane capacitance (pF)"
+	Doprompt "Cell Parameters", Vhold, Vrev, Rs, Cm
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	SetNMvar( NMDF + "RsCorrVhold", Vhold )
+	SetNMvar( NMDF + "RsCorrVrev", Vrev )
+	SetNMvar( NMDF + "RsCorrRs", Rs )
+	SetNMvar( NMDF + "RsCorrCm", Cm )
+	
+	Prompt Vcomp,"fraction of resistive-current correction to apply (0-1)"
+	Prompt Ccomp,"fraction of capacitive-current correction to apply (0-1)"
+	Prompt Fc,"filter cutofff frequency (kHz)"
+	Doprompt "Compensation Parameters",  Vcomp, Ccomp, Fc
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	SetNMvar( NMDF + "RsCorrVcomp", Vcomp )
+	SetNMvar( NMDF + "RsCorrCcomp", Ccomp )
+	SetNMvar( NMDF + "RsCorrFc", Fc )
+	
+	return NMMainRsCorrection( Vhold = Vhold, Vrev = Vrev, Rs = Rs, Cm = Cm, Vcomp = Vcomp, Ccomp = Ccomp, Fc = Fc, history = 1 )
+	
+End // zCall_NMMainRsCorrection
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc ] )
+	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
+	Variable history, deprecation
+	
+	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
+	
+	STRUCT NMLoopExecStruct nm
+	NMLoopExecStructNull( nm )
+	
+	if ( ParamIsDefault( Vhold ) )
+		return NM2ErrorStr( 11, "Vhold", num2str( Vhold ) )
+	endif
+	
+	NMLoopExecVarAdd( "Vhold", Vhold, nm )
+	
+	if ( ParamIsDefault( Vrev ) )
+		return NM2ErrorStr( 11, "Vrev", num2str( Vrev ) )
+	endif
+	
+	NMLoopExecVarAdd( "Vrev", Vrev, nm )
+	
+	if ( ParamIsDefault( Rs ) )
+		return NM2ErrorStr( 11, "Rs", num2str( Rs ) )
+	endif
+	
+	NMLoopExecVarAdd( "Rs", Rs, nm )
+	
+	if ( ParamIsDefault( Cm ) )
+		return NM2ErrorStr( 11, "Cm", num2str( Cm ) )
+	endif
+	
+	NMLoopExecVarAdd( "Cm", Cm, nm )
+	
+	if ( ParamIsDefault( Vcomp ) )
+		return NM2ErrorStr( 11, "Vcomp", num2str( Vcomp ) )
+	endif
+	
+	NMLoopExecVarAdd( "Vcomp", Vcomp, nm )
+	
+	if ( ParamIsDefault( Ccomp ) )
+		return NM2ErrorStr( 11, "Ccomp", num2str( Ccomp ) )
+	endif
+	
+	NMLoopExecVarAdd( "Ccomp", Ccomp, nm )
+	
+	if ( ParamIsDefault( Fc ) )
+		return NM2ErrorStr( 11, "Fc", num2str( Fc ) )
+	endif
+	
+	NMLoopExecVarAdd( "Fc", Fc, nm )
+	
+	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc ) != 0 )
+		return ""
+	endif
+	
+	if ( ParamIsDefault( folderList ) )
+		folderList = ""
+	endif
+	
+	if ( ParamIsDefault( wavePrefixList ) )
+		wavePrefixList = ""
+	endif
+	
+	if ( ParamIsDefault( chanSelectList ) )
+		chanSelectList = ""
+	endif
+	
+	if ( ParamIsDefault( waveSelectList ) )
+		waveSelectList = ""	
+	endif
+	
+	if ( NMLoopExecStructInit( folderList, wavePrefixList, chanSelectList, waveSelectList, nm ) != 0 )
+		return ""
+	endif
+	
+	//nm.updateWaveLists = 1
+	nm.updateGraphs = 1
+	//nm.updatePanel = 1
+	//nm.ignorePrefixFolder = 1
+	
+	return NMLoopExecute( nm, history, deprecation )
+
+End // NMMainRsCorrection
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc ] )
+	String folder, wavePrefix, waveSelect // see description at top
+	Variable chanNum
+	
+	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
+	
+	String fxn = "NMRsCorrection"
+	
+	STRUCT NMParams nm
+	
+	if ( ParamIsDefault( folder ) )
+		folder = ""
+	endif
+	
+	if ( ParamIsDefault( wavePrefix ) )
+		wavePrefix = ""
+	endif
+	
+	if ( ParamIsDefault( chanNum ) )
+		chanNum = -1
+	endif
+	
+	if ( ParamIsDefault( waveSelect ) )
+		waveSelect = ""
+	endif
+	
+	if ( NMLoopStructInit( fxn, folder, wavePrefix, chanNum, waveSelect, nm ) != 0 )
+		return ""
+	endif
+	
+	STRUCT NMRsCorr rc
+	
+	rc.Vhold = Vhold
+	rc.Vrev = Vrev
+	rc.Rs = Rs
+	rc.Cm = Cm
+	rc.Vcomp = Vcomp
+	rc.Ccomp = Ccomp
+	rc.Fc = Fc
+	
+	return NMRsCorrection2( nm, rc, history = 1 )
+	
+End // NMMainRsCorrection2
 
 //****************************************************************
 //****************************************************************
