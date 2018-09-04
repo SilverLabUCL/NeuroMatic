@@ -5833,14 +5833,17 @@ Structure NMRsCorr
 	Variable Vcomp // fraction 0 - 1
 	Variable Ccomp // fraction 0 - 1
 	Variable Fc // kHz
+	
+	String dataUnits // A, mA, uA, nA, pA
 
 EndStructure
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc )
+Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits )
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
+	String dataUnits
 	
 	if ( numtype( Vhold ) > 0 )
 		return NM2Error( 10, "Vhold", num2str( Vhold ) )
@@ -5870,6 +5873,17 @@ Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc )
 		return NM2Error( 10, "Fc", num2str( Fc ) )
 	endif
 	
+	strswitch( dataUnits )
+		case "A":
+		case "mA":
+		case "uA":
+		case "nA":
+		case "pA":
+			break
+		default:
+			return NM2Error( 20, "dataUnits", dataUnits )
+	endswitch
+	
 	return 0
 
 End // NMRsCorrError
@@ -5885,16 +5899,14 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	
 	Variable icnt, wcnt, numWaves, iAmps, dt
 	Variable icap, vThisPnt, vLastPnt, vCorrect
-	Variable vhold, vrev, Rs, Cm, Fc
-	String wName
-	
-	Variable iDataUnits = 1e-12 // assuming raw data is in pA for now
+	Variable vhold, vrev, Rs, Cm, Fc, dataSCale
+	String wName, dataUnits
 	
 	if ( NMParamsError( nm ) != 0 )
 		return ""
 	endif
 	
-	if ( NMRsCorrError( rc.Vhold, rc.Vrev, rc.Rs, rc.Cm, rc.Vcomp, rc.Ccomp, rc.Fc ) != 0 )
+	if ( NMRsCorrError( rc.Vhold, rc.Vrev, rc.Rs, rc.Cm, rc.Vcomp, rc.Ccomp, rc.Fc, rc.dataUnits ) != 0 )
 		return ""
 	endif
 	
@@ -5905,14 +5917,35 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	NMParamVarAdd( "Vcomp", rc.Vcomp, nm )
 	NMParamVarAdd( "Ccomp", rc.Ccomp, nm )
 	NMParamVarAdd( "Fc", rc.Fc, nm )
+	NMParamStrAdd( "dataUnits", rc.dataUnits, nm )
 	
 	vhold = rc.Vhold * 1e-3 // volts
 	vrev = rc.Vrev * 1e-3 // volts
 	Rs = rc.Rs * 1e6 // Ohms
-	Cm = rc.Cm * 1e-12 // Farads
+	Cm = rc.Cm * 1e-12 // F
 	Fc = rc.Fc * 1e3 // Hz
 	
-	// Fc = 1 / ( 2 * pi * tlag ) // tlag = dt
+	// Fc = 1 / ( 2 * pi * tlag )
+	
+	strswitch( dataUnits )
+		case "A":
+			dataSCale = 1
+			break
+		case "mA":
+			dataSCale = 1e-3
+			break
+		case "uA":
+			dataSCale = 1e-6
+			break
+		case "nA":
+			dataSCale = 1e-9
+			break
+		case "pA":
+			dataSCale = 1e-12
+			break
+		default:
+			return ""
+	endswitch
 	
 	numWaves = ItemsInList( nm.wList )
 	
@@ -5929,7 +5962,7 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 		dt = deltax( wtemp ) // ms
 		dt *= 1e-3 // seconds
 		
-		wtemp *= iDataUnits // amps
+		wtemp *= dataSCale // A
 		
 		iAmps = wtemp[ 0 ]
 		
@@ -5958,16 +5991,16 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 			//wtemp[ icnt ] = iAmps - iAmps * vCorrect // not in Traynelis code
 			
 			icap = Cm * ( vThisPnt - vLastPnt ) / dt
-			icap *= 1 - exp( -2 * pi * dt * Fc ) // if tlag = dt, this equals 0.632121
+			icap = icap * ( 1 - exp( -2 * pi * dt * Fc ) ) // if tlag = dt, this equals 0.632121
 			
-			wtemp[ icnt - 1 ] -= rc.Ccomp * icap
-			wtemp[ icnt - 1 ] -= wtemp[ icnt - 1 ] * vCorrect
+			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - rc.Ccomp * icap
+			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - wtemp[ icnt - 1 ] * vCorrect
 			
 			vLastPnt = vThisPnt
 		
 		endfor
 		
-		wtemp /= iDataUnits
+		wtemp /= dataSCale
 		
 		NMLoopWaveNote( nm.folder + wName, nm.paramList )
 		
