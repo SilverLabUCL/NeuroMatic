@@ -5806,6 +5806,218 @@ Function /S NMFilterIIR2( nm [ fLow, fHigh, fNotch, notchQ, history ] ) // see I
 	
 End // NMFilterIIR2
 
+
+//****************************************************************
+//****************************************************************
+//
+//	"Software-based correction of single compartment series resistance errors"
+//	Stephen F. Traynelis
+//	J Neurosci Methods. 1998 Dec 31;86(1):25-34.
+//
+//****************************************************************
+//****************************************************************
+//
+// computer algorithm that corrects capacitative filtering that results from pipette
+// series resistance as well as the voltage error for current responses with linear 
+//	current–voltage curve
+//
+//****************************************************************
+//****************************************************************
+
+Structure NMRsCorr
+
+	Variable Vhold // mV
+	Variable Vrev // mV
+	Variable Rs // MOhms
+	Variable Cm // pF
+	Variable Vcomp // fraction 0 - 1
+	Variable Ccomp // fraction 0 - 1
+	Variable Fc // kHz
+	
+	String dataUnits // A, mA, uA, nA, pA
+
+EndStructure
+
+//****************************************************************
+//****************************************************************
+
+Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits )
+	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
+	String dataUnits
+	
+	if ( numtype( Vhold ) > 0 )
+		return NM2Error( 10, "Vhold", num2str( Vhold ) )
+	endif
+	
+	if ( numtype( Vrev ) > 0 )
+		return NM2Error( 10, "Vrev", num2str( Vrev ) )
+	endif
+	
+	if ( ( numtype( Rs ) > 0 ) || ( Rs <= 0 ) )
+		return NM2Error( 10, "Rs", num2str( Rs ) )
+	endif
+	
+	if ( ( numtype( Cm ) > 0 ) || ( Cm <= 0 ) )
+		return NM2Error( 10, "Cm", num2str( Cm ) )
+	endif
+	
+	if ( ( numtype( Vcomp ) > 0 ) || ( Vcomp < 0 ) || ( Vcomp > 1 ) )
+		return NM2Error( 10, "Vcomp", num2str( Vcomp ) )
+	endif
+	
+	if ( ( numtype( Ccomp ) > 0 ) || ( Ccomp < 0 ) || ( Ccomp > 1 ) )
+		return NM2Error( 10, "Ccomp", num2str( Ccomp ) )
+	endif
+	
+	if ( ( numtype( Fc ) > 0 ) || ( Fc <= 0 ) )
+		return NM2Error( 10, "Fc", num2str( Fc ) )
+	endif
+	
+	strswitch( dataUnits )
+		case "A":
+		case "mA":
+		case "uA":
+		case "nA":
+		case "pA":
+			break
+		default:
+			return NM2Error( 20, "dataUnits", dataUnits )
+	endswitch
+	
+	return 0
+
+End // NMRsCorrError
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMRsCorrection2( nm, rc [ history ] )
+	STRUCT NMParams &nm // uses nm.folder, nm.wList
+	STRUCT NMRsCorr &rc
+	
+	Variable history
+	
+	Variable icnt, wcnt, numWaves, iAmps, dt
+	Variable icap, vThisPnt, vLastPnt, vCorrect
+	Variable vhold, vrev, Rs, Cm, Fc, dataSCale
+	String wName, dataUnits
+	
+	if ( NMParamsError( nm ) != 0 )
+		return ""
+	endif
+	
+	if ( NMRsCorrError( rc.Vhold, rc.Vrev, rc.Rs, rc.Cm, rc.Vcomp, rc.Ccomp, rc.Fc, rc.dataUnits ) != 0 )
+		return ""
+	endif
+	
+	NMParamVarAdd( "Vhold", rc.Vhold, nm )
+	NMParamVarAdd( "Vrev", rc.Vrev, nm )
+	NMParamVarAdd( "Rs", rc.Rs, nm )
+	NMParamVarAdd( "Cm", rc.Cm, nm )
+	NMParamVarAdd( "Vcomp", rc.Vcomp, nm )
+	NMParamVarAdd( "Ccomp", rc.Ccomp, nm )
+	NMParamVarAdd( "Fc", rc.Fc, nm )
+	NMParamStrAdd( "dataUnits", rc.dataUnits, nm )
+	
+	vhold = rc.Vhold * 1e-3 // volts
+	vrev = rc.Vrev * 1e-3 // volts
+	Rs = rc.Rs * 1e6 // Ohms
+	Cm = rc.Cm * 1e-12 // F
+	Fc = rc.Fc * 1e3 // Hz
+	
+	// Fc = 1 / ( 2 * pi * tlag )
+	
+	strswitch( dataUnits )
+		case "A":
+			dataSCale = 1
+			break
+		case "mA":
+			dataSCale = 1e-3
+			break
+		case "uA":
+			dataSCale = 1e-6
+			break
+		case "nA":
+			dataSCale = 1e-9
+			break
+		case "pA":
+			dataSCale = 1e-12
+			break
+		default:
+			return ""
+	endswitch
+	
+	numWaves = ItemsInList( nm.wList )
+	
+	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
+	
+		if ( NMProgressTimer( wcnt, numWaves, "Computing Rs correction..." ) == 1 )
+			break // cancel
+		endif
+	
+		wName = StringFromList( wcnt, nm.wList )
+		
+		Wave wtemp = $nm.folder + wName
+		
+		dt = deltax( wtemp ) // ms
+		dt *= 1e-3 // seconds
+		
+		wtemp *= dataSCale // A
+		
+		iAmps = wtemp[ 0 ]
+		
+		vLastPnt = vhold - iAmps * Rs
+		
+		if ( vLastPnt == vrev )
+			vCorrect = 0 // divide by 0
+		else
+			vCorrect = rc.Vcomp * ( 1 - ( vhold - vrev ) / ( vLastPnt - vrev ) )
+		endif
+		
+		wtemp[ 0 ] = iAmps - iAmps * vCorrect
+		
+		for ( icnt = 1 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+		
+			iAmps = wtemp[ icnt ]
+			
+			vThisPnt = vhold - iAmps * Rs
+			
+			if ( vThisPnt == vrev )
+				vCorrect = 0 // divide by 0
+			else
+				vCorrect = rc.Vcomp * ( 1 - ( vhold - vrev ) / ( vThisPnt - vrev ) )	
+			endif
+		
+			//wtemp[ icnt ] = iAmps - iAmps * vCorrect // not in Traynelis code
+			
+			icap = Cm * ( vThisPnt - vLastPnt ) / dt
+			icap = icap * ( 1 - exp( -2 * pi * dt * Fc ) ) // if tlag = dt, this equals 0.632121
+			
+			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - rc.Ccomp * icap
+			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - wtemp[ icnt - 1 ] * vCorrect
+			
+			vLastPnt = vThisPnt
+		
+		endfor
+		
+		wtemp /= dataSCale
+		
+		NMLoopWaveNote( nm.folder + wName, nm.paramList )
+		
+		nm.successList += wName + ";"
+		
+	endfor
+
+	NMParamsComputeFailures( nm )
+	
+	if ( history )
+		NMLoopHistory( nm )
+	endif
+
+	return nm.successList
+
+End // NMRsCorrection2
+
 //****************************************************************
 //****************************************************************
 
