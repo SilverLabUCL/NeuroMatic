@@ -4218,7 +4218,7 @@ Static Function /S zCall_NMMainLabelY()
 	
 	String chanSelect = NMChanSelectStr()
 	String waveSelect = NMWaveSelectGet()
-	String promptStr = NMPromptStr( "NM X-Axis Label" )
+	String promptStr = NMPromptStr( "NM Y-Axis Label" )
 	String promptStr2 = zError_AllChanWavesPromptStr( promptStr, ignoreChannels = 1 )
 	
 	if ( StringMatch( promptStr2, NMCancel ) )
@@ -8577,9 +8577,32 @@ Static Function /S zCall_NMMainRsCorrection()
 		return "" // cancel
 	endif
 	
-	Variable Vhold = NumVarOrDefault( NMDF + "RsCorrVhold", -80 ) // mV
+	String dataUnits = NMChanLabelY()
+	String unitsList = " ;A;mA;uA;nA;pA;"
+	
+	if ( strsearch( dataUnits, "mA", 0 ) >= 0 )
+		dataUnits = "mA"
+	elseif ( strsearch( dataUnits, "uA", 0 ) >= 0 )
+		dataUnits = "uA"
+	elseif ( strsearch( dataUnits, "nA", 0 ) >= 0 )
+		dataUnits = "nA"
+	elseif ( strsearch( dataUnits, "pA", 0 ) >= 0 )
+		dataUnits = "pA"
+	else
+		dataUnits = " "
+	endif
+	
+	Prompt dataUnits, "select units of your voltage-clamp data", popup unitsList
+	
+	Doprompt "Cell Parameters", dataUnits
+	
+	if ( ( V_flag == 1 ) || StringMatch( dataUnits, " " ) )
+		return "" // cancel
+	endif
+	
+	Variable Vhold = NumVarOrDefault( NMDF + "RsCorrVhold", -100 ) // mV
 	Variable Vrev = NumVarOrDefault( NMDF + "RsCorrVrev", 0 ) // mV
-	Variable Rs = NumVarOrDefault( NMDF + "RsCorrRs", 20 ) // MOhms
+	Variable Rs = NumVarOrDefault( NMDF + "RsCorrRs", 10 ) // MOhms
 	Variable Cm = NumVarOrDefault( NMDF + "RsCorrCm", 10 ) // pF
 	
 	Variable Vcomp = NumVarOrDefault( NMDF + "RsCorrVcomp", 1 ) // 0 - 1
@@ -8614,18 +8637,19 @@ Static Function /S zCall_NMMainRsCorrection()
 	SetNMvar( NMDF + "RsCorrCcomp", Ccomp )
 	SetNMvar( NMDF + "RsCorrFc", Fc )
 	
-	return NMMainRsCorrection( Vhold = Vhold, Vrev = Vrev, Rs = Rs, Cm = Cm, Vcomp = Vcomp, Ccomp = Ccomp, Fc = Fc, history = 1 )
+	return NMMainRsCorrection( Vhold=Vhold, Vrev=Vrev, Rs=Rs, Cm=Cm, Vcomp=Vcomp, Ccomp=Ccomp, Fc=Fc, dataUnits=dataUnits, history=1 )
 	
 End // zCall_NMMainRsCorrection
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc ] )
+Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
+	String dataUnits
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
@@ -8672,7 +8696,13 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	
 	NMLoopExecVarAdd( "Fc", Fc, nm )
 	
-	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc ) != 0 )
+	if ( ParamIsDefault( dataUnits ) )
+		return NM2ErrorStr( 21, "dataUnits", dataUnits )
+	endif
+	
+	NMLoopExecStrAdd( "dataUnits", dataUnits, nm )
+	
+	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) != 0 )
 		return ""
 	endif
 	
@@ -8708,11 +8738,12 @@ End // NMMainRsCorrection
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc ] )
+Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
 	
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
+	String dataUnits
 	
 	String fxn = "NMRsCorrection"
 	
@@ -8747,6 +8778,7 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 	rc.Vcomp = Vcomp
 	rc.Ccomp = Ccomp
 	rc.Fc = Fc
+	rc.dataUnits = dataUnits
 	
 	return NMRsCorrection2( nm, rc, history = 1 )
 	
