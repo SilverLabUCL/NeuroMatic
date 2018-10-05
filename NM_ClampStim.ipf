@@ -223,7 +223,7 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	String sdf // stim data folder
 	Variable forceUpdate
 
-	Variable icnt, items, config, npnts, new, numWaves
+	Variable icnt, jcnt, items, config, npnts, new, numWaves
 	String io, wName, wPrefix, klist, plist, ulist, wList = ""
 	
 	Variable zeroDACLastPoints = NumVarOrDefault( NMClampDF + "ZeroDACLastPoints", 1 )
@@ -252,45 +252,41 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 		config = StimConfigNum(wPrefix)
 		
 		wList = NMFolderWaveList(sdf, wPrefix + "*", ";", "",0)
+		wList = RemoveFromList(wPrefix + "_pulse", wList)
+		
 		ulist = NMFolderWaveList(sdf, "u"+wPrefix + "*", ";", "",0) // unscaled waves for display
 		
 		if (ItemsInLIst(ulist) == 0)
 			ulist = NMFolderWaveList(sdf, "My"+wPrefix + "*", ";", "",0) // try "My" waves
 		endif
 		
-		wList = RemoveFromList(wPrefix + "_pulse", wList)
-		
-		if ((forceUpdate) || (ItemsInList(wList) < numWaves) || (ItemsInList(ulist) < numWaves))
+		if (forceUpdate || (ItemsInList(wList) < numWaves) || (ItemsInList(ulist) < numWaves))
 			wList += StimWavesMake(sdf, io, config, NaN)
 			new = 1
 		endif
+	
+		items = ItemsInList( wList )
 		
+		if ( zeroDACLastPoints && ( items > 0 ) )
+		
+			jcnt = items - 1 // does this for last wave in list
+			
+			wName = StringFromList( jcnt, wList )
+				
+			if ( WaveExists( $sdf + wName ) )
+			
+				Wave wtemp = $sdf + wName
+				
+				npnts = numpnts( wtemp )
+				
+				wtemp[ npnts - 1 ] = 0 // make sure last 2 points are 0
+				wtemp[ npnts - 2 ] = 0
+			
+			endif
+		
+		endif
+	
 	endfor
-	
-	items = ItemsInList(wList)
-	
-	if ( zeroDACLastPoints )
-	
-		for (icnt = 0; icnt < items; icnt += 1)
-		
-			wName = StringFromList(icnt, wList)
-			
-			if (WaveExists($sdf+wName) == 0)
-				continue
-			endif
-			
-			Wave wtemp = $sdf+wName
-			
-			npnts = numpnts(wtemp)
-			
-			if ( icnt == items - 1 )
-				wtemp[npnts-1] = 0 // make sure last points are set to zero in last wave
-				wtemp[npnts-2] = 0
-			endif
-			
-		endfor
-	
-	endif
 	
 	if (new == 1)
 	
