@@ -424,8 +424,9 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 			
 			if ( numtype( aa.tau * aow.onset ) == 0 )
 				
-				tpeak = aow.onset + abs( aa.tau )
-				normFactor = ( tpeak - aow.onset ) * exp( -( tpeak - aow.onset ) / abs( aa.tau ) )
+				//tpeak = aow.onset + abs( aa.tau )
+				//normFactor = ( tpeak - aow.onset ) * exp( -( tpeak - aow.onset ) / abs( aa.tau ) )
+				normFactor = abs( aa.tau ) * exp( -1 )
 				
 				wtemp = ( x - aow.onset ) * exp( -( x - aow.onset ) / abs( aa.tau ) ) / normFactor
 				

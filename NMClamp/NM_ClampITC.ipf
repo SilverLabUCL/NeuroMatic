@@ -153,7 +153,7 @@ Function ITCacquire( mode, savewhen, WaveLength, NumStimWaves, InterStimTime, Nu
 		return -1 // bad input/output configuration
 	endif
 	
-	String seqstr = ITCseqStr()
+	String seqstr = ITCseqStr() // sequence strings created by ITCupdateLists
 	
 	Variable outs = strlen( StringFromList( 0, seqstr ) )
 	Variable ins = strlen( StringFromList( 1, seqstr ) )
@@ -240,10 +240,6 @@ Static Function ITCAcqPrecise( mode, savewhen )
 	
 	Wave Avail2Read = $cdf+"Avail2Read"
 	Wave Avail2Write = $cdf+"Avail2Write"
-
-	//if ( ITCupdateLists( NumStimWaves ) == -1 )
-	//	return -1 // bad input/output configuration
-	//endif
 	
 	Wave ADCscale = $bdf+"ADCscale"
 	Wave ADCchan = $bdf+"ADCchan"
@@ -283,6 +279,10 @@ Static Function ITCAcqPrecise( mode, savewhen )
 	endif
 	
 	if ( ClampAcquireStart( mode, nwaves ) == -1 )
+		return -1
+	endif
+	
+	if ( ITCupdateLists( NumStimWaves ) == -1 ) // recreate lists in case they changed during ClampAcquireStart
 		return -1
 	endif
 	
@@ -659,10 +659,6 @@ Static Function ITCAcqLong( mode, savewhen )
 	
 	Wave Avail2Read = $cdf+"Avail2Read"
 	Wave Avail2Write = $cdf+"Avail2Write"
-
-	//if ( ITCupdateLists( NumStimWaves ) == -1 )
-	//	return -1 // bad input/output configuration
-	//endif
 	
 	Wave stimPnts = $cdf+"StimNumpnts"
 	
@@ -697,6 +693,10 @@ Static Function ITCAcqLong( mode, savewhen )
 	endif
 	
 	if ( ClampAcquireStart( mode, nwaves ) == -1 )
+		return -1
+	endif
+	
+	if ( ITCupdateLists( NumStimWaves ) == -1 ) // recreate lists in case they changed during ClampAcquireStart
 		return -1
 	endif
 	
