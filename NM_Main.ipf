@@ -7,7 +7,7 @@
 //****************************************************************
 //
 //	NeuroMatic: data aquisition, analyses and simulation software that runs with the Igor Pro environment
-//	Copyright (C) 2017 Jason Rothman
+//	Copyright (C) 2019 Jason Rothman
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -49,9 +49,9 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0c"
+StrConstant NMVersionStr = "3.0d"
 StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
-StrConstant NMRights = "Copyright (c) 2017 Jason Rothman"
+StrConstant NMRights = "Copyright (c) 2019 Jason Rothman"
 StrConstant NMEmail = "Jason@ThinkRandom.com"
 StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
 
@@ -74,6 +74,12 @@ StrConstant NMWinColor2 = "47360,40960,40704" // highlight color of panel and gr
 Static Constant NMAutoStart = 1 // auto start NM ( 0 ) no ( 1 ) yes
 
 Static Constant NMHideProcedureFiles = 1
+
+Static Constant NMPanelResolution = 72 // for Windows OS // NM Panel was designed for 72 panel resolution
+// NM uses this parameter to execute the following Igor command: SetIgorOption PanelResolution = <resolution>
+// 0:	Coordinates and sizes are treated as points regardless of the screen resolution.
+// 1:	Coordinates and sizes are treated as pixels if the screen resolution is 96 DPI, points otherwise. This is the default setting in effect when Igor starts.
+// 72:	Coordinates and sizes are treated as pixels regardless of the screen resolution (Igor6 mode).
 
 Constant NMBaselineXbgn = 0 // default x-scale baseline window begin
 Constant NMBaselineXend = 10 // default x-scale baseline window end
@@ -539,6 +545,8 @@ Function CheckNM()
 		endif
 		
 	endif
+	
+	CheckNMPanelResolution()
 	
 	KillGlobals( "root:", "V_*", "110" ) // clean root directory
 	KillGlobals( "root:", "S_*", "110" )
@@ -1022,6 +1030,10 @@ Function NMVarGet( varName )
 			defaultVal = 1
 			break
 			
+		case "PanelResolution":
+			defaultVal = NMPanelResolution
+			break
+			
 		case "NMPanelUpdate":
 			defaultVal = 1
 			break
@@ -1266,20 +1278,20 @@ End // NMStrGet
 
 Function NeuroMaticConfigs()
 	
-	NeuroMaticConfigVar( "WriteHistory", "analysis history ( 0 ) off ( 1 ) Igor history ( 2 ) notebook ( 3 ) both", "off;Igor history;notebook;both;" )
-	NeuroMaticConfigVar( "CmdHistory", "NM command history ( 0 ) off ( 1 ) Igor history ( 2 ) notebook ( 3 ) both", "off;Igor history;notebook;both;" )
+	NeuroMaticConfigVar( "WriteHistory", "analysis history (0) off (1) Igor history (2) notebook (3) both", "off;Igor history;notebook;both;" )
+	NeuroMaticConfigVar( "CmdHistory", "NM command history (0) off (1) Igor history (2) notebook (3) both", "off;Igor history;notebook;both;" )
 	NeuroMaticConfigVar( "CmdHistoryLongFormat", "include folder, wave prefix, channel and wave select in NM command history", "boolean" )
 	
-	NeuroMaticConfigStr( "OpenDataPath", "open data file path ( e.g. C:Jason:TestData: )", "DIR" )
-	NeuroMaticConfigStr( "SaveDataPath", "save data file path ( e.g. C:Jason:TestData: )", "DIR" )
+	NeuroMaticConfigStr( "OpenDataPath", "open data file path (e.g. C:Jason:TestData:)", "DIR" )
+	NeuroMaticConfigStr( "SaveDataPath", "save data file path (e.g. C:Jason:TestData:)", "DIR" )
 	
 	NeuroMaticConfigVar( "ImportPrompt", "display user-input panel while importing data", "boolean" )
 	NeuroMaticConfigVar( "LoadWithPrefixDF", "attach wave-prefix DF when loading waves from multiple files", "boolean" )
-	NeuroMaticConfigStr( "FileNameReplaceStringList", "replace string list when opening files ( e.g. " + NMQuotes( "_ChA,_A;_ChB,_B;_Trial-,;" ) + " )", "" )
-	NeuroMaticConfigVar( "ABF_GapFreeConcat", "concat Pclamp gap-free waves ( for ReadPClampDataXOP only )", "boolean" )
+	NeuroMaticConfigStr( "FileNameReplaceStringList", "replace string list when opening files (e.g. " + NMQuotes( "_ChA,_A;_ChB,_B;_Trial-,;" ) + ")", "" )
+	NeuroMaticConfigVar( "ABF_GapFreeConcat", "concat Pclamp gap-free waves (for ReadPClampDataXOP only)", "boolean" )
 	NeuroMaticConfigVar( "ABF_HeaderReadAll", "read all header parameters", "boolean" )
 	
-	NeuroMaticConfigVar( "AlertUser", "alert user ( 0 ) never ( 1 ) by Igor alert prompt ( 2 ) by NM history", "never;by DoAlert Prompt;by NM history;" )
+	NeuroMaticConfigVar( "AlertUser", "alert user (0) never (1) by Igor alert prompt (2) by NM history", "never;by DoAlert Prompt;by NM history;" )
 	NeuroMaticConfigVar( "DeprecationAlert", "print deprecation alerts", "boolean" )
 	
 	NeuroMaticConfigStr( "NMTabList", "tabs to display", "" )
@@ -1289,11 +1301,12 @@ Function NeuroMaticConfigs()
 	NeuroMaticConfigStr( "PrefixList", "list of wave prefix names", "" )
 	NeuroMaticConfigStr( "WavePrefix", "default NM wave prefix", "" )
 	
-	NeuroMaticConfigVar( "NMPanelX0", "NM panel X0 pixel position, ( NAN ) for automatic placement", "pixels" )
-	NeuroMaticConfigVar( "NMPanelY0", "NM panel Y0 pixel position, ( NAN ) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "PanelResolution", "treat coordinates on Windows OS (0) as points (1) conditional 96 DPI (72) as pixels", "" )
+	NeuroMaticConfigVar( "NMPanelX0", "NM panel X0 pixel position, (NAN) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "NMPanelY0", "NM panel Y0 pixel position, (NAN) for automatic placement", "pixels" )
 	
-	NeuroMaticConfigVar( "xProgress", "progress window x pixel position, ( NAN ) for automatic placement", "pixels" )
-	NeuroMaticConfigVar( "yProgress", "progress window y pixel position, ( NAN ) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "xProgress", "progress window x pixel position, (NAN) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "yProgress", "progress window y pixel position, (NAN) for automatic placement", "pixels" )
 	NeuroMaticConfigVar( "ProgressTimerLimit", "minimum execution time for showing progress display", NMXunits )
 	
 	NeuroMaticConfigVar( "ForceNMFolderPrefix", "force " + NMQuotes( "nm" ) + " prefix for NM folders", "boolean" )
@@ -1309,12 +1322,12 @@ Function NeuroMaticConfigs()
 	NeuroMaticConfigStr( "ChanGraphGridColor", "default channel graph grid color", "RGB" )
 	NeuroMaticConfigStr( "ChanGraphTraceOverlayColor", "default channel graph overlay trace color", "RGB" )
 	NeuroMaticConfigStr( "ChanGraphTraceColor", "default channel graph trace color", "RGB" )
-	NeuroMaticConfigVar( "ChanGraphTraceMode", "default channel graph trace mode ( 0 - 8 )", "" )
-	NeuroMaticConfigVar( "ChanGraphTraceMarker", "default channel graph trace marker ( 0 - 62 )", "" )
-	NeuroMaticConfigVar( "ChanGraphTraceLineStyle", "default channel graph trace line style ( 0 - 17 )", "" )
+	NeuroMaticConfigVar( "ChanGraphTraceMode", "default channel graph trace mode (0 - 8)", "" )
+	NeuroMaticConfigVar( "ChanGraphTraceMarker", "default channel graph trace marker (0 - 62)", "" )
+	NeuroMaticConfigVar( "ChanGraphTraceLineStyle", "default channel graph trace line style (0 - 17)", "" )
 	NeuroMaticConfigVar( "ChanGraphTraceLineSize", "default channel graph trace line size", "" )
 	
-	NeuroMaticConfigVar( "HistogramPaddingBins", "extra bins on each side of histogram ( auto bin sizing )", "" )
+	NeuroMaticConfigVar( "HistogramPaddingBins", "extra bins on each side of histogram (auto bin sizing)", "" )
 	
 	NeuroMaticConfigStr( "D3D_UnpackWavePrefix", "wave prefix of unpacked D3D data file", "" )
 			
@@ -1474,6 +1487,17 @@ Function IsNMon()
 	endif
 
 End // IsNMon
+
+//****************************************************************
+//****************************************************************
+
+Function CheckNMPanelResolution()
+
+	if ( StringMatch( NMComputerType(), "PC" ) )
+		Execute /Q/Z "SetIgorOption PanelResolution = " + num2istr( NMVarGet( "PanelResolution" ) )
+	endif
+
+End // CheckNMPanelResolution
 
 //****************************************************************
 //****************************************************************
@@ -3795,7 +3819,7 @@ Function NMDoAlert( promptStr [ title, alertType ] )
 		// 0:	Dialog with an OK button.
 		// 1:	Dialog with Yes and No buttons.
 		// 2:	Dialog with Yes, No, and Cancel buttons.
-	
+		
 	Variable alert = NMVarGet( "AlertUser" )
 	
 	if ( ( alert == 0 ) || ( strlen( promptStr ) == 0 ) )
@@ -3817,6 +3841,9 @@ Function NMDoAlert( promptStr [ title, alertType ] )
 		DoAlert /T=( title ) alertType, promptStr
 		
 		return V_flag
+		// 1:	Yes clicked.
+		// 2:	No clicked.
+		// 3:	Cancel clicked.
 	
 	elseif  ( alert == 2 ) // print to command window
 	

@@ -41,6 +41,16 @@ Constant NMProgButtonYwidth = 20
 
 //****************************************************************
 //****************************************************************
+
+#if Exists("PanelResolution") != 3
+Function PanelResolution(wName)	// for compatibility with Igor 6
+	String wName // window name
+	return 72
+End
+#endif
+
+//****************************************************************
+//****************************************************************
 //****************************************************************
 
 Function NMProgressXY( xpixels, ypixels )
