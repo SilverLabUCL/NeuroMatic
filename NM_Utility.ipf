@@ -1026,7 +1026,7 @@ Function NMShuffleWave2( wName )
 	String wName
 	
 	Variable icnt, jcnt, kcnt, npnts, items
-	String jstr, iList = "", iList2 = ""
+	String jstr, iList = "", iList2 = "", saveList
 	
 	if ( !WaveExists( $wName ) )
 		return -1
@@ -1037,6 +1037,8 @@ Function NMShuffleWave2( wName )
 	for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
 		iList = AddListItem( num2str( wtemp[ icnt ] ), iList, ";", inf )
 	endfor
+	
+	saveList = iList
 	
 	for ( icnt = 0 ; icnt < 1000 ; icnt += 1 )
 	
@@ -1062,6 +1064,8 @@ Function NMShuffleWave2( wName )
 		endif
 	
 	endfor
+	
+	print icnt, saveList, ilist2
 	
 	for ( icnt = 0 ; icnt < ItemsInList( iList2 ) ; icnt += 1 )
 		if ( icnt < numpnts( wtemp ) )

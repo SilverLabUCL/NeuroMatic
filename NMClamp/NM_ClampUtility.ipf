@@ -72,7 +72,7 @@ End // ClampUtilityPreList
 Function /S ClampUtilityInterList()
 
 	//return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;ModelCell;"
-	return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;"
+	return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;RandomOrder;"
 	
 End // ClampUtilityInterList
 
@@ -1876,9 +1876,13 @@ End // MetricValue
 Function RandomOrder(mode)
 	Variable mode // (-1) kill (0) run (1) config (2) init
 	
-	Variable icnt, jcnt, pcnt, grpNum
+	Variable icnt, jcnt, pcnt, grpNum, npnts
 	String wName1, wName2, wNameTemp, wPrefix, plist
 	String sdf = StimDF()
+	
+	Variable numStimWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
+	Variable numStimReps = NumVarOrDefault( sdf + "NumStimReps", 0 )
+	Variable currentWave = NumVarOrDefault( NMDF + "CurrentWave", 0 )
 	
 	switch(mode)
 	
@@ -1887,52 +1891,86 @@ Function RandomOrder(mode)
 			return 0
 	
 		case 0:
+			if ( ( currentWave == 0 ) || ( mod( currentWave, numStimWaves ) > 0 ) )
+				return 0
+			endif
+			// this mode runs only for repetitions
 			break
 			
 		case 1:
 			DoAlert 0, "Warning: this function will randomize the order of your DAC waves."
 			return 0
 		
-		case 2:
+		case 2: // init
+			// randomize
+			break
+			
 		default:
 			return 0 // do nothing
 			
 	endswitch
 	
-	Variable numStimWaves = NMStimNumStimWaves( sdf )
-	
 	wName1 = sdf + "CT_RandomOrder"
-	wName2 = "Groups"
 	
-	Make /O/N=( numStimWaves ) $wName1 = Nan
-	Make /O/N=( numStimWaves ) $wName2 = Nan
+	if ( !WaveExists( $wName1 ) )
+		Make /O/N=( numStimWaves ) $wName1 = Nan
+	endif
 	
 	Wave wtemp = $wName1
-	Wave gtemp = $wName2
 	
 	wtemp = p
 	
-	for ( icnt = 0 ; icnt < 5 ; icnt += 1 )
+	//for ( icnt = 0 ; icnt < 5 ; icnt += 1 )
 		NMShuffleWave2( wName1 )
-	endfor
+	//endfor
+	
+	wName2 = "Groups"
+	
+	if ( WaveExists( $wName2 ) )
+	
+		npnts = numpnts( $wName2 )
+		
+		if ( npnts != numStimWaves * numStimReps )
+		
+			Redimension /N=( numStimWaves * numStimReps ) $wName2
+			
+			Wave grps = $wName2
+			
+			for ( icnt = npnts ; icnt < numpnts( grps ) ; icnt += 1 )
+				grps[ icnt ] = NaN
+			endfor
+			
+		endif
+		
+	else
+	
+		Make /O/N=( numStimWaves * numStimReps ) $wName2 = Nan
+		
+	endif
+	
+	Wave grps = $wName2
 	
 	plist = StimPrefixListAll( sdf )
 	
-	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
-		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
-		
-			wPrefix = StringFromList(pcnt, plist)
+	if ( mode == 2 ) // save original Group numbers
+	
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
 			
-			wName1 = wPrefix + "_" + num2str( icnt )
-			
-			grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
-			
-			if ( numtype( grpNum ) > 0 )
-				NMNoteVarReplace( sdf+wName1, "Group", icnt ) // save original Group number
-			endif
-			
+				wPrefix = StringFromList(pcnt, plist)
+				
+				wName1 = wPrefix + "_" + num2str( icnt )
+				
+				grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
+				
+				if ( numtype( grpNum ) > 0 )
+					NMNoteVarReplace( sdf+wName1, "Group", icnt ) 
+				endif
+				
+			endfor
 		endfor
-	endfor
+	
+	endif
 	
 	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
 	
@@ -1990,9 +2028,13 @@ Function RandomOrder(mode)
 				return -1
 			endif
 			
+			//Print "swap " + wName1 + " and " + wName2
+			
 		endfor
 	
 	endfor
+	
+	// update Groups wave
 	
 	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
 		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
@@ -2003,12 +2045,15 @@ Function RandomOrder(mode)
 			
 			grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
 			
-			if ( numtype( grpNum ) == 0 )
-				gtemp[ icnt ] = grpNum
+			if ( ( numtype( grpNum ) == 0 ) && ( currentWave + icnt < numpnts( grps ) ) )
+				grps[ currentWave + icnt ] = grpNum
+				//print currentWave + icnt, grpNum
 			endif
 			
 		endfor
 	endfor
+	
+	NMHistory( "Randomized DAC waves")
 	
 	return 0
 	
