@@ -35,6 +35,15 @@
 //	"Grid Enabled Modeling Tools and Databases for NeuroInformatics"
 //
 //	Began 1 July 2003
+//****************************************************************
+//****************************************************************
+//
+//	Variable mode:
+//		(-1) Kill. Kill waves/variables. Called when user removes macro from stim macro list. 
+//		(0) Run. Do computation. Called during acquisition. 
+//		(1) Config. Prompt user for parameter values. Called when user adds macro to stim macro list.
+//		(2) Init. Init computation. Called before acquisition starts.
+//		(3) Finish. Finilize computation. Called after acquisition ends.
 //
 //****************************************************************
 //****************************************************************
@@ -61,7 +70,7 @@ End // ClampUtilityList
 
 Function /S ClampUtilityPreList()
 
-	return "ReadTemp;TModeCheck;TcapRead;TfreqRead;RandomOrder;"
+	return "ReadTemp;TModeCheck;TcapRead;TfreqRead;"
 	
 End // ClampUtilityPreList
 
@@ -128,7 +137,7 @@ End // ClampUtilityKill
 //****************************************************************
 
 Function OnlineAvg(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable ccnt, cbeg, cend
 	String wname, avgname, gname, sdf = StimDF()
@@ -242,7 +251,7 @@ End // OnlineAvgConfig
 //****************************************************************
 
 Function ReadTemp(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable telValue
 	String cdf = NMClampDF
@@ -318,7 +327,7 @@ End // ReadTempConfig
 //****************************************************************
 
 Function TempRead(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable telValue
 	String cdf = NMClampDF, sdf = StimDF()
@@ -395,7 +404,7 @@ End // TempRead
 //****************************************************************
 
 Function ModelCell( mode )
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	String clampMode, sdf = StimDF()
 	
@@ -883,7 +892,7 @@ End // ModelCell_DYDT
 //****************************************************************
 
 Function Rstep( mode )
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable icnt, numWindows
 	String sdf = StimDF()
@@ -1213,7 +1222,7 @@ End // RstepConfig2
 //****************************************************************
 
 Function RCstep( mode )
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable icnt, numWindows
 	String sdf = StimDF()
@@ -1742,7 +1751,7 @@ End // RCstepConfig2
 //****************************************************************
 
 Function StatsRatio(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable currentWave
 	
@@ -1874,55 +1883,225 @@ End // MetricValue
 //****************************************************************
 
 Function RandomOrder(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
-	Variable icnt, jcnt, pcnt, grpNum, npnts
-	String wName1, wName2, wNameTemp, wPrefix, plist
+	Variable icnt, jcnt, pcnt, grpNum1, grpNum2, npnts, items, foundGrp
+	String wName1, wName2, wNameTemp, wPrefix
 	String sdf = StimDF()
+	String plist = StimPrefixListAll( sdf )
+	
+	String grpStr, grpList = "", grpList2 = ""
 	
 	Variable numStimWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
 	Variable numStimReps = NumVarOrDefault( sdf + "NumStimReps", 0 )
 	Variable currentWave = NumVarOrDefault( NMDF + "CurrentWave", 0 )
 	
-	switch(mode)
+	Variable randomOrderReps = NumVarOrDefault( sdf + "RandomOrderReps", 1 )
 	
-		case -1:
-			RandomOrderKill()
+	Variable randomize = 0
+	Variable firstRep = 0
+	Variable nextWave = currentWave + 1
+	
+	switch( mode )
+	
+		case -1: // kill
+			// nothing to do
 			return 0
 	
-		case 0:
-			if ( ( currentWave == 0 ) || ( mod( currentWave, numStimWaves ) > 0 ) )
+		case 0: // run, called via ClampAcquireNext()
+			
+			// randomization needs to occur after acquisition of last group
+			// this is when:
+			// current wave, stim wave # = numStimReps - 1
+			// next wave, stim wave # = 0
+			
+			if ( nextWave >= numStimWaves * numStimReps )
+				return 0 // finished, no more reps
+			endif
+			
+			if ( mod( nextWave, numStimWaves ) != 0 )
 				return 0
 			endif
-			// this mode runs only for repetitions
-			break
 			
-		case 1:
-			DoAlert 0, "Warning: this function will randomize the order of your DAC waves."
+			// next wave will be stim wave #0
+			
+			firstRep = 0
+			
+			if ( randomOrderReps )
+				randomize = 1
+			endif
+			
+			break // this mode runs after first repetition
+			
+		case 1: // config
+			RandomOrderConfig()
 			return 0
 		
-		case 2: // init
-			// randomize
+		case 2: // init, called via ClampAcquireStart()
+			randomize = 1
+			firstRep = 1
 			break
+			
+		case 3: // finish
+			StimWavesCheck(StimDF(), 1) // reset DAC order
+			return 0
 			
 		default:
 			return 0 // do nothing
 			
 	endswitch
 	
-	wName1 = sdf + "CT_RandomOrder"
+	if ( mode == 2 ) // save original Group #s to DAC waves when initializing
 	
-	if ( !WaveExists( $wName1 ) )
-		Make /O/N=( numStimWaves ) $wName1 = Nan
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
+			
+				wPrefix = StringFromList(pcnt, plist)
+				wName1 = wPrefix + "_" + num2str( icnt )
+				
+				grpNum1 = NMNoteVarByKey( sdf+wName1, "Group" )
+				
+				if ( numtype( grpNum1 ) > 0 )
+					NMNoteVarReplace( sdf+wName1, "Group", icnt ) 
+				endif
+				
+			endfor
+		endfor
+	
 	endif
 	
-	Wave wtemp = $wName1
+	// randomize group order
 	
-	wtemp = p
+	if ( randomize )
 	
-	//for ( icnt = 0 ; icnt < 5 ; icnt += 1 )
-		NMShuffleWave2( wName1 )
-	//endfor
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			grpList += num2istr( icnt ) + ";"
+		endfor
+		
+		// randomize group list
+			
+		for ( icnt = 0; icnt < numStimWaves * 2; icnt += 1 )
+		
+			items = ItemsInList( grpList )
+		
+			if ( items == 0 )
+				break // finished
+			endif
+			
+			jcnt = floor( abs( enoise( items ) ) )
+			grpStr = StringFromList( jcnt, grpList )
+			grpList = RemoveListItem( jcnt, grpList )
+			grpList2 += grpStr + ";"
+			
+		endfor
+		
+		if ( ItemsInList( grpList2 ) != numStimWaves )
+			return -1
+		endif
+	
+		// rename DAC waves with temporary names
+		
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
+			
+				wPrefix = StringFromList(pcnt, plist)
+				wName1 = wPrefix + "_" + num2str( icnt )
+				wNameTemp = "x_" + wName1
+				
+				if ( WaveExists( $sdf+wName1 ) == 0 )
+					Print "RandomOrder Error: wave does not exist: " + wName1
+					return -1
+				endif
+				
+				if ( WaveExists( $sdf+wNameTemp ) == 1 )
+					KillWaves /Z $sdf+wNameTemp
+				endif
+				
+				if ( WaveExists( $sdf+wNameTemp ) == 1 )
+					Print "RandomOrder Error: wave cannot be deleted: " + wNameTemp
+					return -1
+				endif
+				
+				Rename $sdf+wName1, $wNameTemp
+				
+				if ( WaveExists( $sdf+wName1 ) == 1 )
+					Print "RandomOrder Error: failed to rename " + wName1 + " to " + wNameTemp
+					return -1
+				endif
+				
+			endfor
+		endfor
+	
+		// rename temporary waves using random sequence in grpList2
+		
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+		
+			grpStr = StringFromList( icnt, grpList2 )
+			grpNum2 = str2num( grpStr )
+			
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
+			
+				wPrefix = StringFromList(pcnt, plist)
+				
+				wName2 = wPrefix + "_" + num2str( icnt )
+				
+				foundGrp = 0
+				
+				for ( jcnt = 0; jcnt < numStimWaves; jcnt += 1 )
+				
+					wName1 = "x_" + wPrefix + "_" + num2str( jcnt )
+					
+					if ( !WaveExists( $sdf+wName1 ) )
+						continue
+					endif
+					
+					grpNum1 = NMNoteVarByKey( sdf+wName1, "Group" )
+					
+					if ( numtype( grpNum1 ) > 0 )
+						Print "RandomOrder Error: failed to find group number for " + wName1
+						return -1 
+					endif
+					
+					if ( grpNum1 == grpNum2 )
+						foundGrp = 1
+						break
+					endif
+				
+				endfor
+				
+				if ( !foundGrp )
+					Print "RandomOrder Error: failed to find DAC wave for group #" + num2istr( grpNum2 )
+					return -1
+				endif
+				
+				if ( WaveExists( $sdf+wName1 ) == 0 )
+					Print "RandomOrder Error: wave does not exist: " + wName1
+					return -1
+				endif
+				
+				if ( WaveExists( $sdf+wName2 ) == 1 )
+					KillWaves /Z $sdf+wName2
+				endif
+				
+				if ( WaveExists( $sdf+wName2 ) == 1 )
+					Print "RandomOrder Error: wave cannot be deleted: " + wName2
+					return -1
+				endif
+				
+				Rename $sdf+wName1, $wName2
+				
+				if ( WaveExists( $sdf+wName1 ) == 1 )
+					Print "RandomOrder Error: failed to rename " + wName1 + " to " + wName2
+					return -1
+				endif
+				
+			endfor
+			
+		endfor
+		
+	endif
+	
+	// configure Groups wave to save group #s
 	
 	wName2 = "Groups"
 	
@@ -1944,116 +2123,32 @@ Function RandomOrder(mode)
 		
 	else
 	
-		Make /O/N=( numStimWaves * numStimReps ) $wName2 = Nan
+		Make /O/N=( numStimWaves * numStimReps ) $wName2 = NaN
 		
 	endif
 	
 	Wave grps = $wName2
 	
-	plist = StimPrefixListAll( sdf )
-	
-	if ( mode == 2 ) // save original Group numbers
-	
-		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
-			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
-			
-				wPrefix = StringFromList(pcnt, plist)
-				
-				wName1 = wPrefix + "_" + num2str( icnt )
-				
-				grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
-				
-				if ( numtype( grpNum ) > 0 )
-					NMNoteVarReplace( sdf+wName1, "Group", icnt ) 
-				endif
-				
-			endfor
-		endfor
-	
-	endif
-	
 	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
-	
-		jcnt = wtemp[ icnt ]
-	
-		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
 		
-			wPrefix = StringFromList(pcnt, plist)
-			
-			wName1 = wPrefix + "_" + num2str( icnt )
-			wName2 = wPrefix + "_" + num2str( jcnt )
-			wNameTemp = wName1 + "_Temp"
-			
-			if ( StringMatch( wName1, wName2 ) == 1 )
-				continue
-			endif
-			
-			if ( WaveExists( $sdf+wName1 ) == 0 )
-				Print "RandomOrder Error: wave does not exist: " + wName1
-				return -1
-			endif
-			
-			if ( WaveExists( $sdf+wName2 ) == 0 )
-				Print "RandomOrder Error: wave does not exist: " + wName2
-				return -1
-			endif
-			
-			if ( WaveExists( $sdf+wNameTemp ) == 1 )
-				KillWaves /Z $sdf+wNameTemp
-			endif
-			
-			if ( WaveExists( $sdf+wNameTemp ) == 1 )
-				Print "RandomOrder Error: wave cannot be deleted: " + wNameTemp
-				return -1
-			endif
-			
-			Rename $sdf+wName1, $wNameTemp
-			
-			if ( WaveExists( $sdf+wName1 ) == 1 )
-				Print "RandomOrder Error: failed to rename " + wName1 + " to " + wNameTemp
-				return -1
-			endif
-			
-			Rename $sdf+wName2, $wName1
-			
-			if ( WaveExists( $sdf+wName2) == 1 )
-				Print "RandomOrder Error: failed to rename " + wName2 + " to " + wName1
-				return -1
-			endif
-			
-			Rename $sdf+wNameTemp, $wName2
-			
-			if ( WaveExists( $sdf+wNameTemp) == 1 )
-				Print "RandomOrder Error: failed to rename " + wNameTemp + " to " + wName2
-				return -1
-			endif
-			
-			//Print "swap " + wName1 + " and " + wName2
-			
-		endfor
-	
+		pcnt = 0 // first one only
+		
+		wPrefix = StringFromList(pcnt, plist)
+		wName1 = wPrefix + "_" + num2str( icnt )
+		
+		grpNum1 = NMNoteVarByKey( sdf+wName1, "Group" )
+		
+		if ( firstRep )
+			grps[ icnt ] = grpNum1 // update Groups wave
+		else
+			grps[ icnt + nextWave ] = grpNum1 // update Groups wave
+		endif
+		
 	endfor
 	
-	// update Groups wave
+	//RandomOrderSave( grpList2 ) // for testing randomness
 	
-	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
-		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
-		
-			wPrefix = StringFromList(pcnt, plist)
-			
-			wName1 = wPrefix + "_" + num2str( icnt )
-			
-			grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
-			
-			if ( ( numtype( grpNum ) == 0 ) && ( currentWave + icnt < numpnts( grps ) ) )
-				grps[ currentWave + icnt ] = grpNum
-				//print currentWave + icnt, grpNum
-			endif
-			
-		endfor
-	endfor
-	
-	NMHistory( "Randomized DAC waves")
+	NMHistory( "Randomized DAC/TTL stim waves to group sequence: " + grpList2 )
 	
 	return 0
 	
@@ -2063,13 +2158,64 @@ End // RandomOrder
 //****************************************************************
 //****************************************************************
 
-Function RandomOrderKill()
-	
-	StimWavesCheck(StimDF(), 1)
-	
-	KillWaves /Z Groups
+Function RandomOrderSave( grpList ) // for testing randomness. Use lots of reps.
+	String grpList
 
-End // RandomOrderKill
+	Variable icnt, npnts
+	String wName, grpStr
+	
+	String cdf = NMClampDF
+	String sdf = StimDF()
+
+	Variable numStimWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
+	
+	for ( icnt = 0 ; icnt < numStimWaves ; icnt += 1 )
+		
+		wName = "CT_RO_" +  num2istr( icnt )
+		
+		if ( !WaveExists( $cdf + wName ) )
+			Make /N=0 $cdf + wName = NaN
+		endif
+		
+		Wave wtemp = $cdf + wName
+		
+		npnts = numpnts( wtemp )
+		
+		Redimension /N=( npnts + 1 ) wtemp
+		
+		grpStr = StringFromList( icnt, grpList )
+		
+		wtemp[ npnts ] = str2num( grpStr )
+	
+	endfor
+
+
+End // RandomOrderSave
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function RandomOrderConfig()
+
+	String sdf = StimDF()
+	
+	Variable reps = NumVarOrDefault( sdf + "RandomOrderReps", 1 )
+	
+	reps += 1
+	
+	Prompt reps, "select when to randomize stimulus waves:", popup "once at the start of acquisition;before each repetition;"
+	DoPrompt "Random Order Configuration", reps
+	
+	if ( V_flag == 1 )
+		return 0 // cancel
+	endif
+	
+	reps -= 1
+	
+	SetNMvar( sdf+"RandomOrderReps", reps )
+
+End // RandomOrderConfig
 
 //****************************************************************
 //****************************************************************

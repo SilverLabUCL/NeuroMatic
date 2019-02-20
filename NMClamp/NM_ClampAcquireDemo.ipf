@@ -39,7 +39,8 @@
 //****************************************************************
 //****************************************************************
 
-Static Constant GaussNoiseSTDV = 1
+Static Constant GaussNoiseSTDV = 0 // ( 0 ) for no noise ( > 0 ) add noise to simulated data
+Static Constant DACSUM = 1 // ( 0 ) none ( 1 ) compute sum of DAC and add to simulated data
 
 //****************************************************************
 //****************************************************************
@@ -164,11 +165,13 @@ Static Function NMClampDemoAcqEpisodic( mode, savewhen, WaveLength, NumStimWaves
 	Variable nwaves = NumStimWaves * NumStimReps // total number of waves
 	
 	Variable rcnt, wcnt, config, config2, chan, chanCount, scale, tgainv
+	Variable firstConfig
 	String wname, wname2, modeStr, wList, instrument
 	String gdf, cdf = NMClampDF, sdf = StimDF(), bdf = NMStimBoardDF( sdf )
 	String thisfxn = GetRTStackInfo( 1 )
 	
 	String wPrefix = "CT_ADCTEMP"
+	String wNameDAC = "DAC_temp"
 	
 	Variable acqMode = NumVarOrDefault( sdf + "AcqMode", 0 )
 	
@@ -198,6 +201,8 @@ Static Function NMClampDemoAcqEpisodic( mode, savewhen, WaveLength, NumStimWaves
 	for ( rcnt = 0; rcnt < NumStimReps; rcnt += 1 ) // loop thru reps
 	
 		for ( wcnt = 0; wcnt < NumStimWaves; wcnt += 1 ) // loop thru waves
+		
+			firstConfig = 1
 			
 			for ( config = 0; config < numpnts( DACname ); config += 1 ) // handle DAC outputs
 			
@@ -211,7 +216,17 @@ Static Function NMClampDemoAcqEpisodic( mode, savewhen, WaveLength, NumStimWaves
 					
 					chan = DACchan[ config ] // board DAC channel
 					
-					//Wave DAC = $wname
+					Wave DAC = $wname
+					
+					if ( DACSUM )
+						if ( firstConfig )
+							Duplicate /O DAC $wNameDAC
+						else
+							Wave dtemp = $wNameDAC
+							dtemp += DAC
+						endif
+						
+					endif
 					
 					// send DAC wave to board DAC channel
 					
@@ -231,7 +246,7 @@ Static Function NMClampDemoAcqEpisodic( mode, savewhen, WaveLength, NumStimWaves
 					
 					chan = TTLchan[ config ] // board TTL channel
 					
-					//Wave TTL = $wname
+					Wave TTL = $wname
 					
 					// send TTL wave to board TTL channel
 					
@@ -259,6 +274,13 @@ Static Function NMClampDemoAcqEpisodic( mode, savewhen, WaveLength, NumStimWaves
 				
 					if ( GaussNoiseSTDV > 0 )
 						wtemp = gnoise( GaussNoiseSTDV )
+					else
+						wtemp = 0
+					endif
+					
+					if ( DACSUM && WaveExists( $wNameDAC ) )
+						Wave dtemp = $wNameDAC
+						wtemp += dtemp
 					endif
 				
 				endif
