@@ -80,8 +80,7 @@ End // ClampUtilityPreList
 
 Function /S ClampUtilityInterList()
 
-	//return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;ModelCell;"
-	return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;RandomOrder;"
+	return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;RandomOrder;" // ModelCell;
 	
 End // ClampUtilityInterList
 

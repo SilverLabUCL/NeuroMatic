@@ -1339,7 +1339,7 @@ End // NMStatsDisplayWavesStructNull
 
 Function NMStatsConfigEdit() // called from NM_Configurations
 
-	String tName = NMStatsWinTable( "inputs" )
+	//String tName = NMStatsWinTable( "inputs" )
 
 End // NMStatsConfigEdit
 

@@ -255,7 +255,7 @@ End // NMClampCheck
 
 Function NMClampConfigEdit() // called from NM_Configurations
 
-	NMConfigEdit( "Notes" )
+	//NMConfigEdit( "Notes" )
 
 End // NMClampConfigEdit
 
@@ -558,42 +558,26 @@ End // ClampPathSet
 //****************************************************************
 //****************************************************************
 
-Function /S ClampDateNameOLD()
-
-	String name = "", d = Date()
-	
-	Variable icnt, ascii
-	
-	for ( icnt = 0; icnt < strlen( d ); icnt += 1 )
-	
-		ascii = char2num( d[ icnt, icnt ] )
-		
-		if ( ( ascii < 48 ) || ( ( ascii > 57 ) && ( ascii < 65 ) ) || ( ( ascii > 90 ) && ( ascii < 97 ) ) || ( ascii > 127 ) )
-			continue
-		endif
-	
-		name += d[ icnt, icnt ]
-		
-	endfor
-
-	if ( numtype( str2num( name[ 0, 0 ] ) ) == 0 )
-		name = "nm" + name // cannot have folder name starting with number
-	endif
-	
-	return name
-
-End // ClampDateNameOLD
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function /S ClampDateName()
+Function /S ClampDateName( [ promptFormat ] )
+	Variable promptFormat
 
 	Variable month, useMonthName = 0
 	String findSepStr, sepStr = ""
 	
 	String format = StrVarOrDefault( NMClampDF + "FolderNameDateFormat", DateFormat )
+	
+	if ( promptFormat )
+	
+		Prompt format, "choose date format:", popup DateFormatList
+		DoPrompt "NM Clamp Data Folder Name Prefix", format
+		
+		if ( V_flag == 1 )
+			//return "" // cancel not allowed here
+		endif
+		
+		SetNMstr( NMClampDF + "FolderNameDateFormat", format )
+	
+	endif
 
 	String dateList = Secs2Date( DateTime, -2 , ";" )
 	
@@ -718,7 +702,7 @@ Function /S ClampFileNamePrefixSet( prefix )
 	String prefix
 	
 	if ( strlen( prefix ) == 0 )
-		prefix = ClampDateName()
+		prefix = ClampDateName( promptFormat = 1 )
 	endif
 	
 	prefix = NMCheckStringName( prefix )

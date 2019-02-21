@@ -224,7 +224,8 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	Variable forceUpdate
 
 	Variable icnt, jcnt, items, config, npnts, new, numWaves
-	String io, wName, wPrefix, klist, plist, ulist, wList = ""
+	String stimName, io, wName, wPrefix, preFxnList, interFxnList
+	String klist, plist, ulist, wList = ""
 	
 	Variable zeroDACLastPoints = NumVarOrDefault( NMClampDF + "ZeroDACLastPoints", 1 )
 	
@@ -233,6 +234,8 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	if (strlen(sdf) == 0)
 		return ""
 	endif
+	
+	stimName = NMChild( sdf )
 	
 	numWaves = NumVarOrDefault(sdf+"NumStimWaves", 0)
 	
@@ -296,6 +299,25 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 			KillWaves /Z $StringFromList(icnt, klist)
 		endfor
 		
+	endif
+	
+	preFxnList = StrVarOrDefault( sdf + "PreStimFxnList", "" )
+	
+	if ( WhichListItem( "RandomOrder", preFxnList ) >= 0 ) // move RandomOrder to InterStimFxnList
+	
+		interFxnList = StrVarOrDefault( sdf + "InterStimFxnList", "" )
+		
+		if ( WhichListItem( "RandomOrder", interFxnList ) < 0 )
+			interFxnList = AddListItem( "RandomOrder", interFxnList, ";", inf )
+			SetNMstr( sdf + "InterStimFxnList", interFxnList )
+		endif
+		
+		preFxnList = RemoveFromList( "RandomOrder", preFxnList )
+		
+		SetNMstr( sdf + "PreStimFxnList", preFxnList )
+		
+		NMHistory( "Clamp Stim " + stimName + " : RandomOrder moved to " + NMQuotes( "during" ) + " acquisition macro list." )
+	
 	endif
 	
 	return wList
