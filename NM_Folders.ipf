@@ -1712,7 +1712,7 @@ Function /S NMFoldersMerge()
 	String wList1, wList2
 	
 	Variable countFromZero = -1
-	Variable copySets = 1 + NumVarOrDefault( NMMainDF + "DuplicateSets", 1 )
+	Variable copySets = 1 + NumVarOrDefault( NMMainDF + "MergeFoldersSets", 1 )
 	
 	String f1 = CurrentNMFolder( 0 )
 	String f2 = ""
@@ -1748,7 +1748,7 @@ Function /S NMFoldersMerge()
 	
 	copySets -= 1
 		
-	SetNMvar( NMMainDF + "DuplicateSets", copySets )
+	SetNMvar( NMMainDF + "MergeFoldersSets", copySets )
 	
 	NMFolderNew( newfolder )
 	
