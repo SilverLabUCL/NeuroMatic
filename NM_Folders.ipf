@@ -1705,16 +1705,20 @@ End // NMDataReload
 
 Function /S NMFoldersMerge()
 
-	Variable fcnt, numfolders
-	String fname, newPrefix, wlist, noneStr
+	Variable fcnt, numfolders, icnt, jcnt, kcnt
+	String fname, wlist, noneStr
+	String newPrefix, prefixFolder, currentPrefixFolder, prefixList = ""
+	String setsListAll, setsList, setName
+	String wList1, wList2
 	
 	Variable countFromZero = -1
+	Variable copySets = 1 + NumVarOrDefault( NMMainDF + "DuplicateSets", 1 )
 	
 	String f1 = CurrentNMFolder( 0 )
 	String f2 = ""
 	String fList = NMDataFolderList()
 	
-	String currentPrefix = CurrentNMWavePrefix()
+	String wavePrefix = CurrentNMWavePrefix()
 	String newfolder = FolderNameNext( "" )
 	
 	for ( fcnt = 0; fcnt < ItemsInList( fList ); fcnt += 1 )
@@ -1727,11 +1731,12 @@ Function /S NMFoldersMerge()
 	endfor
 	
 	Prompt newfolder, "new folder name:"
-	Prompt currentPrefix, "prefix of waves to copy to new folder:"
+	Prompt wavePrefix, "prefix of waves to copy to new folder:"
 	Prompt f1, "first folder:", popup fList
 	Prompt f2, "second folder:", popup fList
+	Prompt copySets, "copy Sets and Groups?", popup "no;yes;"
 	
-	DoPrompt "Merge Folders", newfolder, currentPrefix, f1, f2
+	DoPrompt "Merge Folders", newfolder, wavePrefix, f1, f2
 	
 	if ( V_flag == 1 )
 		return "" // cancel
@@ -1741,15 +1746,19 @@ Function /S NMFoldersMerge()
 		countFromZero = 0 // not in order, so use counter
 	endif
 	
+	copySets -= 1
+		
+	SetNMvar( NMMainDF + "DuplicateSets", copySets )
+	
 	NMFolderNew( newfolder )
 	
 	NMFolderChange( f1 )
 	
-	wlist = WaveList( currentPrefix + "*",";","" )
+	wlist = WaveList( wavePrefix + "*",";","" )
 	
 	if ( ItemsInList( wlist ) > 0 )
 	
-		NMSet( wavePrefixNoPrompt = currentPrefix )
+		NMSet( wavePrefixNoPrompt = wavePrefix )
 		
 		if ( countFromZero >= 0 )
 			newPrefix = "DF" + num2str( countFromZero ) + "_"
@@ -1758,17 +1767,19 @@ Function /S NMFoldersMerge()
 			newPrefix = "D" + NMFolderListName( f1 ) + "_"
 		endif
 	
-		NMMainDuplicate( toFolder = "root:" + newfolder, newPrefix = newPrefix, overwrite = 1, copySets = 0 )
+		NMMainDuplicate( toFolder = "root:" + newfolder, newPrefix = newPrefix, overwrite = 1, copySets = copySets )
+		
+		prefixList += newPrefix + wavePrefix + ";"
 		
 	endif
 	
 	NMFolderChange( f2 )
 	
-	wlist = WaveList( currentPrefix + "*",";","" )
+	wlist = WaveList( wavePrefix + "*",";","" )
 	
 	if ( ItemsInList( wlist ) > 0 )
 	
-		NMSet( wavePrefixNoPrompt = currentPrefix )
+		NMSet( wavePrefixNoPrompt = wavePrefix )
 		
 		if ( countFromZero >= 0 )
 			newPrefix = "DF" + num2str( countFromZero ) + "_"
@@ -1777,7 +1788,9 @@ Function /S NMFoldersMerge()
 			newPrefix = "D" + NMFolderListName( f2 ) + "_"
 		endif
 	
-		NMMainDuplicate( toFolder = "root:" + newfolder, newPrefix = newPrefix, overwrite = 1, copySets = 0 )
+		NMMainDuplicate( toFolder = "root:" + newfolder, newPrefix = newPrefix, overwrite = 1, copySets = copySets )
+		
+		prefixList += newPrefix + wavePrefix + ";"
 		
 	endif
 	
@@ -1797,7 +1810,7 @@ Function /S NMFoldersMerge()
 			break
 		endif
 		
-		wlist = NMFolderWaveList( "root:" + fname, currentPrefix + "*", ";", "", 0 )
+		wlist = NMFolderWaveList( "root:" + fname, wavePrefix + "*", ";", "", 0 )
 		
 		if ( ItemsInList( wlist ) == 0 )
 			fList = RemoveFromList( fname, fList )
@@ -1825,11 +1838,11 @@ Function /S NMFoldersMerge()
 		
 		NMFolderChange( f2 )
 		
-		wlist = WaveList( currentPrefix + "*",";","" )
+		wlist = WaveList( wavePrefix + "*",";","" )
 		
 		if ( ItemsInList( wlist ) > 0 )
 		
-			NMSet( wavePrefixNoPrompt = currentPrefix )
+			NMSet( wavePrefixNoPrompt = wavePrefix )
 			
 			if ( countFromZero >= 0 )
 				newPrefix = "DF" + num2str( countFromZero ) + "_"
@@ -1838,7 +1851,9 @@ Function /S NMFoldersMerge()
 				newPrefix = "D" + NMFolderListName( f2 ) + "_"
 			endif
 	
-			NMMainDuplicate( toFolder = "root:" + newfolder, newPrefix = newPrefix, overwrite = 1, copySets = 0 )
+			NMMainDuplicate( toFolder = "root:" + newfolder, newPrefix = newPrefix, overwrite = 1, copySets = copySets )
+			
+			prefixList += newPrefix + wavePrefix + ";"
 		
 			fList = RemoveFromList( f2, fList )
 			
@@ -1848,7 +1863,56 @@ Function /S NMFoldersMerge()
 	
 	NMFolderChange( newfolder )
 	
-	NMSet( wavePrefixNoPrompt = "DF" )
+	newPrefix = "DF"
+	
+	NMSet( wavePrefixNoPrompt = newPrefix )
+	
+	if ( copySets && ( ItemsInList( prefixList ) > 0 ) )
+	
+		currentPrefixFolder = CurrentNMPrefixFolder()
+	
+		for ( icnt = 0 ; icnt < ItemsInList( prefixList ) ; icnt += 1 )
+			
+			wavePrefix = StringFromList( icnt, prefixList )
+			
+			prefixFolder = NMPrefixFolderDF( "", wavePrefix )
+			
+			if ( !DataFolderExists( prefixFolder ) )
+				continue
+			endif
+			
+			setsListAll = NMSetsListAll( prefixFolder = prefixFolder ) // e.g. "Set1;Group0;Group1;Group2;"
+		
+			for ( jcnt = 0 ; jcnt < ItemsInList( setsListAll ) ; jcnt += 1 )
+				
+				setName = StringFromList( jcnt, setsListAll )
+				setsList = NMFolderStringList( prefixFolder, setName + "_*", ";", 0 ) // list names for all channels
+				
+				for ( kcnt = 0 ; kcnt < ItemsInList( setsList ) ; kcnt += 1 )
+				
+					setName = StringFromList( kcnt, setsList )
+					wList1 = StrVarOrDefault( prefixFolder + setName, "" )
+					
+					if ( ItemsInList( wList1 ) == 0 )
+						continue
+					endif
+					
+					wList2 = StrVarOrDefault( currentPrefixFolder + setName, "" )
+					
+					wList2 = NMAddToList( wList1, wList2, ";" )
+					
+					SetNMstr( currentPrefixFolder + setName, wList2 )
+					
+				
+				endfor  
+			
+			endfor
+			
+		endfor
+		
+		NMSet( wavePrefixNoPrompt = newPrefix ) // update Sets/Groups
+		
+	endif
 	
 	return newfolder
 	
