@@ -1877,40 +1877,12 @@ Function /S NMFoldersMerge()
 			
 			prefixFolder = NMPrefixFolderDF( "", wavePrefix )
 			
-			if ( !DataFolderExists( prefixFolder ) )
-				continue
-			endif
-			
-			setsListAll = NMSetsListAll( prefixFolder = prefixFolder ) // e.g. "Set1;Group0;Group1;Group2;"
-		
-			for ( jcnt = 0 ; jcnt < ItemsInList( setsListAll ) ; jcnt += 1 )
-				
-				setName = StringFromList( jcnt, setsListAll )
-				setsList = NMFolderStringList( prefixFolder, setName + "_*", ";", 0 ) // list names for all channels
-				
-				for ( kcnt = 0 ; kcnt < ItemsInList( setsList ) ; kcnt += 1 )
-				
-					setName = StringFromList( kcnt, setsList )
-					wList1 = StrVarOrDefault( prefixFolder + setName, "" )
-					
-					if ( ItemsInList( wList1 ) == 0 )
-						continue
-					endif
-					
-					wList2 = StrVarOrDefault( currentPrefixFolder + setName, "" )
-					
-					wList2 = NMAddToList( wList1, wList2, ";" )
-					
-					SetNMstr( currentPrefixFolder + setName, wList2 )
-					
-				
-				endfor  
-			
-			endfor
+			NMSetsListsCopy( prefixFolder, currentPrefixFolder )
 			
 		endfor
 		
-		NMSet( wavePrefixNoPrompt = newPrefix ) // update Sets/Groups
+		NMWaveSelect( "All" )
+		NMCurrentWaveSet( 0, noSave = 1 )
 		
 	endif
 	

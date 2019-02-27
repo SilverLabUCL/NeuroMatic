@@ -4050,6 +4050,48 @@ End // NMSetsListsUpdateNewChannels
 //****************************************************************
 //****************************************************************
 //****************************************************************
+
+Function NMSetsListsCopy( fromPrefixFolder, toPrefixFolder )
+	String fromPrefixFolder, toPrefixFolder
+	
+	Variable icnt
+	String setListName, wList1, wList2
+	
+	if ( !DataFolderExists( fromPrefixFolder ) )
+		return NM2Error( 30, "fromPrefixFolder", fromPrefixFolder )
+	endif
+	
+	if ( !DataFolderExists( toPrefixFolder ) )
+		return NM2Error( 30, "toPrefixFolder", toPrefixFolder )
+	endif
+	
+	String setsList = NMFolderStringList( fromPrefixFolder, "*_SetList*", ";", 0 )
+	
+	for ( icnt = 0 ; icnt < ItemsInList( setsList ) ; icnt += 1 )
+	
+		setListName = StringFromList( icnt, setsList )
+		
+		wList1 = StrVarOrDefault( fromPrefixFolder + setListName, "" )
+				
+		if ( ItemsInList( wList1 ) == 0 )
+			continue
+		endif
+		
+		wList2 = StrVarOrDefault( toPrefixFolder + setListName, "" )
+		
+		wList2 = NMAddToList( wList1, wList2, ";" )
+				
+		SetNMstr( toPrefixFolder + setListName, wList2 )
+		
+	endfor
+
+	return 0
+
+End // NMSetsListsCopy
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
 //
 //	Sets Panel Functions
 //	works only with Current Prefix Folder
