@@ -734,6 +734,16 @@ Function NMArtReset()
 	SetNMvar( df+"StimTime", 0 )
 	SetNMvar( df+"StimNum", 0 )
 	
+	SetNMvar( df+"BslnValue1", NaN ) // tab display
+	SetNMvar( df+"BslnValue2", NaN )
+	SetNMvar( df+"DcayValue1", NaN )
+	SetNMvar( df+"DcayValue2", NaN )
+	
+	SetNMvar( df+"fit_a1", NaN )
+	SetNMvar( df+"fit_t1", NaN )
+	SetNMvar( df+"fit_a2", NaN )
+	SetNMvar( df+"fit_t2", NaN )
+	
 	//NMArtStimNumSet( 0 )
 	NMArtGoTo( "0" )
 	
@@ -1174,7 +1184,7 @@ Function NMArtFit( [ update ] )
 		return -1 // nothing to fit
 	endif
 
-	if ( ( NMArtFitBsln() == 0 ) && ( NMArtFitStimDecay() == 0 ) )
+	if ( ( NMArtFitBsln() == 0 ) && ( NMArtFitDecay() == 0 ) )
 		//NMArtSubtract()
 	endif
 	
@@ -1215,7 +1225,7 @@ Function NMArtFitBsln()
 	
 	ybgn = V_avg
 	
-	WaveStats /Q/R=( bend, bend - 10 * dt ) eWave
+	WaveStats /Q/R=( bend - 10 * dt, bend ) eWave
 	
 	yend = V_avg
 
@@ -1228,7 +1238,7 @@ Function NMArtFitBsln()
 			
 			AT_a[0] = bbgn // x0 // hold
 			AT_a[1] = yend // y0
-			AT_a[2] = ybgn - yend // a1
+			AT_a[2] = 1.5 * ( ybgn - yend ) // a1
 			AT_a[3] = ( bend - bbgn ) / 5 // t1
 			
 			FuncFit /Q/W=0/N/H="1001" NMArtFxnExp AT_a ewave( bbgn,bend ) // single exp
@@ -1305,16 +1315,20 @@ End // NMArtFitBsln
 //****************************************************************
 //****************************************************************
 
-Function NMArtFitStimDecay()
+Function NMArtFitDecay()
 
-	Variable pbgn, pend, a1, t1, a2, t2
-	Variable v1 = Nan, v2 = Nan
+	Variable pbgn, pend, y0, dt
 	Variable V_FitError = 0, V_FitQuitReason, V_chisq
 	
 	String df = NMArtDF
 	
 	Variable tbgn = NumVarOrDefault( df + "Xbgn", NaN ) // drag wave variable
 	Variable tend = NumVarOrDefault( df + "Xend", NaN )
+	
+	Variable a1 = NumVarOrDefault( df+"fit_a1", NaN )
+	Variable t1 = NumVarOrDefault( df+"fit_t1", NaN )
+	Variable a2 = NumVarOrDefault( df+"fit_a2", NaN )
+	Variable t2 = NumVarOrDefault( df+"fit_t2", NaN )
 	
 	Wave wtemp = $ChanDisplayWave( -1 )
 	Wave AT_a = $( df+"AT_a" )
@@ -1332,48 +1346,108 @@ Function NMArtFitStimDecay()
 	
 	pbgn = x2pnt( wtemp, tbgn )
 	pend = x2pnt( wtemp, tend )
+	dt = deltax( wtemp )
 	
-	// fit single exponential
+	WaveStats /Q/R=( tend - 10 * dt, tend ) wtemp
 	
-	Redimension /N=4 AT_a
+	y0 = V_avg
 	
-	AT_a[0] = tbgn // x0 // hold
-	AT_a[1] = wtemp[ pend ] // y0 // hold // this is set to baseline function
-	AT_a[2] = wtemp[ pbgn ] - AT_a[1] // a1
-	AT_a[3] = ( tend - tbgn ) / 5 // t1
+	a1 = NaN
+	t1 = NaN // force new 1-exp fit, this improves 2-exp fit
 	
-	FuncFit /Q/W=0/N/H="1100" NMArtFxnExp AT_a wtemp( tbgn, tend )
+	if ( StringMatch( DcayFxn, "exp" ) || ( numtype( a1 * t1 ) > 0 ) ) // fit 1-exp
 	
-	if ( V_FitError != 0 )
-		Print "Fit Error =", V_FitError
-	endif
-	
-	if ( StringMatch( DcayFxn, "2exp" ) == 1 ) // fit double exponential
-	
-		Redimension /N=6 AT_a
-	
-		AT_a[2] *= 0.5
-		AT_a[4] = AT_a[2]
-		AT_a[5] = AT_a[3] * 2
+		Redimension /N=4 AT_a // must be n=4 for 1-exp fit
 		
-		FuncFit /Q/W=0/N/H="110000" NMArtFxnExp2 AT_a wtemp( tbgn, tend )
+		AT_a[0] = tbgn // x0 // hold
+		AT_a[1] = y0 // hold // during fit y0 is set to baseline function stored in AT_b
+		
+		if ( numtype( a1 ) == 0 )
+			AT_a[2] = a1
+		else
+			AT_a[2] = wtemp[ pbgn ] - y0
+		endif
+		
+		if ( numtype( t1 ) == 0 )
+			AT_a[3] = t1
+		else
+			AT_a[3] = ( tend - tbgn ) / 5
+		endif
+		
+		FuncFit /Q/W=0/N/H="1100" NMArtFxnExp AT_a wtemp( tbgn, tend )
+		
+		a1 = AT_a[2]
+		t1 = AT_a[3]
 		
 		if ( V_FitError != 0 )
-			Print "Fit Error =", V_FitError
+			NMHistory( "1-exp fit error = " + num2str( V_FitError ) )
+			AT_fit = Nan
+			SetNMvar( df+"DcayValue1", NaN )
+			SetNMvar( df+"DcayValue2", NaN )
+			return V_FitError
 		endif
 	
 	endif
 	
-	Wave W_sigma 
+	if ( StringMatch( DcayFxn, "2exp" ) ) // fit 2-exp
+	
+		Redimension /N=6 AT_a // must be n=6 for 2-exp fit
+		
+		AT_a[0] = tbgn // x0 // hold
+		AT_a[1] = y0 // hold // during fit y0 is set to baseline function stored in AT_b
+		
+		if ( numtype( a1 ) == 0 )
+			AT_a[2] = a1
+		else
+			AT_a[2] = wtemp[ pbgn ] - y0
+		endif
+		
+		if ( numtype( t1 ) == 0 )
+			AT_a[3] = t1
+		else
+			AT_a[3] = ( tend - tbgn ) / 5
+		endif
+		
+		if ( numtype( a2 ) == 0 )
+			AT_a[4] = a2
+		else
+			AT_a[4] = 0.5 * AT_a[2]
+		endif
+		
+		if ( numtype( t2 ) == 0 )
+			AT_a[5] = t2
+		else
+			AT_a[5] = 2 * AT_a[3]
+		endif
+		
+		FuncFit /Q/W=0/N/H="110000" NMArtFxnExp2 AT_a wtemp( tbgn, tend )
+		
+		if ( V_FitError != 0 )
+			NMHistory( "2-exp fit error = " + num2str( V_FitError ) )
+			AT_fit = Nan
+			SetNMvar( df+"DcayValue1", NaN )
+			SetNMvar( df+"DcayValue2", NaN )
+			return V_FitError
+		endif
+	
+	endif
 	
 	if ( numpnts( AT_a ) == 4 )
 		AT_fit = NMArtFxnExp( AT_a, AT_fitx )
-		v1 = AT_a[2]
-		v2 = AT_a[3]
+		SetNMvar( df+"DcayValue1", AT_a[2] ) // a1 // tab
+		SetNMvar( df+"DcayValue2", AT_a[3] ) // t1 // tab
+		SetNMvar( df+"fit_a1", AT_a[2] ) // a1 // save for next fit
+		SetNMvar( df+"fit_t1", AT_a[3] )
+		SetNMvar( df+"fit_a2", NaN )
+		SetNMvar( df+"fit_t2", NaN )
 	elseif ( numpnts( AT_a ) == 6 )
 		AT_fit = NMArtFxnExp2( AT_a, AT_fitx )
-		v1 = AT_a[3]
-		v2 = AT_a[5]
+		SetNMvar( df+"DcayValue1", AT_a[3] ) // t1 // tab
+		SetNMvar( df+"DcayValue2", AT_a[5] ) // t2 // tab
+		SetNMvar( df+"fit_a1", AT_a[2] ) // save for next fit
+		SetNMvar( df+"fit_t1", AT_a[3] )
+		SetNMvar( df+"fit_a2", AT_a[4] )
+		SetNMvar( df+"fit_t2", AT_a[5] )
 	endif 
 	
 	AT_fit[ 0, pbgn - 1 ] = Nan
@@ -1393,17 +1467,13 @@ Function NMArtFitStimDecay()
 	
 	if ( fmax > wmax )
 		AT_fit = Nan // probably a bad fit
-		return -1
 	endif
-	
-	SetNMvar( df+"DcayValue1", v1 )
-	SetNMvar( df+"DcayValue2", v2 )
 	
 	KillWaves /Z W_sigma
 	
 	return V_FitError
 
-End // NMArtFitStimDecay
+End // NMArtFitDecay
 
 //****************************************************************
 //****************************************************************
