@@ -38,7 +38,7 @@
 //****************************************************************
 //****************************************************************
 
-Static Constant ArtDT = 0.5 // approximate length of artefact
+Static Constant ArtWidth = 0.5 // approximate length of artefact
 
 Static StrConstant ArtShape = "PN"
 // "PN" - artifact ends with positive peak followed by negative peak
@@ -190,6 +190,69 @@ End // NMArtWavesCheck
 //****************************************************************
 //****************************************************************
 
+Function NMArtConfigs()
+
+	NMConfigVar( "Art", "ArtWidth", ArtWidth, "approximate width of artifact", "" )
+	NMConfigVar( "Art", "t1_hold", NaN, "fit hold value of 2-exp t1", "" )
+	NMConfigVar( "Art", "t1_min", NaN, "min value of 2-exp t1", "" )
+	NMConfigVar( "Art", "t1_max", NaN, "max value of 2-exp t1", "" )
+	NMConfigVar( "Art", "t2_hold", NaN, "fit hold value of 2-exp t2", "" )
+	NMConfigVar( "Art", "t2_min", NaN, "min value of 2-exp t2", "" )
+	NMConfigVar( "Art", "t2_max", NaN, "max value of 2-exp t2", "" )
+	
+End // NMArtConfigs
+
+//****************************************************************
+//****************************************************************
+
+Function NMArtVarGet( varName )
+	String varName
+	
+	Variable defaultVal = NaN
+	
+	strswitch( varName )
+	
+		case "ArtWidth":
+			defaultVal = ArtWidth
+			break
+	
+		case "t1_hold":
+			defaultVal = NaN
+			break
+			
+		case "t1_min":
+			defaultVal = NaN
+			break
+			
+		case "t1_max":
+			defaultVal = NaN
+			break
+	
+		case "t2_hold":
+			defaultVal = NaN
+			break
+			
+		case "t2_min":
+			defaultVal = NaN
+			break
+			
+		case "t2_max":
+			defaultVal = NaN
+			break
+			
+		default:
+			NMDoAlert ( "NMSpikeVar Error: no variable called " + NMQuotes( varName ) )
+			return NaN
+	
+	endswitch
+	
+	return NumVarOrDefault( NMArtDF+varName, defaultVal )
+	
+End // NMArtVarGet
+
+//****************************************************************
+//****************************************************************
+
 Function /S NMArtSubWaveName( wname )
 	String wname
 	
@@ -252,7 +315,7 @@ Function NMArtDisplay( appnd ) // append/remove Art display waves to current cha
 		
 		ModifyGraph /W=$gName rgb( $wName )=( 0,0,65280 ), lsize( $wName )=2
 		
-		ModifyGraph /W=$gName mode( AT_timeY )=3, marker( AT_timeY )=10, rgb( AT_timeY )=( 65280,0,0 ), msize( AT_timeY )=20
+		ModifyGraph /W=$gName mode( AT_timeY )=3, marker( AT_timeY )=10, rgb( AT_timeY )=( 65280,0,0 ), msize( AT_timeY )=20, mrkThick( AT_timeY )=2
 		ModifyGraph /W=$gName mode( AT_fitb )=0, lsize( AT_fitb )=2, rgb( AT_fitb )=( bc.r, bc.g, bc.b )
 		
 		//ShowInfo /W=$gName
@@ -428,10 +491,10 @@ Function NMArtMake( force ) // create Art tab controls
 	PopupMenu AT_FitFxn, value="", proc=NMArtPopup
 	
 	SetVariable AT_FitVal1, title="a :", pos={x0+80,y0+2}, size={70,50}, fsize = 12, format = "%.2f"
-	SetVariable AT_FitVal1, value=$( df+"DcayValue1" ), limits={-inf,inf,0}, frame=0
+	SetVariable AT_FitVal1, value=$( df+"DcayValue1" ), limits={-inf,inf,0}, frame=0, proc=NMArtSetVar
 	
 	SetVariable AT_FitVal2, title="t :", pos={x0+155,y0+2}, size={70,50}, fsize = 12, format = "%.2f"
-	SetVariable AT_FitVal2, value=$( df+"DcayValue2" ), limits={-inf,inf,0}, frame=0
+	SetVariable AT_FitVal2, value=$( df+"DcayValue2" ), limits={-inf,inf,0}, frame=0, proc=NMArtSetVar
 	
 	SetVariable AT_FitWin, title="fit win:", pos={x0,y0+yinc}, size={100,50}, fsize = 12, format = "%.2f"
 	SetVariable AT_FitWin, value=$( df+"DcayWin" ), proc=NMArtSetVar
@@ -441,7 +504,7 @@ Function NMArtMake( force ) // create Art tab controls
 	
 	y0 += 100
 	
-	GroupBox AT_TimeGrp, title = "Time", pos={x0-20,y0-25}, size={260,130}
+	GroupBox AT_TimeGrp, title = "Time", pos={x0-20,y0-25}, size={260,90}
 	
 	PopupMenu AT_TimeWave, pos={x0+140,y0}, bodywidth=190, proc=NMArtPopup
 	PopupMenu AT_TimeWave, value=""
@@ -449,18 +512,18 @@ Function NMArtMake( force ) // create Art tab controls
 	SetVariable AT_NumStims, title=":", pos={x0+195,y0}, size={40,50}, limits={0,inf,0}
 	SetVariable AT_NumStims, value=$( df+"NumStims" ), fsize=12, frame=0, noedit=1
 	
-	SetVariable AT_StimTime, title="t =", pos={x0+60,y0+yinc}, size={100,50}, fsize = 12, format = "%.2f"
-	SetVariable AT_StimTime, value=$( df+"StimTime" ), proc=NMArtSetVar
+	//SetVariable AT_StimTime, title="t =", pos={x0+60,y0+yinc}, size={100,50}, fsize = 12, format = "%.2f"
+	//SetVariable AT_StimTime, value=$( df+"StimTime" ), frame=0, limits={0,inf,0}
 	
-	SetVariable AT_StimNum, title=" ", pos={x0+90,y0+2*yinc}, size={50,50}, limits={0,inf,0}
+	SetVariable AT_StimNum, title=" ", pos={x0+90,y0+1*yinc}, size={50,50}, limits={0,inf,0}
 	SetVariable AT_StimNum, value=$( df+"StimNum" ), fsize = 12, proc=NMArtSetVar
 	
-	Button AT_FirstStim, pos={x0+90-80,y0+2*yinc}, title = "<<", size={30,20}, proc=NMArtButton
-	Button AT_PrevStim, pos={x0+90-40,y0+2*yinc}, title = "<", size={30,20}, proc=NMArtButton
-	Button AT_NextStim, pos={x0+150,y0+2*yinc}, title = ">", size={30,20}, proc=NMArtButton
-	Button AT_LastStim, pos={x0+150+40,y0+2*yinc}, title = ">>", size={30,20}, proc=NMArtButton
+	Button AT_FirstStim, pos={x0+90-80,y0+1*yinc}, title = "<<", size={30,20}, proc=NMArtButton
+	Button AT_PrevStim, pos={x0+90-40,y0+1*yinc}, title = "<", size={30,20}, proc=NMArtButton
+	Button AT_NextStim, pos={x0+150,y0+1*yinc}, title = ">", size={30,20}, proc=NMArtButton
+	Button AT_LastStim, pos={x0+150+40,y0+1*yinc}, title = ">>", size={30,20}, proc=NMArtButton
 	
-	y0 += 130
+	y0 += 90
 	x0 -= 5
 	xinc = 80
 	
@@ -468,7 +531,7 @@ Function NMArtMake( force ) // create Art tab controls
 	Button AT_StimFit, pos={x0+1*xinc,y0}, title = "Fit", size={70,20}, proc=NMArtButton
 	Button AT_StimSubtract, pos={x0+2*xinc,y0}, title = "Subtract", size={70,20}, proc=NMArtButton
 	
-	Checkbox AT_AutoFit, title="auto fit", pos={x0+50,y0+yinc}, size={100,50}, value=1, fsize = 12, proc=NMArtCheckbox
+	Checkbox AT_AutoFit, title="auto fit", pos={x0+90,y0+yinc}, size={100,50}, value=1, fsize = 12, proc=NMArtCheckbox
 	
 	//Checkbox AT_TableFit, title="table", pos={x0+150,y0+yinc}, size={100,50}, value=1, fsize = 12, proc=NMArtCheckbox
 	
@@ -488,17 +551,14 @@ Function NMArtUpdate()
 	String DcayFxn = StrVarOrDefault( df+"DcayFxn", "2exp" )
 	String StimTimeWName = StrVarOrDefault( df+"StimTimeWName", "" )
 	
+	Variable t1_hold = NMArtVarGet( "t1_hold" )
+	Variable t2_hold = NMArtVarGet( "t2_hold" )
+	
 	md = WhichListItem( BslnFxn, "avg;line;exp;zero;" ) + 1
 	PopupMenu AT_BslnFxn, win=NMPanel, value ="avg;line;exp;zero;", mode=md
 	
 	md = WhichListItem( DcayFxn, "exp;2exp;" ) + 1
 	PopupMenu AT_FitFxn, win=NMPanel, value="exp;2exp;", mode=md
-	
-	md = WhichListItem( StimTimeWName, NMArtTimeWaveList() ) + 2
-	
-	if ( md == 0 )
-		md = 1
-	endif
 	
 	strswitch( BslnFxn )
 		case "avg":
@@ -520,22 +580,49 @@ Function NMArtUpdate()
 	endswitch
 	
 	strswitch( DcayFxn )
+	
 		case "exp":
+		
 			SetVariable AT_FitVal1, win=NMPanel, title="a :"
-			SetVariable AT_FitVal2, win=NMPanel, title="t :"
+			
+			if ( ( numtype( t1_hold ) == 0 ) && ( t1_hold > 0 ) )
+				SetVariable AT_FitVal2, win=NMPanel, title="t :", valueColor=(65535,0,0)
+			else
+				SetVariable AT_FitVal2, win=NMPanel, title="t :", valueColor=(0,0,0)
+			endif
+			
 			break
+			
 		case "2exp":
-			SetVariable AT_FitVal1, win=NMPanel, title="t1 :"
-			SetVariable AT_FitVal2, win=NMPanel, title="t2 :"
+		
+			if ( ( numtype( t1_hold ) == 0 ) && ( t1_hold > 0 ) )
+				SetVariable AT_FitVal1, win=NMPanel, title="t1 :", valueColor=(65535,0,0)
+			else
+				SetVariable AT_FitVal1, win=NMPanel, title="t1 :", valueColor=(0,0,0)
+			endif
+			
+			if ( ( numtype( t2_hold ) == 0 ) && ( t2_hold > 0 ) )
+				SetVariable AT_FitVal2, win=NMPanel, title="t2 :", valueColor=(65535,0,0)
+			else
+				SetVariable AT_FitVal2, win=NMPanel, title="t2 :", valueColor=(0,0,0)
+			endif
+			
 			break
+			
 	endswitch
 	
-	PopupMenu AT_TimeWave, win=NMPanel, value="--- manual ---;" + NMArtTimeWaveList(), mode=md
+	md = WhichListItem( StimTimeWName, NMArtTimeWaveList() ) + 3
+	
+	if ( md == 0 )
+		md = 1
+	endif
+	
+	PopupMenu AT_TimeWave, win=NMPanel, value="Select Wave of Stim Times;---;" + NMArtTimeWaveList(), mode=md
 	
 	SetVariable AT_BslnWin, win=NMPanel, limits={leftx( $wname ),rightx( $wname ),deltax( $wname )}
 	SetVariable AT_FitWin, win=NMPanel, limits={0,inf,deltax( $wname )}
 	SetVariable AT_SubWin, win=NMPanel, limits={0,inf,deltax( $wname )}
-	SetVariable AT_StimTime, win=NMPanel, limits={leftx( $wname ),rightx( $wname ),deltax( $wname )}
+	//SetVariable AT_StimTime, win=NMPanel, limits={leftx( $wname ),rightx( $wname ),deltax( $wname )}
 	
 	Checkbox AT_AutoFit, win=NMPanel, value=NumVarOrDefault( df+"AutoFit",1 )
 	//Checkbox AT_TableFit, win=NMPanel, value=NumVarOrDefault( df+"TableFit",0 )
@@ -575,19 +662,19 @@ Function NMArtPopup( ctrlName, popNum, popStr ) : PopupMenuControl
 	
 	String df = NMArtDF
 	
-	Variable AutoFit = NumVarOrDefault( df+"AutoFit", 0 )
+	Variable autoFit = NumVarOrDefault( df+"AutoFit", 0 )
 	
 	strswitch( ctrlName )
 	
 		case "AT_TimeWave":
 		
-			if ( WaveExists( $popStr ) == 0 )
-				NMArtManualMode()
+			if ( WaveExists( $popStr ) )
+				NMArtTimeWaveSet( popStr )
+				NMArtReset()
 			else
-				NMArtTimeWaveNew( popStr )
+				autoFit = 0
 			endif
 			
-			NMArtReset()
 			NMArtUpdate()
 			
 			break
@@ -608,7 +695,7 @@ Function NMArtPopup( ctrlName, popNum, popStr ) : PopupMenuControl
 	
 	NMArtUpdate()
 	
-	if ( AutoFit )
+	if ( autoFit )
 		NMArtFit()
 	endif
 	
@@ -645,9 +732,18 @@ Function NMArtSetVar( ctrlName, varNum, varStr, varName ) : SetVariableControl
 	Variable StimNum = NumVarOrDefault( df+"StimNum", 0 )
 	
 	strswitch( ctrlName )
-		case "AT_StimTime":
-			NMArtStimTimeSet( varNum )
+	
+		case "AT_FitVal1":
+			z_SetTauHold( 1, varNum )
 			break
+		case "AT_FitVal2":
+			z_SetTauHold( 2, varNum )
+			break
+	
+		//case "AT_StimTime":
+			//NMArtStimTimeSet( varNum )
+			//break
+			
 		case "AT_BslnDT":
 		case "AT_BslnWin":
 		case "AT_SubWin":
@@ -657,9 +753,38 @@ Function NMArtSetVar( ctrlName, varNum, varStr, varName ) : SetVariableControl
 		case "AT_StimNum":
 			NMArtGoTo( varStr )
 			break
+			
 	endswitch
 	
 End // NMArtSetVar
+
+//****************************************************************
+//****************************************************************
+
+Static Function z_SetTauHold( select, holdValue )
+	Variable select, holdValue
+	
+	String df = NMArtDF
+	
+	String dcayFxn = StrVarOrDefault( df+"DcayFxn", "" )
+	
+	if ( ( numtype( holdValue ) > 0 ) || ( holdValue <= 0 ) )
+		holdValue = NaN
+	endif
+	
+	if ( StringMatch( dcayFxn, "exp" ) )
+		if ( select == 2 )
+			return NMConfigVarSet( "Art", "t1_hold", holdValue )
+		endif
+	elseif ( StringMatch( dcayFxn, "2exp" ) )
+		if ( select == 1 )
+			return NMConfigVarSet( "Art", "t1_hold", holdValue )
+		elseif ( select == 2 )
+			return NMConfigVarSet( "Art", "t2_hold", holdValue )
+		endif
+	endif
+
+End // z_SetTauHold
 
 //****************************************************************
 //****************************************************************
@@ -744,7 +869,6 @@ Function NMArtReset()
 	SetNMvar( df+"fit_a2", NaN )
 	SetNMvar( df+"fit_t2", NaN )
 	
-	//NMArtStimNumSet( 0 )
 	NMArtGoTo( "0" )
 	
 End // NMArtReset
@@ -753,51 +877,22 @@ End // NMArtReset
 //****************************************************************
 
 Function NMArtStimsCount()
-	String df = NMArtDF
 
-	SetNMvar( df+"NumStims", numpnts( $( df+"AT_timeX" ) ) )
+	String df = NMArtDF
+	
+	WaveStats /Q $( df+"AT_timeX" )
+
+	SetNMvar( df+"NumStims", V_npnts )
 
 End // NMArtStimsCount
 
 //****************************************************************
 //****************************************************************
 
-Function NMArtManualMode()
-	String df = NMArtDF
-
-	SetNMstr( df+"StimTimeWName", "" )
-	SetNMvar( df+"NumStims", 0 )
-	
-	Wave xwave = $( df+"AT_timeX" )
-	Wave ywave = $( df+"AT_timeY" )
-	
-	Redimension /N=0 xwave, ywave
-	
-	xwave = 0; ywave = 0
-
-End // NMArtManualMode
-
-//****************************************************************
-//****************************************************************
-
-Function NMArtManualModeOn()
-	String df = NMArtDF
-
-	if ( strlen( StrVarOrDefault( df+"StimTimeWName", "" ) ) == 0 )
-		return 1
-	else
-		return 0
-	endif
-
-End // NMArtManualModeOn
-
-//****************************************************************
-//****************************************************************
-
-Function NMArtTimeWaveNew( wname )
+Function NMArtTimeWaveSet( wname )
 	String wname
 	
-	Variable icnt
+	Variable icnt, pnt
 	String df = NMArtDF
 	
 	if ( ( strlen( wname ) == 0 ) || ( WaveExists( $wname ) == 0 ) )
@@ -817,46 +912,11 @@ Function NMArtTimeWaveNew( wname )
 	fwave = 0
 	
 	for ( icnt = 0; icnt < numpnts( xwave ); icnt += 1 )
-		ywave[icnt] = dwave[x2pnt( dwave, xwave[icnt] )]
+		pnt = x2pnt( dwave, xwave[icnt] )
+		ywave[ icnt ] = dwave[ pnt ]
 	endfor
 	
-End // NMArtTimeWaveNew
-
-//****************************************************************
-//****************************************************************
-
-Function NMArtStimTimeSet( t )
-	Variable t
-	
-	String df = NMArtDF
-	String wName = StrVarOrDefault( df+"StimTimeWName", "" )
-	
-	Variable StimNum = NumVarOrDefault( df+"StimNum", 0 )
-	
-	Wave xwave = $( df+"AT_timeX" )
-	Wave ywave = $( df+"AT_timeY" )
-	Wave dwave = $ChanDisplayWave( -1 )
-	
-	if ( WaveExists( $wName ) == 1 )
-	
-		Wave tWave = $wName
-		//twave[StimNum] = t // change original wave
-		
-	else // manual mode
-	
-		if ( numpnts( xwave ) < StimNum + 1 )
-			Redimension /N=( StimNum + 1 ) xwave, ywave
-		endif
-		
-	endif
-	
-	xwave[StimNum] = t
-	ywave[StimNum] = dwave[x2pnt( dwave, t )]
-	
-	NMArtStimsCount()
-	NMArtStimNumSet( StimNum )
-
-End // NMArtStimTimeSet
+End // NMArtTimeWaveSet
 
 //****************************************************************
 //****************************************************************
@@ -869,16 +929,13 @@ Function NMArtGoTo( select ) // jump to new stim time
 	// "inf" - last
 	// otherwise pass array number of stim time wave
 	
-	Variable next, doFit, pmax
+	Variable next, doFit
 	String df = NMArtDF
 	
 	Variable StimNum = NumVarOrDefault( df+"StimNum", 0 )
 	Variable AutoFit = NumVarOrDefault( df+"AutoFit", 0 )
 	
-	if ( WaveExists( $ df+"AT_ArtSubFin" ) )
-		pmax = numpnts( $df+"AT_ArtSubFin" ) - 1
-		pmax = max( pmax, 0 )
-	endif
+	Variable pmax = z_StimNumMax()
 
 	strswitch( select )
 			
@@ -894,7 +951,7 @@ Function NMArtGoTo( select ) // jump to new stim time
 			next = StimNum + 1
 			break
 			
-		case "+inf":
+		case "inf":
 			next = pmax
 			break
 			
@@ -936,6 +993,33 @@ End // NMArtGoTo
 //****************************************************************
 //****************************************************************
 
+Static function z_StimNumMax()
+	
+	Variable icnt
+	
+	String df = NMArtDF
+	
+	String wName = StrVarOrDefault( df+"StimTimeWName", "" )
+	
+	if ( !WaveExists( $wName ) )
+		return NaN
+	endif
+	
+	Wave wtemp = $wName
+	
+	for ( icnt = numpnts( wtemp ) - 1 ; icnt >= 0 ; icnt -= 1 )
+		if ( numtype( wtemp[ icnt ] ) == 0 )
+			return icnt
+		endif
+	endfor
+	
+	return NaN
+
+End // z_StimNumMax
+
+//****************************************************************
+//****************************************************************
+
 Function NMArtStimNumSet( stimNum [ doFit ] )
 	Variable stimNum
 	Variable doFit
@@ -951,30 +1035,14 @@ Function NMArtStimNumSet( stimNum [ doFit ] )
 	Wave AT_fit = $( df+"AT_fit" )
 	Wave AT_fitb = $( df+"AT_fitb" )
 	
-	if ( NMArtManualModeOn() == 1 ) // manual mode
-	
-		if ( stimNum > numpnts( xwave ) )
-			return -1 // out of range
-		endif
-		
-		SetNMvar( df+"StimNum", stimNum )
-		
-		if ( stimNum == numpnts( xwave ) )
-			return -1 // does not exist yet
-		endif
-	
-	else
-	
-		if ( stimNum > numpnts( xwave ) - 1 )
-			return -1 // out of range
-		endif
-		
-		SetNMvar( df+"StimNum", stimNum )
-		
+	if ( stimNum > numpnts( xwave ) - 1 )
+		return -1 // out of range
 	endif
 	
+	SetNMvar( df+"StimNum", stimNum )
+	
 	t = xwave[stimNum]
-	NMArtDisplayTimeSet( t )
+	z_DisplayTimeSet( stimNum, t )
 	
 	AT_fit = Nan
 	AT_fitb = Nan
@@ -990,37 +1058,8 @@ End // NMArtStimNumSet
 //****************************************************************
 //****************************************************************
 
-Function NMArtBslnBgn()
-
-	String df = NMArtDF
-
-	Variable StimTime = NumVarOrDefault( df+"StimTime", 0 )
-	Variable BslnWin = NumVarOrDefault( df+"BslnWin", 0 )
-	Variable BslnDT = NumVarOrDefault( df+"BslnDT", 0 )
-	
-	return StimTime - BslnDT - BslnWin
-
-End // NMArtBslnBgn
-
-//****************************************************************
-//****************************************************************
-
-Function NMArtBslnEnd()
-
-	String df = NMArtDF
-
-	Variable StimTime = NumVarOrDefault( df+"StimTime", 0 )
-	Variable BslnWin = NumVarOrDefault( df+"BslnWin", 0 )
-	Variable BslnDT = NumVarOrDefault( df+"BslnDT", 0 )
-	
-	return StimTime - BslnDT
-
-End // NMArtBslnEnd
-
-//****************************************************************
-//****************************************************************
-
-Function NMArtDisplayTimeSet( t )
+Static Function z_DisplayTimeSet( stimNum, t )
+	Variable stimNum
 	Variable t // stim time, ( 0 ) to reset
 	
 	Variable bsln, tpeak, xAxisDelta, yAxisDelta
@@ -1038,6 +1077,8 @@ Function NMArtDisplayTimeSet( t )
 	String gName = CurrentChanGraphName()
 	String wName = ChanDisplayWave( CurrentChan )
 	
+	Wave timeY = $( df+"AT_timeY" )
+	
 	wName = GetPathName( wName, 0 )
 	
 	SetNMvar( df+"StimTime", t )
@@ -1047,12 +1088,14 @@ Function NMArtDisplayTimeSet( t )
 		//Cursor /W=$gName B, $wName, 0
 		SetAxis /A
 		return 0
+	elseif ( numtype( t ) > 0 )
+		return 0
 	endif
 	
 	String dName = ChanDisplayWave( -1 )
 	
-	bbgn = NMArtBslnBgn()
-	bend = NMArtBslnEnd()
+	bbgn = z_BslnBgn()
+	bend = z_BslnEnd()
 	
 	SetNMvar( df + "BslnXbgn", bbgn ) // drag wave variable
 	SetNMvar( df + "BslnXend", bend )
@@ -1061,8 +1104,12 @@ Function NMArtDisplayTimeSet( t )
 	
 	bsln = V_avg
 	
+	if ( ( stimNum >= 0 ) && ( stimNum < numpnts( timeY ) ) )
+		timeY[ stimNum ] = bsln
+	endif
+	
 	abgn = t // artifact window
-	aend = t + ArtDT
+	aend = t + ArtWidth
 	
 	WaveStats /Q/R=( abgn, aend ) $dname
 	
@@ -1122,7 +1169,37 @@ Function NMArtDisplayTimeSet( t )
 	
 	NMArtDragUpdate()
 	
-End // NMArtDisplayTimeSet
+End // z_DisplayTimeSet
+
+//****************************************************************
+//****************************************************************
+
+Static Function z_BslnBgn()
+
+	String df = NMArtDF
+
+	Variable StimTime = NumVarOrDefault( df+"StimTime", 0 )
+	Variable BslnWin = NumVarOrDefault( df+"BslnWin", 0 )
+	Variable BslnDT = NumVarOrDefault( df+"BslnDT", 0 )
+	
+	return StimTime - BslnDT - BslnWin
+
+End // z_BslnBgn
+
+//****************************************************************
+//****************************************************************
+
+Static Function z_BslnEnd()
+
+	String df = NMArtDF
+
+	Variable StimTime = NumVarOrDefault( df+"StimTime", 0 )
+	Variable BslnWin = NumVarOrDefault( df+"BslnWin", 0 )
+	Variable BslnDT = NumVarOrDefault( df+"BslnDT", 0 )
+	
+	return StimTime - BslnDT
+
+End // z_BslnEnd
 
 //****************************************************************
 //****************************************************************
@@ -1216,8 +1293,8 @@ Function NMArtFitBsln()
 	Wave AT_fitb = $( df+"AT_fitb" ) // channel display wave
 	Wave AT_fitx = $( df+"AT_fitx" ) // x-times for fitting
 	
-	bbgn = NMArtBslnBgn()
-	bend = NMArtBslnEnd()
+	bbgn = z_BslnBgn()
+	bend = z_BslnEnd()
 	
 	dt = deltax( eWave )
 	
@@ -1319,6 +1396,7 @@ Function NMArtFitDecay()
 
 	Variable pbgn, pend, y0, dt
 	Variable V_FitError = 0, V_FitQuitReason, V_chisq
+	String hstr
 	
 	String df = NMArtDF
 	
@@ -1329,6 +1407,9 @@ Function NMArtFitDecay()
 	Variable t1 = NumVarOrDefault( df+"fit_t1", NaN )
 	Variable a2 = NumVarOrDefault( df+"fit_a2", NaN )
 	Variable t2 = NumVarOrDefault( df+"fit_t2", NaN )
+	
+	Variable t1_hold = NMArtVarGet( "t1_hold" )
+	Variable t2_hold = NMArtVarGet( "t2_hold" )
 	
 	Wave wtemp = $ChanDisplayWave( -1 )
 	Wave AT_a = $( df+"AT_a" )
@@ -1376,9 +1457,6 @@ Function NMArtFitDecay()
 		
 		FuncFit /Q/W=0/N/H="1100" NMArtFxnExp AT_a wtemp( tbgn, tend )
 		
-		a1 = AT_a[2]
-		t1 = AT_a[3]
-		
 		if ( V_FitError != 0 )
 			NMHistory( "1-exp fit error = " + num2str( V_FitError ) )
 			AT_fit = Nan
@@ -1386,68 +1464,89 @@ Function NMArtFitDecay()
 			SetNMvar( df+"DcayValue2", NaN )
 			return V_FitError
 		endif
+		
+		a1 = AT_a[2]
+		t1 = AT_a[3]
 	
 	endif
 	
+	a2 = NaN
+	t2 = NaN
+	
 	if ( StringMatch( DcayFxn, "2exp" ) ) // fit 2-exp
+	
+		Make /T/O/N=0 FitConstraints = ""
+	
+		z_Constraints( DcayFxn, FitConstraints )
 	
 		Redimension /N=6 AT_a // must be n=6 for 2-exp fit
 		
 		AT_a[0] = tbgn // x0 // hold
 		AT_a[1] = y0 // hold // during fit y0 is set to baseline function stored in AT_b
 		
-		if ( numtype( a1 ) == 0 )
-			AT_a[2] = a1
-		else
-			AT_a[2] = wtemp[ pbgn ] - y0
+		if ( ( numtype( a1 ) > 0 ) || ( a1 == 0 ) )
+			a1 = wtemp[ pbgn ] - y0
 		endif
 		
-		if ( numtype( t1 ) == 0 )
-			AT_a[3] = t1
-		else
-			AT_a[3] = ( tend - tbgn ) / 5
+		if ( ( numtype( t1 ) > 0 ) || ( t1 <= 0 ) )
+			t1 = ( tend - tbgn ) / 5
 		endif
 		
-		if ( numtype( a2 ) == 0 )
-			AT_a[4] = a2
-		else
-			AT_a[4] = 0.5 * AT_a[2]
+		if ( ( numtype( a2 ) > 0 ) || ( a2 == 0 ) )
+			a2 = a1 * 0.5
 		endif
 		
-		if ( numtype( t2 ) == 0 )
-			AT_a[5] = t2
-		else
-			AT_a[5] = 2 * AT_a[3]
+		hstr = "110000"
+		
+		if ( ( numtype( t2_hold ) == 0 ) || ( t2_hold > 0 ) )
+			t2 = t2_hold
+			hstr = "110001"
+		elseif ( ( numtype( t2 ) > 0 ) || ( t2 <= 0 ) )
+			t2 = 3 * t1
 		endif
 		
-		FuncFit /Q/W=0/N/H="110000" NMArtFxnExp2 AT_a wtemp( tbgn, tend )
+		AT_a[2] = a1
+		AT_a[3] = t1
+		AT_a[4] = a2
+		AT_a[5] = t2
+		
+		//print a1, t1, a2, t2
+		
+		FuncFit /Q/W=0/N/H=hstr NMArtFxnExp2 AT_a wtemp( tbgn, tend ) /C=FitConstraints
 		
 		if ( V_FitError != 0 )
-			NMHistory( "2-exp fit error = " + num2str( V_FitError ) )
+			NMHistory( "2-exp fit error = " + num2str( V_FitError ) + ", reason = " + num2str( V_FitQuitReason ) )
 			AT_fit = Nan
 			SetNMvar( df+"DcayValue1", NaN )
 			SetNMvar( df+"DcayValue2", NaN )
 			return V_FitError
 		endif
+		
+		a1 = AT_a[2]
+		t1 = AT_a[3]
+		a2 = AT_a[4]
+		t2 = AT_a[5]
+		
+		//print a1, t1, a2, t2
 	
 	endif
 	
-	if ( numpnts( AT_a ) == 4 )
+	if ( StringMatch( DcayFxn, "exp" ) )
 		AT_fit = NMArtFxnExp( AT_a, AT_fitx )
-		SetNMvar( df+"DcayValue1", AT_a[2] ) // a1 // tab
-		SetNMvar( df+"DcayValue2", AT_a[3] ) // t1 // tab
-		SetNMvar( df+"fit_a1", AT_a[2] ) // a1 // save for next fit
-		SetNMvar( df+"fit_t1", AT_a[3] )
+		SetNMvar( df+"DcayValue1", a1 ) // tab
+		SetNMvar( df+"DcayValue2", t1 )
+		SetNMvar( df+"fit_a1", a1 ) // save for next fit
+		SetNMvar( df+"fit_t1", t1 )
 		SetNMvar( df+"fit_a2", NaN )
 		SetNMvar( df+"fit_t2", NaN )
-	elseif ( numpnts( AT_a ) == 6 )
+	elseif ( StringMatch( DcayFxn, "2exp" ) )
 		AT_fit = NMArtFxnExp2( AT_a, AT_fitx )
-		SetNMvar( df+"DcayValue1", AT_a[3] ) // t1 // tab
-		SetNMvar( df+"DcayValue2", AT_a[5] ) // t2 // tab
-		SetNMvar( df+"fit_a1", AT_a[2] ) // save for next fit
-		SetNMvar( df+"fit_t1", AT_a[3] )
-		SetNMvar( df+"fit_a2", AT_a[4] )
-		SetNMvar( df+"fit_t2", AT_a[5] )
+		SetNMvar( df+"DcayValue1", t1 ) // tab
+		SetNMvar( df+"DcayValue2", t2 )
+		SetNMvar( df+"fit_a1", a1 ) // save for next fit
+		SetNMvar( df+"fit_t1", t1 )
+		SetNMvar( df+"fit_a2", a2 )
+		SetNMvar( df+"fit_t2", t2 )
 	endif 
 	
 	AT_fit[ 0, pbgn - 1 ] = Nan
@@ -1470,10 +1569,62 @@ Function NMArtFitDecay()
 	endif
 	
 	KillWaves /Z W_sigma
+	KillWaves /Z FitConstraints
 	
 	return V_FitError
 
 End // NMArtFitDecay
+
+//****************************************************************
+//****************************************************************
+
+Static Function z_Constraints( dcayFxn, cwave )
+	String dcayFxn
+	Wave /T cwave
+
+	Variable icnt, items
+	String cList = ""
+	
+	Variable t1_min = NMArtVarGet( "t1_min" )
+	Variable t1_max = NMArtVarGet( "t1_max" )
+	Variable t2_min = NMArtVarGet( "t2_min" )
+	Variable t2_max = NMArtVarGet( "t2_max" )
+	
+	if ( ( numtype( t1_min ) == 0 ) && ( t1_min > 0 ) )
+		cList += "K3 > " + num2str( t1_min ) + ";"
+	endif
+	
+	if ( ( numtype( t1_max ) == 0 ) && ( t1_max > 0 ) )
+		cList += "K3 < " + num2str( t1_max ) + ";"
+	endif
+	
+	if ( StringMatch( dcayFxn, "2exp" ) )
+		
+		if ( ( numtype( t2_min ) == 0 ) && ( t2_min > 0 ) )
+			cList += "K5 > " + num2str( t2_min ) + ";"
+		endif
+		
+		if ( ( numtype( t2_max ) == 0 ) && ( t2_max > 0 ) )
+			cList += "K5 < " + num2str( t2_max ) + ";"
+		endif
+	
+	endif
+	
+	items = ItemsInList( cList )
+	
+	if ( items == 0 )
+		return 0
+	endif
+	
+	Redimension /N=( items ) cwave
+	
+	for ( icnt = 0 ; icnt < items ; icnt += 1 )
+		cwave[ icnt ] = StringFromList( icnt, cList )
+	endfor
+	
+	return 0
+
+End // z_Constraints
 
 //****************************************************************
 //****************************************************************
@@ -1583,8 +1734,8 @@ Function NMArtFxnExp( w, x )
 	
 	Wave AT_b = $( NMArtDF+"AT_b" ) // baseline values
 	
-	if ( w[3] <= 0 )
-		w[3] = -w[3] + 0.0001 // keep positive
+	if ( w[3] < 0 )
+		w[3] = -w[3] // keep positive
 	endif
 	
 	switch( numpnts( AT_b ) )
@@ -1648,9 +1799,9 @@ Function NMArtFxnExp2( w, x )
 	
 	endif
 	
-	if ( w[2] * w[4] < 0 ) // a1 and a2 have opposite signs
-		w[4] *= w[2] / abs( w[2] ) // keep the same sign
-	endif
+	//if ( w[2] * w[4] < 0 ) // a1 and a2 have opposite signs
+		//w[4] *= w[2] / abs( w[2] ) // keep the same sign
+	//endif
 	
 	switch( numpnts( AT_b ) )
 		case 0: // baseline fit does not exist so this is normal exp fit
@@ -1675,6 +1826,11 @@ End // NMArtFxnExp2
 
 //****************************************************************
 //****************************************************************
+//
+// OLD CODE BELOW
+//
+//****************************************************************
+//****************************************************************
 
 Function xNMArtAuto() // NOT USED
 
@@ -1691,14 +1847,14 @@ Function xNMArtAuto() // NOT USED
 	
 	NMArtWavesCheck()
 	
-	if ( tableFit == 1 )
+	if ( tableFit )
 	
 		Wave /T fwave = $( df+"AT_FitWaves" )
 		Wave /T twave = $( df+"AT_TimeWaves" )
 		
 		for ( icnt = 0; icnt < numpnts( fwave ); icnt += 1 )
 			if ( StringMatch( fwave[icnt], dname ) == 1 )
-				NMArtTimeWaveNew( twave[icnt] )
+				NMArtTimeWaveSet( twave[icnt] )
 				break
 			endif
 		endfor
@@ -1710,6 +1866,42 @@ Function xNMArtAuto() // NOT USED
 	NMArtGoTo( "0" )
 
 End // NMArtAuto
+
+//****************************************************************
+//****************************************************************
+
+Function xNMArtStimTimeSet( t ) // NOT USED
+	Variable t
+	
+	String df = NMArtDF
+	String wName = StrVarOrDefault( df+"StimTimeWName", "" )
+	
+	Variable StimNum = NumVarOrDefault( df+"StimNum", 0 )
+	
+	Wave xwave = $( df+"AT_timeX" )
+	Wave ywave = $( df+"AT_timeY" )
+	Wave dwave = $ChanDisplayWave( -1 )
+	
+	if ( WaveExists( $wName ) == 1 )
+	
+		Wave tWave = $wName
+		//twave[StimNum] = t // change original wave
+		
+	else // manual mode
+	
+		if ( numpnts( xwave ) < StimNum + 1 )
+			Redimension /N=( StimNum + 1 ) xwave, ywave
+		endif
+		
+	endif
+	
+	xwave[StimNum] = t
+	ywave[StimNum] = dwave[x2pnt( dwave, t )]
+	
+	NMArtStimsCount()
+	NMArtStimNumSet( StimNum )
+
+End // NMArtStimTimeSet
 
 //****************************************************************
 //****************************************************************
@@ -1754,7 +1946,7 @@ Function xNMArtFitAllTable() // NOT USED
 		SetNMvar( "CurrentWave", inum )
 		UpdateCurrentWave()
 		
-		NMArtTimeWaveNew( tname )
+		NMArtTimeWaveSet( tname )
 		
 		xNMArtAuto()
 		NMArtReset()
