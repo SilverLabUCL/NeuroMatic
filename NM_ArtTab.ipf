@@ -315,8 +315,14 @@ Function NMArtDisplay( appnd ) // append/remove Art display waves to current cha
 	if ( appnd == 1 )
 
 		AppendToGraph /W=$gName $wName
-		AppendToGraph /W=$gName $( df+"AT_fitb" ), $( df+"AT_fit" )
-		AppendToGraph /W=$gName $( df+"AT_timeY" ) vs $( df+"AT_timeX" )
+		
+		if ( WaveExists( $df+"AT_fit" ) )
+			AppendToGraph /W=$gName $( df+"AT_fitb" ), $( df+"AT_fit" )
+		endif
+		
+		if ( WaveExists( $df+"AT_timeX" ) )
+			AppendToGraph /W=$gName $( df+"AT_timeY" ) vs $( df+"AT_timeX" )
+		endif
 		
 		ModifyGraph /W=$gName rgb( $wName )=( 0,0,65280 ), lsize( $wName )=2
 		
@@ -921,6 +927,10 @@ Function NMArtStimsCount()
 
 	String df = NMArtDF
 	
+	if ( !WaveExists( $df+"AT_timeX" ) || ( numpnts( $df+"AT_timeX" ) == 0 ) )
+		return 0
+	endif
+	
 	WaveStats /Q $( df+"AT_timeX" )
 
 	SetNMvar( df+"NumStims", V_npnts )
@@ -1068,7 +1078,11 @@ Function NMArtStimNumSet( stimNum [ doFit ] )
 	Variable t
 	String df = NMArtDF
 	
-	if ( stimNum < 0 )
+	if ( ( numtype( stimNum) > 0 ) || ( stimNum < 0 ) )
+		return -1 // out of range
+	endif
+	
+	if ( !WaveExists( $df+"AT_timeX" ) || ( numpnts( $df+"AT_timeX" ) == 0 ) )
 		return -1 // out of range
 	endif
 	
