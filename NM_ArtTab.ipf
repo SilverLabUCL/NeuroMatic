@@ -1022,7 +1022,7 @@ End // NMArtStimsCount
 Function NMArtTimeWaveSet( wname )
 	String wname
 	
-	Variable icnt, pnt
+	Variable icnt, pnt, t
 	String df = NMArtDF
 	
 	if ( ( strlen( wname ) == 0 ) || ( WaveExists( $wname ) == 0 ) )
@@ -1045,7 +1045,8 @@ Function NMArtTimeWaveSet( wname )
 	fwave = 0
 	
 	for ( icnt = 0; icnt < numpnts( xwave ); icnt += 1 )
-		pnt = x2pnt( dwave, xwave[icnt] )
+		t = xwave[icnt]
+		pnt = x2pnt( dwave, t )
 		ywave[ icnt ] = dwave[ pnt ]
 	endfor
 	
@@ -1292,12 +1293,19 @@ Static Function z_DisplayTimeSet( stimNum, t )
 	
 	pbgn = x2pnt( wtemp, dbgn )
 	pend = x2pnt( wtemp, dend )
-	ybgn = wtemp[ pbgn ]
-	yend = wtemp[ pend ]
+	
+	if ( ( pbgn >= 0 ) && ( pbgn < numpnts( wtemp ) ) )
+		ybgn = wtemp[ pbgn ]
+	endif
+	
+	if ( ( pend >= 0 ) && ( pend < numpnts( wtemp ) ) )
+		yend = wtemp[ pend ]
+	endif
 	
 	ymin = min( ybgn, yend )
 	ymax = max( ybgn, yend )
 	ymax = max( ymax, bsln )
+	
 	yAxisDelta = abs( ymax - ymin ) // for channel display
 	
 	SetAxis Left ( ymin - yAxisDelta ), ( ymax + yAxisDelta )
@@ -1548,13 +1556,20 @@ Function NMArtFitBsln( [ update ] )
 	endswitch
 	
 	pbgn = 0
-	pend = x2pnt( eWave, bbgn ) - 1
-
-	AT_fitb[ pbgn, pend ] = Nan
+	pend = x2pnt( AT_fitb, bbgn ) - 1
 	
-	pbgn = x2pnt( eWave, stimTime + subtractWin ) + 1
+	if ( ( pend > 0 ) && ( pend < numpnts( AT_fitb ) ) )
+		AT_fitb[ pbgn, pend ] = Nan
+	endif
+	
+	pbgn = x2pnt( AT_fitb, stimTime + subtractWin ) + 1
 	pend = numpnts( AT_fitb ) - 1
-	AT_fitb[ pbgn, pend ] = Nan
+	
+	if ( ( pbgn > 0 ) && ( pbgn < numpnts( AT_fitb ) ) )
+		if ( ( pend > pbgn ) && ( pend < numpnts( AT_fitb ) ) )
+			AT_fitb[ pbgn, pend ] = Nan
+		endif
+	endif
 	
 	if ( update )
 		DoUpdate
@@ -1674,7 +1689,9 @@ Function NMArtFitDecay( [ update ] )
 		hstr = "11"
 		
 		if ( ( numtype( a1 ) > 0 ) || ( a1 == 0 ) )
-			a1 = wtemp[ pbgn ] - y0
+			if ( ( pbgn >= 0 ) && ( pbgn < numpnts( wtemp ) ) )
+				a1 = wtemp[ pbgn ] - y0
+			endif
 		endif
 		
 		if ( ( numtype( t1_hold ) == 0 ) || ( t1_hold > 0 ) )
@@ -1745,12 +1762,19 @@ Function NMArtFitDecay( [ update ] )
 		SetNMvar( df+"fit_t2", t2 )
 	endif 
 	
-	AT_fit[ 0, pbgn - 1 ] = Nan
+	
+	if ( ( pbgn > 2 ) && ( pbgn <= numpnts( AT_fit ) ) )
+		AT_fit[ 0, pbgn - 1 ] = Nan
+	endif
 	
 	pbgn = x2pnt( wtemp, stimTime + subtractWin ) + 1
 	pend = numpnts( wtemp ) - 1
 	
-	AT_fit[ pbgn, pend ] = Nan
+	if ( ( pbgn > 1 ) && ( pbgn < numpnts( AT_fit ) ) )
+		if ( ( pend > pbgn ) && ( pend < numpnts( AT_fit ) ) )
+			AT_fit[ pbgn, pend ] = Nan
+		endif
+	endif
 	
 	WaveStats /Q AT_fit
 	
@@ -1867,6 +1891,10 @@ Function NMArtFitSubtract( [ update ] )
 		update = 1
 	endif
 	
+	if ( numpnts( wtempNoStim ) != numpnts( AT_fitb ) )
+		return -1
+	endif
+	
 	// zero stim artifact
 	
 	pbgn = x2pnt( wtempNoStim, stimTime - bslnDT )
@@ -1907,6 +1935,8 @@ Function NMArtRestore()
 	Variable pcnt, pbgn, pend
 	String df = NMArtDF
 	
+	String dName = ChanDisplayWave( -1 )
+	
 	Variable stimNum = NMArtVarGet( "StimNum" )
 	Variable stimTime = NMArtVarGet( "StimTime" )
 	Variable bslnDT = NMArtVarGet( "BslnDT" )
@@ -1921,14 +1951,18 @@ Function NMArtRestore()
 	endif
 
 	Wave wtempNoStim = $NMArtSubWaveName( "nostim" )
-	Wave oWave = $ChanDisplayWave( -1 )
+	Wave dWave = $dName
 	Wave AT_ArtSubFin = $( df+"AT_ArtSubFin" )
+	
+	if ( numpnts( wtempNoStim ) != numpnts( dWave ) )
+		return -1
+	endif
 	
 	pbgn = x2pnt( wtempNoStim, stimTime - bslnDT )
 	pend = x2pnt( wtempNoStim, stimTime + subtractWin )
 
 	for ( pcnt = pbgn; pcnt <= pend; pcnt += 1 )
-		wtempNoStim[pcnt] = oWave[pcnt]
+		wtempNoStim[pcnt] = dWave[pcnt]
 	endfor
 	
 	AT_ArtSubFin[ stimNum ] = 0
