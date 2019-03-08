@@ -1357,7 +1357,7 @@ Function NMStatsConfigs() // called from NM_Configurations
 	
 	NMStatsConfigVar( "WaveLengthFormat", "Stats1 wave length matches number of ( 0 ) waves per channel ( 1 ) currently selected waves ( use 0 for previous NM formatting )", "waves per channel;currently selected waves;" )
 	
-	NMStatsConfigVar( "DisplayPrecision", "number of decimal numbers to display", "" )
+	NMStatsConfigVar( "DisplayPrecision", "decimal numbers to display", "" )
 	
 	NMStatsConfigStr( "DisplayError", "Stats2 display error", "STDV;SEM;" )
 	
