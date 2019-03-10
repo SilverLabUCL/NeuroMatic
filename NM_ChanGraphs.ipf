@@ -5624,14 +5624,19 @@ End // NMDragVariableSet
 //****************************************************************
 //****************************************************************
 
-Function NMDragTrigger( offsetStr )
+Function NMDragTrigger( offsetStr [ callAutoTab ] )
 	String offsetStr
+	Variable callAutoTab
 	
 	Variable tt, offset, pnt
 	String gName, wName, xNamePath, yNamePath, graphMinMax, waveVarName, varName
 	
 	if ( strlen( offsetStr ) == 0 )
 		return -1
+	endif
+	
+	if ( ParamIsDefault( callAutoTab ) )
+		callAutoTab = 1
 	endif
 	
 	gname = StringByKey( "GRAPH", offsetStr )
@@ -5686,7 +5691,9 @@ Function NMDragTrigger( offsetStr )
 	
 	SetNMvar( NMDF+"AutoDoUpdate", 0 ) // prevent DoUpdate in Tab Auto functions
 	
-	NMAutoTabCall()
+	if ( callAutoTab )
+		NMAutoTabCall()
+	endif
 	
 	SetNMvar( NMDF+"AutoDoUpdate", 1 ) // reset update flag
 	
