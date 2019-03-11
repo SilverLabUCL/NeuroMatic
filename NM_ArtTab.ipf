@@ -411,7 +411,9 @@ Function NMArtDragTrigger( offsetStr )
 	Variable stimTime = NMArtVarGet( "StimTime" )
 	Variable autoFit = NMArtVarGet( "AutoFit" )
 	
-	if ( NMDragTrigger( offsetStr, callAutoTab = 0 ) < 0 )
+	Variable rflag = NMDragTrigger( offsetStr, callAutoTab = 0 )
+	
+	if ( rflag < 0 )
 		return -1
 	endif
 	
@@ -1393,7 +1395,7 @@ End // z_FitAllCall
 
 Function NMArtFitAll()
 
-	Variable icnt, stimTime, numStim
+	Variable icnt, stimTime, numStim, rflag
 	String df = NMArtDF
 	
 	Variable stimNumSave = NMArtVarGet( "StimNum" )
@@ -1424,7 +1426,9 @@ Function NMArtFitAll()
 			continue
 		endif
 		
-		if ( NMArtFit() == 0 )
+		rflag = NMArtFit()
+		
+		if ( rflag == 0 )
 			NMArtFitSubtract()
 		else
 			NMHistory( "Art all waves failed to fit stim #" + num2istr( icnt ) )
