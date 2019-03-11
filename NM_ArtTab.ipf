@@ -1915,7 +1915,7 @@ Function NMArtFitSubtract( [ update ] )
 	endif
 	
 	//wtempStim = wtemp - wtempNoStim
-	Duplicate /O wtempNoStim $( df + "Display" )
+	Duplicate /O wtempNoStim $( df + "AT_Display" )
 	
 	if ( update )
 		DoUpdate
@@ -1963,7 +1963,7 @@ Function NMArtRestore()
 		wtempNoStim[pcnt] = dWave[pcnt]
 	endfor
 	
-	Duplicate /O wtempNoStim $( df + "Display" )
+	Duplicate /O wtempNoStim $( df + "AT_Display" )
 	
 	finished[ stimNum ] = 0
 
