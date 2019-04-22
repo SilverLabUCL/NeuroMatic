@@ -3338,8 +3338,10 @@ Function PulseConfigCheck( paramList [ sdf, warningStr ] )
 	shape = StringByKey( "pulse", paramList, "=" )
 	
 	if ( WhichListItem( shape, NMPulseList, ";", 0, 0 ) == -1 )
-		NMHistory( warningStr + " : unrecognized pulse shape : " + shape )
-		warnings += 1
+		if ( !WaveExists( $sdf + shape ) )
+			NMHistory( warningStr + " : unrecognized pulse shape : " + shape )
+			warnings += 1
+		endif
 	endif
 	
 	waveNum = NMPulseWaveNum( paramList )
