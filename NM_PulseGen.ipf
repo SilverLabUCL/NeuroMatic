@@ -286,7 +286,7 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 	Variable notes
 	STRUCT NMPulseSaveToWaves &s
 	
-	Variable off, width, TTL, tpeak, normFactor, normalize, infWidth, numExps
+	Variable off, width, TTL, tpeak, normFactor, normalize, infWidth, numExps, userWave
 	Variable center, stdv
 	Variable pslope, Lvar
 	Variable pbgn, pend, ipnt
@@ -601,9 +601,10 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 			
 				Wave yourpulse = $df+pulse
 				
-				wtemp = yourpulse
-				
 				ipnt = numpnts( yourpulse )
+				
+				wtemp[ 0, ipnt-1] = yourpulse
+				
 				ipnt += 1
 				
 				if ( ipnt < numpnts( wtemp ) )
@@ -615,6 +616,7 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 				MatrixOp /O wtemp = shiftVector( wtemp, ipnt, 0 )
 				
 				normalize = 1
+				userWave = 1
 				
 			else
 			
@@ -669,7 +671,7 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 		
 		endif
 		
-	else
+	elseif ( !userWave )
 	
 		wtemp = 0
 	
@@ -4042,14 +4044,21 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 	Variable plasticity
 	
 	Variable icnt, waveNum, delta
-	String shape, plasticityModel, waveNumStr, paramList2 = "", wList = ""
+	String shape, plasticityModel, waveNumStr, paramList2 = "", wList = "", otherWave = ""
 	
 	if ( strlen( paramList ) > 0 )
 	
 		shape = StringByKey( "pulse", paramList, "=" )
 		
 		if ( WhichListItem( shape, NMPulseList, ";", 0, 0 ) == -1 )
-			shape = "square"
+		
+			if ( WaveExists( $df+shape ) )
+				otherWave = shape
+				shape = "other"
+			else
+				shape = "square"
+			endif
+			
 		endif
 		
 		waveNum = NMPulseWaveNum( paramList )
@@ -4205,6 +4214,10 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 	endif
 	
 	SetNMvar( pdf + promptPrefix + "WaveND", delta )
+	
+	if ( StringMatch( shape, "other" ) && ( strlen( otherWave ) > 0 ) )
+		shape = otherWave
+	endif
 	
 	return waveNumStr + "pulse=" + shape + ";" + paramList2
 

@@ -49,7 +49,7 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0e"
+StrConstant NMVersionStr = "3.0f"
 StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
 StrConstant NMRights = "Copyright (c) 2019 Jason Rothman"
 StrConstant NMEmail = "Jason@ThinkRandom.com"
@@ -1719,58 +1719,58 @@ Function /S NMLoopExecute( nm, cmdHistory, deprecation )
 		endif
 		
 	endif
+		
+	if ( NMVarGet( "CmdHistoryLongFormat" ) )
 	
-	if ( cmdHistory )
-		
-		if ( NMVarGet( "CmdHistoryLongFormat" ) )
-		
-			if ( !StringMatch( nm.folderList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
-			else
-				nm.folderList = ""
-			endif
-			
-			if ( !StringMatch( nm.wavePrefixList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
-			else
-				nm.wavePrefixList = ""
-			endif
-			
-			if ( !StringMatch( nm.chanSelectList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
-			else
-				nm.chanSelectList = ""
-			endif
-			
-			if ( !StringMatch( nm.waveSelectList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
-			else
-				nm.waveSelectList = ""
-			endif
-			
+		if ( !StringMatch( nm.folderList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
 		else
-		
-			if ( WhichListItem( "ForceHistory", nm.folderList ) >= 0 )
-				nm.folderList = RemoveFromList( "ForceHistory", nm.folderList )
-				vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
-			endif
-			
-			if ( WhichListItem( "ForceHistory", nm.wavePrefixList ) >= 0 )
-				nm.wavePrefixList = RemoveFromList( "ForceHistory", nm.wavePrefixList )
-				vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
-			endif
-			
-			if ( WhichListItem( "ForceHistory", nm.chanSelectList ) >= 0 )
-				nm.chanSelectList = RemoveFromList( "ForceHistory", nm.chanSelectList )
-				vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
-			endif
-			
-			if ( WhichListItem( "ForceHistory", nm.waveSelectList ) >= 0 )
-				nm.waveSelectList = RemoveFromList( "ForceHistory", nm.waveSelectList )
-				vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
-			endif
-			
+			nm.folderList = ""
 		endif
+		
+		if ( !StringMatch( nm.wavePrefixList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
+		else
+			nm.wavePrefixList = ""
+		endif
+		
+		if ( !StringMatch( nm.chanSelectList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
+		else
+			nm.chanSelectList = ""
+		endif
+		
+		if ( !StringMatch( nm.waveSelectList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
+		else
+			nm.waveSelectList = ""
+		endif
+		
+	else
+	
+		if ( WhichListItem( "ForceHistory", nm.folderList ) >= 0 )
+			nm.folderList = RemoveFromList( "ForceHistory", nm.folderList )
+			vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
+		endif
+		
+		if ( WhichListItem( "ForceHistory", nm.wavePrefixList ) >= 0 )
+			nm.wavePrefixList = RemoveFromList( "ForceHistory", nm.wavePrefixList )
+			vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
+		endif
+		
+		if ( WhichListItem( "ForceHistory", nm.chanSelectList ) >= 0 )
+			nm.chanSelectList = RemoveFromList( "ForceHistory", nm.chanSelectList )
+			vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
+		endif
+		
+		if ( WhichListItem( "ForceHistory", nm.waveSelectList ) >= 0 )
+			nm.waveSelectList = RemoveFromList( "ForceHistory", nm.waveSelectList )
+			vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
+		endif
+		
+	endif
+		
+	if ( cmdHistory )
 		
 		NMCmdHistory( fxnName, vlist + nm.paramList )
 	
