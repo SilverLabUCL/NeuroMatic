@@ -603,7 +603,11 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 				
 				ipnt = numpnts( yourpulse )
 				
-				wtemp[ 0, ipnt-1] = yourpulse
+				ipnt = min( ipnt, numpnts( wtemp ) )
+				
+				if ( ipnt - 1 > 0 )
+					wtemp[ 0, ipnt-1] = yourpulse
+				endif
 				
 				ipnt += 1
 				
@@ -613,7 +617,9 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 				
 				ipnt = aow.onset / deltax( wtemp )
 				
-				MatrixOp /O wtemp = shiftVector( wtemp, ipnt, 0 )
+				if ( ipnt > 0 )
+					MatrixOp /O wtemp = shiftVector( wtemp, ipnt, 0 )
+				endif
 				
 				normalize = 1
 				userWave = 1
