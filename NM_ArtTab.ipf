@@ -52,6 +52,7 @@ Static StrConstant BslnFxn = "avg" // baseline function to compute within bslnWi
 
 Static Constant BslnWin = 1.5 // baseline window size; baseline is computed immediately before stim artefact time
 Static Constant BslnDT = 0 // optional baseline time shift negative from stim time, 0 - no time shift
+Static Constant BslnConvergeNstdv = 1 // decay convergence test, number of bsln stdv
 
 Static StrConstant DecayFxn = "2exp" // "exp" or "2exp"
 
@@ -159,6 +160,7 @@ Function NMArtCheck() // check globals
 	CheckNMStr( df+"BslnFxn", BslnFxn )
 	CheckNMVar( df+"BslnDT", BslnDT )
 	CheckNMVar( df+"BslnWin", BslnWin )
+	CheckNMVar( df+"BslnConvergeNstdv", BslnConvergeNstdv )
 	
 	CheckNMStr( df+"ArtShape", ArtShape )
 	CheckNMStr( df+"DecayFxn", DecayFxn )
@@ -190,6 +192,7 @@ End // NMArtCheck
 Function NMArtWavesCheck( [ forceMake ] )
 	Variable forceMake
 
+	Variable thisIsAnArtWave
 	String df = NMArtDF
 	
 	String wName = CurrentNMWaveName()
@@ -197,7 +200,11 @@ Function NMArtWavesCheck( [ forceMake ] )
 	String noStimName = NMArtSubWaveName( "nostim" )
 	String stimName = NMArtSubWaveName( "stim" )
 	
-	Variable thisIsAnArtWave = StringMatch( wName[ 0, 2 ], "AT_" )
+	if ( strlen( wName ) == 0 )
+		return 0
+	endif
+	
+	thisIsAnArtWave = StringMatch( wName[ 0, 2 ], "AT_" )
 	
 	if ( thisIsAnArtWave )
 		return 0 // do not work with Art waves if they are selected
@@ -237,13 +244,14 @@ Function NMArtConfigs()
 	NMConfigVar( "Art", "ArtWidth", ArtWidth, "approx artefact width", "" )
 	NMConfigStr( "Art", "ArtShape", ArtShape, "artefact end polarity, Pos-Neg or Neg-Pos", "PN;NP;" )
 	
+	NMConfigVar( "Art", "BslnConvergeNstdv", BslnConvergeNstdv, "decay convergence test, number of bsln stdv", "" )
+	
 	NMConfigVar( "Art", "t1_hold", NaN, "fit hold value of t1", "" )
 	NMConfigVar( "Art", "t1_min", 0, "t1 min value", "" )
 	NMConfigVar( "Art", "t1_max", NaN, "t1 max value", "" )
 	NMConfigVar( "Art", "t2_hold", NaN, "fit hold value of t2", "" )
 	NMConfigVar( "Art", "t2_min", 0, "t2 min value", "" )
 	NMConfigVar( "Art", "t2_max", NaN, "t2 max value", "" )
-	
 	
 	NMConfigStr( "Art", "BaseColor", NMGreenStr, "baseline display color", "RGB" )
 	NMConfigStr( "Art", "DecayColor", NMRedStr, "decay display color", "RGB" )
@@ -280,6 +288,10 @@ Function NMArtVarGet( varName )
 			
 		case "BslnDT":
 			defaultVal = BslnDT
+			break
+			
+		case "BslnConvergeNstdv":
+			defaultVal = BslnConvergeNstdv
 			break
 			
 		case "DecayWin":
@@ -1209,9 +1221,10 @@ End // z_NumStimsCount()
 //****************************************************************
 //****************************************************************
 
-Function NMArtStimNumSet( stimNum [ doFit ] )
+Function NMArtStimNumSet( stimNum [ doFit, update ] )
 	Variable stimNum // -1 for current stim number (for update)
 	Variable doFit
+	Variable update // display
 	
 	Variable nmax, finished, t = NaN
 	String df = NMArtDF
@@ -1219,6 +1232,10 @@ Function NMArtStimNumSet( stimNum [ doFit ] )
 	Variable autoFit = NMArtVarGet( "AutoFit" )
 	
 	String twName = NMArtStrGet( "StimTimeWName" )
+	
+	if ( ParamIsDefault( update ) )
+		update = 1
+	endif
 	
 	if ( !WaveExists( $df+"AT_TimeX" ) )
 		return 0
@@ -1256,7 +1273,7 @@ Function NMArtStimNumSet( stimNum [ doFit ] )
 		t = xwave[ stimNum ]
 	endif
 	
-	z_DisplayTimeSet( stimNum, t )
+	z_DisplayTimeSet( stimNum, t, update )
 	
 	z_UpdateCheckboxSubtract()
 	
@@ -1318,9 +1335,10 @@ End // z_StimNumMax
 //****************************************************************
 //****************************************************************
 
-Static Function z_DisplayTimeSet( stimNum, t ) // called from NMArtStimNumSet
+Static Function z_DisplayTimeSet( stimNum, t, update ) // called from NMArtStimNumSet
 	Variable stimNum
 	Variable t // stim time, ( NaN ) to reset
+	Variable update // display
 	
 	Variable bsln, tpeak, xAxisDelta, yAxisDelta
 	Variable bbgn, bend, abgn, aend, dbgn, dend
@@ -1430,10 +1448,11 @@ Static Function z_DisplayTimeSet( stimNum, t ) // called from NMArtStimNumSet
 	
 	SetNMvar( df + "Xbgn", dbgn ) // drag wave variable
 	SetNMvar( df + "Xend", dend )
-
-	DoWindow /F $gName
 	
-	SetAxis bottom ( bbgn - xAxisDelta ), ( t + subtractWin + xAxisDelta )
+	if ( update )
+		DoWindow /F $gName
+		SetAxis bottom ( bbgn - xAxisDelta ), ( t + subtractWin + xAxisDelta )
+	endif
 	
 	Wave dtemp = $dwName
 	
@@ -1454,9 +1473,13 @@ Static Function z_DisplayTimeSet( stimNum, t ) // called from NMArtStimNumSet
 	
 	yAxisDelta = abs( ymax - ymin ) // for channel display
 	
-	SetAxis Left ( ymin - yAxisDelta ), ( ymax + yAxisDelta )
+	if ( update )
 	
-	NMArtDragUpdate()
+		SetAxis Left ( ymin - yAxisDelta ), ( ymax + yAxisDelta )
+		
+		NMArtDragUpdate()
+		
+	endif
 	
 End // z_DisplayTimeSet
 
@@ -1494,45 +1517,54 @@ End // z_BslnEnd
 
 Static Function z_FitAllCall()
 
-	Variable vflag
-	String df = NMArtDF
 	String twName = NMArtStrGet( "StimTimeWName" )
+	
+	if ( strlen( twName ) == 0 )
+		return 0
+	endif
+
+	String df = NMArtDF
 	String title = "NM Art Tab : " + twName
 	
-	Variable allWaves = 1 + NumVarOrDefault( df + "FitAllWaves", 0 )
+	Variable allWaves = 1 + NumVarOrDefault( df + "FitAllWaves", 1 )
+	Variable update = 1 + NumVarOrDefault( df + "FitAllUpdate", 1 )
+	
+	Prompt allwaves, "compute artefact subtraction for:", popup "current wave;all selected waves;"
+	Prompt update, "display results while computing?", popup "no;yes;"
 	
 	Variable numWaves = NMNumActiveWaves()
 	
 	if ( numWaves == 0 )
 		return 0
 	endif
-	
-	if ( strlen( twName ) == 0 )
-		return 0
-	endif
 		
 	if ( numWaves == 1 )
 	
-		vflag = NMDoAlert( "Fit and subtract all stimulus artefacts in the currently selected wave?", title = title, alertType = 1 )
+		DoPrompt NMPromptStr( "NM Art Fit All" ), update
 		
-		if ( vflag == 2 )
-			return -1 // no
+		if ( V_flag == 1 )
+			return -1 // cancel
 		endif
+		
+		update -= 1
+		
+		SetNMvar( df + "UpdateDisplay", update )
 		
 		allWaves = 0
 	
-	elseif ( NMNumActiveWaves() > 1 )
+	elseif ( numWaves > 1 )
 	
-		Prompt allwaves, "compute fit and subtraction for:", popup "current wave;all selected waves;"
-		DoPrompt NMPromptStr( "NM Art Fit All" ), allWaves
+		DoPrompt NMPromptStr( "NM Art Fit All" ), allWaves, update
 		
 		if ( V_flag == 1 )
 			return -1 // cancel
 		endif
 		
 		allWaves -= 1
+		update -= 1
 		
 		SetNMvar( df + "FitAllWaves", allWaves )
+		SetNMvar( df + "FitAllUpdate", update )
 	
 	else
 	
@@ -1540,17 +1572,18 @@ Static Function z_FitAllCall()
 	
 	endif
 	
-	return NMArtFitAll( allWaves = allWaves )
+	return NMArtFitAll( allWaves = allWaves, update = update )
 	
 End // z_FitAllCall
 
 //****************************************************************
 //****************************************************************
 
-Function NMArtFitAll( [ allWaves ] )
+Function NMArtFitAll( [ allWaves, update ] )
 	Variable allWaves
+	Variable update // display
 
-	Variable wcnt, wbgn, wend
+	Variable wcnt, wbgn, wend, success, failure
 	Variable icnt, stimTime, numStim, rflag
 	String wName, fwName
 	
@@ -1608,7 +1641,7 @@ Function NMArtFitAll( [ allWaves ] )
 				continue
 			endif
 			
-			NMArtStimNumSet( icnt, doFit = 0 )
+			NMArtStimNumSet( icnt, doFit = 0, update = update )
 			
 			stimTime = NMArtVarGet( "StimTime" )
 			
@@ -1616,12 +1649,14 @@ Function NMArtFitAll( [ allWaves ] )
 				continue
 			endif
 			
-			NMArtFit()
+			NMArtFit( update = update )
 			
 			if ( NMArtVarGet( "FitFlag" ) == 2 )
-				NMArtFitSubtract()
+				NMArtFitSubtract( update = update )
+				success += 1
 			else
 				NMHistory( "Art subtract failure : " + wName + " : stim " + num2istr( icnt ) )
+				failure += 1
 			endif
 			
 		endfor
@@ -1637,6 +1672,8 @@ Function NMArtFitAll( [ allWaves ] )
 	endif
 	
 	NMArtStimNumSet( 0 )
+	
+	NMHistory( "Art Fit All : " + num2str( failure ) + " failures out of " + num2str( failure + success ) )
 
 End // NMArtFitAll
 
@@ -1849,7 +1886,8 @@ Function NMArtFitDecay( [ update ] )
 	Variable update
 
 	Variable pbgn, pend, y0, ybgn, dt
-	Variable V_FitError = 0, V_FitQuitReason, V_chisq
+	Variable fit_ss, bsln_ss, data_stdv
+	Variable V_FitError, V_FitQuitReason, V_chisq
 	String hstr
 	
 	String df = NMArtDF
@@ -1865,6 +1903,10 @@ Function NMArtFitDecay( [ update ] )
 	Variable t1_hold = NMArtVarGet( "t1_hold" )
 	Variable t2_hold = NMArtVarGet( "t2_hold" )
 	
+	Variable stimNum = NMArtVarGet( "StimNum" )
+	
+	Variable waveNum = CurrentNMWave()
+	
 	String dwName = ChanDisplayWave( -1 )
 	
 	if ( !WaveExists( $df+"AT_Fit" ) )
@@ -1875,9 +1917,11 @@ Function NMArtFitDecay( [ update ] )
 	Wave AT_A = $df+"AT_A"
 	Wave AT_Fit = $df+"AT_Fit"
 	Wave AT_FitX = $df+"AT_FitX"
+	Wave AT_FitB = $df+"AT_FitB"
 	
 	Variable stimTime = NMArtVarGet( "StimTime" )
 	Variable subtractWin = NMArtVarGet( "SubtractWin" )
+	Variable BslnNstdv = NMArtVarGet( "BslnConvergeNstdv" )
 	
 	String decayFxn = NMArtStrGet( "DecayFxn" )
 	
@@ -1917,6 +1961,9 @@ Function NMArtFitDecay( [ update ] )
 		hstr += "00"
 	endif
 	
+	V_FitError = 0
+	V_FitQuitReason = 0
+	
 	FuncFit /Q/W=2/N/H=hstr NMArtFxnExp AT_A dtemp( tbgn, tend )
 	
 	if ( V_FitError != 0 )
@@ -1952,6 +1999,9 @@ Function NMArtFitDecay( [ update ] )
 		AT_A[ 5 ] = t2
 		
 		//print a1, t1, a2, t2
+		
+		V_FitError = 0
+		V_FitQuitReason = 0
 		
 		FuncFit /Q/W=2/N/H=hstr NMArtFxnExp2 AT_A dtemp( tbgn, tend ) /C=FitConstraints
 		
@@ -1992,8 +2042,7 @@ Function NMArtFitDecay( [ update ] )
 		return NaN
 	endif 
 	
-	
-	if ( ( pbgn > 2 ) && ( pbgn <= numpnts( AT_Fit ) ) )
+	if ( ( pbgn > 1 ) && ( pbgn <= numpnts( AT_Fit ) ) )
 		AT_Fit[ 0, pbgn - 1 ] = Nan
 	endif
 	
@@ -2006,16 +2055,27 @@ Function NMArtFitDecay( [ update ] )
 		endif
 	endif
 	
-	WaveStats /Q AT_Fit
+	// convergence test - does fit decay to baseline?
 	
-	Variable fmax = max( abs( V_max ), abs( V_min ) )
+	pend = pbgn
+	pbgn = pend - 10
 	
-	WaveStats /Q dtemp
+	WaveStats /Q/R=[ pbgn, pend ] AT_Fit
 	
-	Variable wmax = max( abs( V_max ), abs( V_min ) )
+	fit_ss = V_avg
 	
-	if ( fmax > wmax )
-		AT_Fit = Nan // probably a bad fit
+	WaveStats /Q/R=[ pbgn, pend ] AT_FitB
+	
+	bsln_ss = V_avg
+	
+	WaveStats /Q/R=[ pbgn, pend ] dtemp
+	
+	data_stdv = V_sdev
+	
+	if ( ( fit_ss < bsln_ss - BslnNstdv * data_stdv ) || ( fit_ss > bsln_ss + BslnNstdv * data_stdv ) )
+		AT_Fit = Nan // fit does not converge to baseline
+		V_FitError = -1
+		//Print "wave " + num2str( waveNum )  + ", stim " + num2str( stimNum ) + " : decay fit did not converge to baseline"
 	endif
 	
 	if ( update )
