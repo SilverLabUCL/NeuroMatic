@@ -38,7 +38,7 @@
 
 Static StrConstant NMChanGraphPrefix = "Chan"
 StrConstant NMChanPopupList = "Overlay;Grid;Drag;Errors;XLabel;YLabel;FreezeX;FreezeY;To Front;Reset Position;Off;"
-StrConstant NMChanTransformList = "Baseline;Normalize;dF/Fo;Invert;Differentiate;Double Differentiate;Phase Plane;Integrate;FFT;Running Average;Histogram;Clip Events;"
+StrConstant NMChanTransformList = "Baseline;Normalize;dF/Fo;Z-score;Invert;Differentiate;Double Differentiate;Integrate;Phase Plane;FFT;Log;Ln;Running Average;Histogram;Clip Events;"
 StrConstant NMChanFFTList = "real;magnitude;magnitude square;phase;"
 StrConstant NMFilterList = "binomial;boxcar;low-pass;high-pass;"
 
@@ -780,6 +780,18 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 				
 			case "dF/Fo":
 				axisName = "dF/Fo"
+				break
+				
+			case "Z-score":
+				axisName = "Z-score"
+				break
+				
+			case "Log":
+				axisName = "Log"
+				break
+				
+			case "Ln":
+				axisName = "Ln"
 				break
 				
 			case "Histogram":
@@ -3262,6 +3274,7 @@ Function NMChanTransformCheck( transformList )
 		
 			case "dF/Fo":
 			case "Baseline":
+			case "Z-score":
 			
 				xbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
 				xend = str2num( StringByKey("xend", tList, "=", ",") )
@@ -3412,12 +3425,15 @@ Function /S NMChanTransformCall( channel, on )
 		case "Double Differentiate":
 		case "Phase Plane":
 		case "Integrate":
-		case "Invert":		
+		case "Invert":
+		case "Log":
+		case "Ln":
 			return NMChannelTransformSet( channel = channel, transform = transform, history = 1 ) // simple transforms
 		
 		case "Normalize":
 		case "dF/Fo":
 		case "Baseline":
+		case "Z-score":
 		case "FFT":
 		case "Running Average":
 		case "Histogram":
@@ -3464,6 +3480,9 @@ Function /S NMChanTransformAsk( channel ) // request channel transform function
 			break
 		case "Baseline":
 			transform = NMChanTransformBaselineCall( channel )
+			break
+		case "Z-score":
+			transform = NMChanTransformZscoreCall( channel )
 			break
 		case "FFT":
 			transform = NMChanTransformFFTCall( channel )
@@ -3534,6 +3553,8 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 		case "Phase Plane":
 		case "Integrate":
 		case "Invert":
+		case "Log":
+		case "Ln":
 			break
 			
 		case "Normalize":
@@ -3546,6 +3567,10 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 			
 		case "Baseline":
 			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformBaseline" ) + " for this channel transformation." )
+			return ""
+			
+		case "Z-score":
+			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformZscore" ) + " for this channel transformation." )
 			return ""
 			
 		case "FFT":
@@ -3582,7 +3607,7 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 	
 	return transform
 
-End // NMChanTransform
+End // NMChannelTransformSet
 
 //****************************************************************
 //****************************************************************
@@ -3810,6 +3835,48 @@ End // NMChanTransformDFOFCall
 //****************************************************************
 //****************************************************************
 
+Function /S NMChanTransformBaselineCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable xbgn, xend
+	String cdf, mdf = NMMainDF
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	cdf = NMChanTransformDF( channel )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	xbgn = NumVarOrDefault( mdf+"Bsln_Bgn", NMBaselineXbgn )
+	xend = NumVarOrDefault( mdf+"Bsln_End", NMBaselineXend )
+	
+	xbgn = NumVarOrDefault( cdf + "Bsln_Bbgn", xbgn )
+	xend = NumVarOrDefault( cdf + "Bsln_Bend", xend )
+	
+	Prompt xbgn, NMPromptAddUnitsX( "compute baseline from" )
+	Prompt xend, NMPromptAddUnitsX( "compute baseline to" )
+	
+	DoPrompt "Baseline Subtract", xbgn, xend
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	SetNMvar( cdf + "Bsln_Bbgn", xbgn )
+	SetNMvar( cdf + "Bsln_Bend", xend )
+	
+	return NMChanTransformBaseline( channel, xbgn, xend, history = 1 )
+
+End // NMChanTransformBaselineCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function /S NMChanTransformDFOF( channel, xbgn, xend [ prefixFolder, history ] )
 	Variable channel // ( -1 ) for current channel
 	Variable xbgn, xend // x-axis begin and end, use ( -inf, inf ) for all
@@ -3870,48 +3937,6 @@ End // NMChanTransformDFOF
 //****************************************************************
 //****************************************************************
 
-Function /S NMChanTransformBaselineCall( channel )
-	Variable channel // ( -1 ) for current channel
-	
-	Variable xbgn, xend
-	String cdf, mdf = NMMainDF
-	
-	if ( channel == -1 )
-		channel = CurrentNMChannel()
-	endif
-	
-	cdf = NMChanTransformDF( channel )
-	
-	if ( strlen( cdf ) == 0 )
-		return ""
-	endif
-	
-	xbgn = NumVarOrDefault( mdf+"Bsln_Bgn", NMBaselineXbgn )
-	xend = NumVarOrDefault( mdf+"Bsln_End", NMBaselineXend )
-	
-	xbgn = NumVarOrDefault( cdf + "Bsln_Bbgn", xbgn )
-	xend = NumVarOrDefault( cdf + "Bsln_Bend", xend )
-	
-	Prompt xbgn, NMPromptAddUnitsX( "compute baseline from" )
-	Prompt xend, NMPromptAddUnitsX( "compute baseline to" )
-	
-	DoPrompt "Baseline Subtract", xbgn, xend
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	SetNMvar( cdf + "Bsln_Bbgn", xbgn )
-	SetNMvar( cdf + "Bsln_Bend", xend )
-	
-	return NMChanTransformBaseline( channel, xbgn, xend, history = 1 )
-
-End // NMChanTransformBaselineCall
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Function /S NMChanTransformBaseline( channel, xbgn, xend [ prefixFolder, history ] )
 	Variable channel // ( -1 ) for current channel
 	Variable xbgn, xend // x-axis begin and end, use ( -inf, inf ) for all
@@ -3967,6 +3992,108 @@ Function /S NMChanTransformBaseline( channel, xbgn, xend [ prefixFolder, history
 	return transformList
 	
 End // NMChanTransformBaseline
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformZscoreCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable xbgn, xend
+	String cdf, mdf = NMMainDF
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	cdf = NMChanTransformDF( channel )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	xbgn = NumVarOrDefault( mdf+"Bsln_Bgn", NMBaselineXbgn )
+	xend = NumVarOrDefault( mdf+"Bsln_End", NMBaselineXend )
+	
+	xbgn = NumVarOrDefault( cdf + "ZscoreBgn", xbgn )
+	xend = NumVarOrDefault( cdf + "ZscoreEnd", xend )
+	
+	Prompt xbgn, NMPromptAddUnitsX( "compute mean/stdv from" )
+	Prompt xend, NMPromptAddUnitsX( "compute mean/stdv to" )
+	
+	DoPrompt "Z-score", xbgn, xend
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	SetNMvar( cdf + "ZscoreBgn", xbgn )
+	SetNMvar( cdf + "ZscoreEnd", xend )
+	
+	return NMChanTransformZscore( channel, xbgn, xend, history = 1 )
+
+End // NMChanTransformZscoreCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformZscore( channel, xbgn, xend [ prefixFolder, history ] )
+	Variable channel // ( -1 ) for current channel
+	Variable xbgn, xend // x-axis begin and end, use ( -inf, inf ) for all
+	String prefixFolder
+	Variable history
+	
+	String transformList, vlist = "", cdf
+	
+	vList = NMCmdNum( channel, vList, integer = 1 )
+	vList = NMCmdNum( xbgn, vList )
+	vList = NMCmdNum( xend, vList )
+	
+	if ( ParamIsDefault( prefixFolder ) )
+		prefixFolder = CurrentNMPrefixFolder()
+	else
+		vlist = NMCmdStrOptional( "prefixFolder", prefixFolder, vlist )
+	endif
+	
+	prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
+	
+	if ( strlen( prefixFolder ) == 0 )
+		return ""
+	endif
+	
+	if ( history )
+		NMCommandHistory( vlist )
+	endif
+	
+	if ( channel == -1 )
+		channel = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	endif
+	
+	cdf = NMChanTransformDF( channel, prefixFolder = prefixFolder )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	if ( numtype( xbgn ) > 0 )
+		xbgn = -inf
+	endif
+	
+	if ( numtype( xend ) > 0 )
+		xend = inf
+	endif
+	
+	transformList = "Z-score,xbgn=" + num2str( xbgn ) + ",xend=" + num2str( xend ) + "," + ";"
+	SetNMstr( cdf + "TransformStr", transformList )
+	
+	ChanGraphsUpdate()
+	NMAutoTabCall()
+	
+	return transformList
+	
+End // NMChanTransformZscore
 
 //****************************************************************
 //****************************************************************
@@ -5228,15 +5355,6 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 				break
 				
-			case "dF/Fo":
-			
-				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
-				bend = str2num( StringByKey("xend", tList, "=", ",") )
-				
-				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, DFOF = 1 )
-				
-				break
-				
 			case "Baseline":
 			
 				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
@@ -5246,11 +5364,45 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 				break
 				
+			case "dF/Fo":
+			
+				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
+				bend = str2num( StringByKey("xend", tList, "=", ",") )
+				
+				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, DFOF = 1 )
+				
+				break
+				
+			case "Z-score":
+			
+				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
+				bend = str2num( StringByKey("xend", tList, "=", ",") )
+				
+				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, Zscore = 1 )
+				
+				break
+				
 			case "Invert":
 			
 				Wave wtemp = $dstName
 				
 				MatrixOp /O wtemp = wtemp * negone
+				
+				break
+				
+			case "Log":
+			
+				Wave wtemp = $dstName
+				
+				wtemp = log( wtemp )
+				
+				break
+				
+			case "Ln":
+			
+				Wave wtemp = $dstName
+				
+				wtemp = ln( wtemp )
 				
 				break
 				

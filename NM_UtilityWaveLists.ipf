@@ -4234,11 +4234,12 @@ End // NMTimeScaleConvert2
 //****************************************************************
 //****************************************************************
 
-Function /S NMBaseline( wList [ folder, xWave, xbgn, xend, allWavesAvg, DFOF, deprecation ] )
+Function /S NMBaseline( wList [ folder, xWave, xbgn, xend, allWavesAvg, DFOF, Zscore, deprecation ] )
 	String wList, folder, xWave // see description at top
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable allWavesAvg // ( 0 ) no, baseline to each wave's mean ( 1 ) baseline to mean of all selected waves
 	Variable DFOF // compute dF/Fo baseline ( 0 ) no ( 1 ) yes
+	Variable Zscore // compute z-score ( 0 ) no ( 1 ) yes
 	Variable deprecation
 	
 	STRUCT NMParams nm
@@ -4263,18 +4264,19 @@ Function /S NMBaseline( wList [ folder, xWave, xbgn, xend, allWavesAvg, DFOF, de
 		xend = inf
 	endif
 	
-	return NMBaseline2( nm, xbgn = xbgn, xend = xend, allWavesAvg = allWavesAvg, DFOF = DFOF )
+	return NMBaseline2( nm, xbgn = xbgn, xend = xend, allWavesAvg = allWavesAvg, DFOF = DFOF, Zscore = Zscore )
 	
 End // NMBaseline
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
+Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, Zscore, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList, nm.xWave
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable allWavesAvg // ( 0 ) no, baseline to each wave's mean ( 1 ) baseline to mean of all selected waves
-	Variable DFOF // compute dF/Fo baseline ( 0 ) no ( 1 ) yes
+	Variable DFOF // compute dF/Fo ( 0 ) no ( 1 ) yes
+	Variable Zscore // compute z-score ( 0 ) no ( 1 ) yes
 	Variable history
 	
 	Variable wcnt, numWaves, pbgn, pend, xflag
@@ -4312,6 +4314,10 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 		NMParamVarAdd( "DFOF", DFOF, nm, integer = 1 )
 	endif
 	
+	if ( Zscore )
+		NMParamVarAdd( "Zscore", Zscore, nm, integer = 1 )
+	endif
+	
 	if ( allWavesAvg )
 	
 		for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
@@ -4330,10 +4336,12 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 			WaveStats /Q/R=[ pbgn, pend ] wtemp
 			
 			avg += V_avg
+			stdv += V_sdev
 			
 		endfor
 		
 		avg /= numWaves
+		stdv /= numWaves
 		
 		if ( numtype( avg ) > 0 )
 			if ( history )
@@ -4366,6 +4374,7 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 			WaveStats /Q/R=[ pbgn, pend ] wtemp
 			
 			avg = V_avg
+			stdv = V_sdev
 			
 		endif
 		
@@ -4386,6 +4395,17 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 			endif
 		
 			MatrixOp /O wtemp = ( wtemp - avg ) / avg
+			
+		elseif ( Zscore )
+		
+			if ( ( numtype( stdv ) > 0 ) || ( stdv == 0 ) )
+				if ( history )
+					NMHistory( thisFxn + " Error Zscore : encountered bad stdv for wave " + wName )
+				endif
+				continue // not allowed
+			endif
+			
+			MatrixOp /O wtemp = ( wtemp - avg ) / stdv
 			
 		else
 			
