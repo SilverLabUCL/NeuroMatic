@@ -4,7 +4,10 @@
 //****************************************************************
 //****************************************************************
 
-Constant NMD3DFormat = 2
+Static Constant D3DFORMAT = 2
+Static Constant MULTIPLEFOLDERSOPTION = 1 // import subfolder data into (1) one folder (2) multiple folders
+Static StrConstant DETECTORSHORTPREFIX = "D" // short prefix name for "Detector"
+Static StrConstant SOURCESHORTPREFIX = "S" // short prefix name for "Source"
 
 //****************************************************************
 //****************************************************************
@@ -13,10 +16,9 @@ Macro NMImportD3DFilesCall()
 
 	String folderPath = ""
 	String fileList = ""
-	
-	Variable precision = 2
+	Variable wavePrecision = 2
 
-	NMImportD3DFiles( folderPath, fileList, precision )
+	NMImportD3DFiles( folderPath, fileList, wavePrecision )
 	
 End // NMImportD3DFilesCall
 
@@ -26,11 +28,10 @@ End // NMImportD3DFilesCall
 Macro NMImportD3DFolderCall()
 
 	String folderPath = ""
-	
 	Variable NoAlerts = 0
-	Variable precision = 2
+	Variable wavePrecision = 2
 
-	NMImportD3DFolder( folderPath, NoAlerts, precision )
+	NMImportD3DFolder( folderPath, NoAlerts, wavePrecision )
 	
 End // NMImportD3DFolderCall
 
@@ -45,10 +46,10 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 	//print folderPath, NoAlerts, precision
 
 	String file, fileList, folderName, folderList = "", subFolderList, d3dFolderList = "" 
-	String df, wName, wList = ""
+	String df, wName, wList = "", prefix, prefix2, prefixList = "", prefixList2, prefixList3
 	
-	Variable icnt, jcnt, folderSelect
-	Variable numFiles, numFolders
+	Variable icnt, jcnt, folderSelect = 0, setCurrentPrefix, foundPrefix
+	Variable numFiles, numFolders, createdFolder, addPrefix = 1
 
 	if ( strlen( folderPath ) == 0 )
 	
@@ -64,7 +65,7 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 		
 	endif
 	
-	print folderPath
+	NMHistory( folderPath )
 	
 	NewPath /O/Q/Z D3DOpenFilePath, folderPath
 
@@ -123,7 +124,7 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 					folderList += d3dFolderList
 				
 				
-					folderSelect = NumVarOrDefault( df + "D3DMultipleFoldersSelect", 2 )
+					folderSelect = NumVarOrDefault( df + "D3DMultipleFoldersSelect", MULTIPLEFOLDERSOPTION )
 					
 					Prompt folderSelect, "import subfolder data into:", popup "one folder;multiple folders;"
 					DoPrompt "Import D3D Folders", folderSelect
@@ -155,62 +156,95 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 		
 		numFiles = ItemsInList( fileList )
 		
+		if ( numFiles == 0 )
+			continue
+		endif
+		
 		if ( folderSelect == 1 )
-			if ( icnt == 0 )
+			if ( !createdFolder )
 				NMFolderNew(  folderName )
+				createdFolder = 1
 			endif
+			addPrefix = 0
 		else
-			if ( numFiles == 0 )
-				continue
-			else
-				NMFolderNew(  folderName )
-			endif
+			NMFolderNew( folderName )
 		endif
 		
 		folderPath = LastPathColon( folderPath, 1 )
+		
+		foundPrefix = 0
 		
 		for ( jcnt = 0; jcnt < numFiles; jcnt += 1 )
 		
 			file = StringFromList( jcnt, fileList )
 			
-			wName = NMImportD3DFile( folderPath + file, precision )
+			if ( addPrefix && !foundPrefix && strsearch( file, "Detect", 0 ) >= 0 )
+				setCurrentPrefix = 1
+				foundPrefix = 1
+			else
+				setCurrentPrefix = 0
+			endif
 			
-			wList = AddListItem( wName, wList, ";", inf )
+			prefix = NMImportD3DFile( folderPath + file, precision, addPrefix = addPrefix, setCurrentPrefix = setCurrentPrefix )
+			
+			if ( strlen( prefix ) > 0 )
+				prefixList = AddListItem( prefix, prefixList, ";", inf )
+			endif
 		
 		endfor
 		
-		if ( ( folderSelect == 2 ) || ( icnt == numFolders - 1 ) )
-			
-			if ( strlen( wList ) == 0 )
-				//NMFolderClose( folderName )
-				continue // nothing opened
-			endif
-			
-			wList = WaveList( "Detect*", ";", "" )
-			
-			if ( ItemsInList( wList ) > 0 )
-				NMSet( wavePrefixNoPrompt =  "Detect" ) 
-			endif
-			
-			wList = WaveList( "Source*", ";", "" )
-			
-			if ( ItemsInList( wList ) > 0 )
-				NMPrefixAdd(  "Source"  )
-			endif
-			
-			wList = WaveList( "S2D_*", ";", "" )
-			
-			if ( ItemsInList( wList ) > 0 )
-				NMPrefixAdd(  "S2D_"  )
-			endif
-	
+		if ( addPrefix && !foundPrefix )
+			prefix = StringFromList( 0, prefixList )
+			NMSet( wavePrefixNoPrompt = prefix )
 		endif
 		
 	endfor
 	
+	Variable firstPrefix = 1
+	
+	if ( folderSelect == 1 )
+	
+		prefixList2 = prefixList
+	
+		for ( icnt = 0 ; icnt < 20 ; icnt += 1 )
+		
+			if ( ItemsInList( prefixList2 ) == 0 )
+				break
+			endif
+	
+			prefix = StringFromList( 0, prefixList2 )
+			prefix = prefix[ 0, strlen( prefix ) - 2 ]
+			
+			if ( firstPrefix )
+				NMSet( wavePrefixNoPrompt = prefix )
+				firstPrefix = 0
+			else
+				NMPrefixAdd( prefix )
+			endif
+			
+			prefixList3 = ""
+			
+			for ( jcnt = 0 ; jcnt < ItemsInList( prefixList2 ) ; jcnt += 1 )
+			
+				prefix2 = StringFromList( jcnt, prefixList2 )
+				
+				if ( strsearch( prefix2, prefix, 0 ) == 0 )
+					continue
+				endif
+				
+				prefixList3 += prefix2 + ";"
+				
+			endfor
+			
+			prefixList2 = prefixList3
+		
+		endfor
+	
+	endif
+	
 	KillPath /Z D3DOpenFilePath
 	
-	Print "Finished loading " + folderName
+	NMHistory( "Finished loading " + folderName )
 	
 	return folderName
 
@@ -270,7 +304,7 @@ Function /S NMImportD3DFiles( folderPath, fileList, precision )
 		
 		filePath = parent + StringFromList( icnt, fileList )
 		
-		NMImportD3DFile( filePath, precision )
+		NMImportD3DFile( filePath, precision, addPrefix = 1, setCurrentPrefix = ( icnt == 0 ) )
 		
 	endfor
 	
@@ -316,7 +350,7 @@ Function /S NMD3DFileType( filePath )
 	
 	endif
 	
-	if ( NMD3DFormat == 2 )
+	if ( D3DFORMAT == 2 )
 		
 		LoadWave /A=D3Dwave/J/K=2/L={0,0,20,0,0}/O/Q filePath // load as text wave
 			
@@ -355,11 +389,13 @@ End // NMD3DFileType
 //****************************************************************
 //****************************************************************
 
-Function /S NMImportD3DFile( filePath, precision )
+Function /S NMImportD3DFile( filePath, precision [ addPrefix, setCurrentPrefix ] )
 	String filePath // file path on hard drive to open
 	Variable precision // load into Igor waves ( 1 ) single floating point ( 2 ) double floating point
-
-	String fileName, parent, outPrefix
+	Variable addPrefix // add wave prefix name ( 0 ) no ( 1 ) yes
+	Variable setCurrentPrefix // set as current wave prefix name ( 0 ) no ( 1 ) yes
+	
+	String fileName, parent, outPrefix = ""
 	String wName, wName2, wName3, wList, stemp, wName2D, prefix
 	String xunits, yunits
 	String dataDimensions = "time"
@@ -371,6 +407,14 @@ Function /S NMImportD3DFile( filePath, precision )
 	Variable EOH, skip
 	
 	Variable pointsPerSample = 1
+	
+	if ( ParamIsDefault( addPrefix ) )
+		addPrefix = 1
+	endif
+	
+	if ( ParamIsDefault( setCurrentPrefix ) )
+		setCurrentPrefix = 1
+	endif
 
 	if ( strlen( filePath ) == 0 )
 		return "" // cancel
@@ -380,7 +424,7 @@ Function /S NMImportD3DFile( filePath, precision )
 		return "" // cancel
 	endif
 	
-	if ( NMD3DFormat == 2 )
+	if ( D3DFORMAT == 2 )
 		offset = 0
 	else
 		offset = 5
@@ -396,7 +440,7 @@ Function /S NMImportD3DFile( filePath, precision )
 		
 	if ( ( StringMatch( fileName[ slen-4,slen-1 ], ".dat" ) == 1 ) || ( StringMatch( fileName[ slen-4,slen-1 ], ".bin" ) == 1 ) )
 		
-		if ( NMD3DFormat == 2 )
+		if ( D3DFORMAT == 2 )
 		
 			LoadWave /A=D3Dwave/J/K=2/L={0,0,2000,0,0}/O/Q filePath // load as text wave
 			
@@ -624,6 +668,9 @@ Function /S NMImportD3DFile( filePath, precision )
 					wName2 += "_" + num2istr( wcnt )
 				endif
 				
+				wName2 = ReplaceString( "Detector", wName2, DETECTORSHORTPREFIX )
+				wName2 = ReplaceString( "Source", wName2, SOURCESHORTPREFIX )
+				
 				if ( snap == 1 )
 					wName2 = "Snap_" + wName2
 				endif
@@ -635,6 +682,10 @@ Function /S NMImportD3DFile( filePath, precision )
 				endif
 			
 				Duplicate /O $wName, $wName2
+				
+				NMNoteType( wName2, "NMD3D", xunits, yunits, "" )
+				
+				outPrefix = wName2
 			
 				if ( ( snap == 1 ) && ( x1 + y1 + z1 + x2 + y2 + z2 > 0 ) )
 				
@@ -681,6 +732,8 @@ Function /S NMImportD3DFile( filePath, precision )
 				
 			endif
 			
+			outPrefix = prefix
+			
 		endif
 		
 	endif
@@ -697,16 +750,24 @@ Function /S NMImportD3DFile( filePath, precision )
 		outPrefix = NMD3DUnpack( wName2, x1, y1, z1, x2, y2, z2, pointsPerSample, dt, xunits, yunits, outPrefix )
 		
 		if ( strlen( outPrefix ) > 0 )
-			//NMSet( wavePrefix=outPrefix )
 			KillWaves /Z $wName2
-			return outPrefix
 		endif
 		
 	endif
 	
 	//Print "Finished loading " + filePath
 	
-	return wName2
+	if ( addPrefix )
+		if ( strlen( outPrefix ) > 0 )
+			if ( setCurrentPrefix )
+				NMSet( wavePrefixNoPrompt = outPrefix )
+			else
+				NMPrefixAdd( outPrefix )
+			endif
+		endif
+	endif
+	
+	return outPrefix
 
 End // NMImportD3DFile
 
@@ -731,7 +792,8 @@ Function /S NMD3DUnpack( wName, x1, y1, z1, x2, y2, z2, pointsPerSample, dx, xun
 	if ( StringMatch( outPrefix, "prompt" ) )
 		
 		//outPrefix = NMD3DWavePrefix( wName )
-		outPrefix = ReplaceString( "Detector", wName, "DT" )
+		outPrefix = ReplaceString( "Detector", wName, DetectorShortPrefix )
+		outPrefix = ReplaceString( "Source", outPrefix, SourceShortPrefix )
 		
 		if ( strlen( outPrefix ) == 0 )
 		
