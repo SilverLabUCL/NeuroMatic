@@ -3316,6 +3316,18 @@ Function NMChanTransformCheck( transformList )
 				endif
 				
 				return 0
+				
+			case "Integrate":
+			
+				Variable method = str2num( StringByKey("method", tList, "=", ",") )
+				
+				switch( method )
+					case 0:
+					case 1:
+						return 0
+				endswitch
+				
+				return 1
 				 
 			case "FFT":
 			
@@ -3424,7 +3436,6 @@ Function /S NMChanTransformCall( channel, on )
 		case "Differentiate":
 		case "Double Differentiate":
 		case "Phase Plane":
-		case "Integrate":
 		case "Invert":
 		case "Log":
 		case "Ln":
@@ -3434,6 +3445,7 @@ Function /S NMChanTransformCall( channel, on )
 		case "dF/Fo":
 		case "Baseline":
 		case "Z-score":
+		case "Integrate":
 		case "FFT":
 		case "Running Average":
 		case "Histogram":
@@ -3483,6 +3495,9 @@ Function /S NMChanTransformAsk( channel ) // request channel transform function
 			break
 		case "Z-score":
 			transform = NMChanTransformZscoreCall( channel )
+			break
+		case "Integrate":
+			transform = NMChanTransformIntegrateCall( channel )
 			break
 		case "FFT":
 			transform = NMChanTransformFFTCall( channel )
@@ -3551,7 +3566,6 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 		case "Differentiate":
 		case "Double Differentiate":
 		case "Phase Plane":
-		case "Integrate":
 		case "Invert":
 		case "Log":
 		case "Ln":
@@ -3571,6 +3585,10 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 			
 		case "Z-score":
 			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformZscore" ) + " for this channel transformation." )
+			return ""
+			
+		case "Integrate":
+			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformIntegrate" ) + " for this channel transformation." )
 			return ""
 			
 		case "FFT":
@@ -4094,6 +4112,111 @@ Function /S NMChanTransformZscore( channel, xbgn, xend [ prefixFolder, history ]
 	return transformList
 	
 End // NMChanTransformZscore
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformIntegrateCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable method
+	String cdf
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	cdf = NMChanTransformDF( channel )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	method = NumVarOrDefault( cdf + "IntegrateMethod", 1 )
+	
+	method += 1
+	
+	Prompt method, "select integration method:", popup "rectangular;trapezoid;"
+	
+	DoPrompt "Integrate", method
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	method -= 1
+	
+	SetNMvar( cdf + "IntegrateMethod", method )
+	
+	return NMChanTransformIntegrate( channel, method = method, history = 1 )
+
+End // NMChanTransformIntegrateCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformIntegrate( channel [ prefixFolder, method, history ] )
+	Variable channel // ( -1 ) for current channel
+	String prefixFolder
+	Variable method // ( 0 ) rectangular ( 1 ) trapezoid
+	Variable history
+	
+	String transformList, cdf, vlist = ""
+	
+	vList = NMCmdNum( channel, vList, integer = 1 )
+	
+	if ( ParamIsDefault( prefixFolder ) )
+		prefixFolder = CurrentNMPrefixFolder()
+	else
+		vlist = NMCmdStrOptional( "prefixFolder", prefixFolder, vlist )
+	endif
+	
+	prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
+	
+	if ( strlen( prefixFolder ) == 0 )
+		return ""
+	endif
+	
+	if ( !ParamIsDefault( method ) )
+		vlist = NMCmdNumOptional( "method", method, vlist )
+	endif
+	
+	if ( history )
+		NMCommandHistory( vlist )
+	endif
+	
+	if ( channel == -1 )
+		channel = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	endif
+	
+	cdf = NMChanTransformDF( channel, prefixFolder = prefixFolder )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	switch( method )
+	
+		case 0: // rectangular
+		case 1: // trapezoid
+			break
+	
+		default:
+			return ""
+
+	endswitch
+	
+	transformList = "Integrate,method=" + num2istr( method ) + "," + ";"
+	SetNMstr( cdf + "TransformStr", transformList )
+	
+	ChanGraphsUpdate()
+	NMAutoTabCall()
+	
+	return transformList
+	
+End // NMChanTransformIntegrate
 
 //****************************************************************
 //****************************************************************
@@ -5065,7 +5188,7 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 	
 	Variable icnt, wcnt, xbgn1, xend1, xbgn2, xend2
 	Variable outputNum, minValue, maxValue, negone = -1
-	Variable sfreq, fratio, numWaves, numAvgWaves, wrap, bbgn, bend, dx, offset, npnts
+	Variable sfreq, fratio, numWaves, numAvgWaves, wrap, bbgn, bend, dx, offset, npnts, method
 	
 	String fxn1, fxn2, wName, wName2, tList, transform, output, mdf = NMMainDF
 	
@@ -5288,11 +5411,15 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				break
 				
 			case "Integrate":
+				
+				method = str2num( StringByKey("method", tList, "=", ",") )
+				
 				if ( WaveExists( $xWave ) )
-					Integrate $dstName /X=$xWave
+					Integrate /Meth=( method ) $dstName /X=$xWave
 				else
-					Integrate $dstName
+					Integrate /Meth=( method ) $dstName
 				endif
+				
 				break
 				
 			case "FFT":

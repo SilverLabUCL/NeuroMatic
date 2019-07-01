@@ -6643,8 +6643,10 @@ End // SortWaveListByCreation
 //****************************************************************
 //****************************************************************
 
-Function /S NMIntegrate( wList [ folder, xWave, deprecation ] ) // see NMIntegrate2
+Function /S NMIntegrate( wList [ folder, xWave, method, deprecation ] ) // see NMIntegrate2
 	String wList, folder, xWave // see description at top
+	Variable method // see /Meth of Igor Integrate ( 0 ) Rectangular, default ( 1 ) Trapezoid
+	// best to use trapezoid if using x-wave
 	Variable deprecation
 	
 	STRUCT NMParams nm
@@ -6661,15 +6663,17 @@ Function /S NMIntegrate( wList [ folder, xWave, deprecation ] ) // see NMIntegra
 		return ""
 	endif
 	
-	return NMIntegrate2( nm )
+	return NMIntegrate2( nm, method = method )
 
 End // NMIntegrate
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMIntegrate2( nm [ history ] ) // see Igor Integrate
+Function /S NMIntegrate2( nm [ method, history ] ) // see Igor Integrate
 	STRUCT NMParams &nm // uses nm.folder, nm.wList, nm.xWave
+	Variable method // see /Meth of Igor Integrate ( 0 ) Rectangular, default ( 1 ) Trapezoid
+	// best to use trapezoid if using x-wave
 	Variable history
 	
 	Variable wcnt, numWaves, xflag
@@ -6685,6 +6689,10 @@ Function /S NMIntegrate2( nm [ history ] ) // see Igor Integrate
 		NMParamStrAdd( "xwave", nm.xWave, nm )
 		xflag = 1
 	endif
+	
+	if ( ( numtype( method ) > 0 ) || ( method < 0 ) || ( method > 1 ) )
+		return NM2ErrorStr( 10, "method", num2str( method ) )
+	endif
 		
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
@@ -6697,9 +6705,9 @@ Function /S NMIntegrate2( nm [ history ] ) // see Igor Integrate
 		Wave wtemp = $nm.folder + wName
 		
 		if ( xflag )
-			Integrate wtemp /X=$nm.folder + nm.xWave
+			Integrate /Meth=( method ) wtemp /X=$nm.folder + nm.xWave
 		else
-			Integrate wtemp
+			Integrate /Meth=( method ) wtemp
 		endif
 		
 		NMLoopWaveNote( nm.folder + wName, "" )

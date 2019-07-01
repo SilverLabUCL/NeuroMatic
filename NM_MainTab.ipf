@@ -9451,26 +9451,42 @@ End // NMMainSort2
 //****************************************************************
 
 Static Function /S zCall_NMMainIntegrate()
-
-	DoAlert /T=( NMPromptStr( "NM Integrate Waves" ) ) 1, "Are you sure you want to integrate the currently selected waves?"
 	
-	if ( V_Flag == 1 )
-		return NMMainIntegrate( history = 1 )
+	Variable method = NumVarOrDefault( NMMainDF + "IntegrateMethod", 1 ) // ( 0 ) rectangular ( 1 ) trapezoid
+	
+	method += 1
+	
+	Prompt method, "select integration method:", popup "rectangular;trapezoid;"
+	DoPrompt NMPromptStr( "NM Integrate Waves" ), method
+	
+	if ( V_flag == 1 )
+		return "" // cancel
 	endif
 	
-	return ""
+	method -= 1
+	
+	SetNMvar( NMMainDF + "IntegrateMethod", method )
+	
+	return NMMainIntegrate( method = method, history = 1 )
 
 End // zCall_NMMainIntegrate
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainIntegrate( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation ] )
+Function /S NMMainIntegrate( [ folderList, wavePrefixList, chanSelectList, waveSelectList, method, history, deprecation ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
+	Variable method // ( 0 ) rectangular, default ( 1 ) trapezoid
 	Variable history, deprecation
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
+	
+	if ( ( numtype( method ) > 0 ) || ( method < 0 ) || ( method > 1 ) )
+		return NM2ErrorStr( 10, "method", num2str( method ) )		
+	endif
+	
+	NMLoopExecVarAdd( "method", method, nm )
 	
 	if ( ParamIsDefault( folderList ) )
 		folderList = ""
@@ -9504,13 +9520,18 @@ End // NMMainIntegrate
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainIntegrate2( [ folder, wavePrefix, chanNum, waveSelect ] )
+Function /S NMMainIntegrate2( [ folder, wavePrefix, chanNum, waveSelect, method ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
+	Variable method // ( 0 ) rectangular, default ( 1 ) trapezoid
 	
 	String fxn = "NMIntegrate"
 	
 	STRUCT NMParams nm
+	
+	if ( ( numtype( method ) > 0 ) || ( method < 0 ) || ( method > 1 ) )
+		return NM2ErrorStr( 10, "method", num2str( method ) )		
+	endif
 	
 	if ( ParamIsDefault( folder ) )
 		folder = ""
@@ -9532,7 +9553,7 @@ Function /S NMMainIntegrate2( [ folder, wavePrefix, chanNum, waveSelect ] )
 		return ""
 	endif
 	
-	return NMIntegrate2( nm, history = 1 )
+	return NMIntegrate2( nm, method = method, history = 1 )
 	
 End // NMMainIntegrate2
 
