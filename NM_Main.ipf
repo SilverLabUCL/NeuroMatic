@@ -1786,6 +1786,8 @@ Function /S NMLoopExecute( nm, cmdHistory, deprecation )
 	
 	nm.paramList = NMCmdVarListConvert( nm.paramList )
 	
+	NMProgressCancel( reset = 1 )
+	
 	for ( fcnt = 0 ; fcnt < ItemsInList( nm.folderList ) ; fcnt += 1 ) // loop thru folders
 	
 		folder = StringFromList( fcnt, nm.folderList )

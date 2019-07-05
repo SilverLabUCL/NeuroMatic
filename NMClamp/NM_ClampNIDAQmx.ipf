@@ -363,7 +363,8 @@ Function NidaqAcquire( mode, saveWhen, WaveLength, NumStimWaves, InterStimTime, 
 	endif
 	
 	NidaqDacTimeScale( 0.001 ) // convert to seconds
-	NidaqWavesInput( nwaves )
+	//NidaqWavesInput( nwaves ) // moved to allow RandomOrder
+	NidaqMakeADCpre( nwaves )
 	
 	if ( ( NumStimWaves == 1 ) && ( NumStimReps > 1 ) )
 		NumStimWaves = NumStimReps
@@ -394,6 +395,7 @@ Function NidaqAcquire( mode, saveWhen, WaveLength, NumStimWaves, InterStimTime, 
 			
 		case 1: // continuous
 		case 4: // continuous triggered
+			NidaqMakeADC()
 			error = NIDAQAcqContinuous()
 			break
 
@@ -528,6 +530,8 @@ Function NidaqAcqEpics()
 				return ClampError( 1, "Error in configuration of NIDAQ Counter " + num2str( NM_NIDAQCounter ) )
 			endif
 		endif
+		
+		NidaqMakeADC() // added this fxn here to allow RandomOrder
 
 		for ( wcnt = 0 ; wcnt < NumStimWaves ; wcnt += 1 ) // loop thru waves
 		
@@ -946,14 +950,57 @@ End // NidaqDacTimeScale
 //****************************************************************
 //****************************************************************
 
-Function NidaqWavesInput( NumWaves )
-	Variable NumWaves
+Function NidaqMakeADCpre( numWaves )
+	Variable numWaves
 
-	Variable bcnt, wcnt, ccnt, wnum, samples
+	Variable bcnt, wcnt, ccnt
+	String wname, alist, xlist, oldlist = "", cdf = NMClampDF
+
+	Wave /T preADClist = $( cdf+"preADClist" )
+	
+	String precision = StrVarOrDefault( cdf+"WavePrecision", "D" )
+	
+	for ( wcnt = 0 ; wcnt < DimSize( preADClist, 0 ) ; wcnt += 1 )
+	for ( bcnt = 0 ; bcnt < DimSize( preADClist, 1 ) ; bcnt += 1 )
+		
+		alist = preADClist[wcnt][bcnt]
+		
+		if ( StringMatch( alist,oldlist ) == 0 )
+		
+			for ( ccnt = 0 ; ccnt < ItemsInList( alist ) ; ccnt += 1 )
+			
+				xlist = StringFromList( ccnt,alist )
+				wname = StringFromList( 0,xlist,"," )
+				
+				strswitch( precision )
+					case "S":
+						Make /O/N=( numWaves ) $wname = Nan
+						break
+					default:
+						Make /D/O/N=( numWaves ) $wname = Nan
+				endswitch
+				
+			endfor
+			
+		endif
+		
+		oldlist = alist
+		
+	endfor
+	endfor
+
+End // NidaqMakeADCpre
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NidaqMakeADC()
+	
+	Variable bcnt, wcnt, ccnt, samples
 	String wname, alist, xlist, oldlist = "", cdf = NMClampDF, sdf = StimDF()
 
 	Wave /T ADClist = $( cdf+"ADClist" )
-	Wave /T preADClist = $( cdf+"preADClist" )
 	
 	String precision = StrVarOrDefault( cdf+"WavePrecision", "D" )
 	Variable dt = NumVarOrDefault( StimDF()+"SampleInterval", 1 )
@@ -992,37 +1039,8 @@ Function NidaqWavesInput( NumWaves )
 		
 	endfor
 	endfor
-	
-	for ( wcnt = 0 ; wcnt < DimSize( preADClist, 0 ) ; wcnt += 1 )
-	for ( bcnt = 0 ; bcnt < DimSize( preADClist, 1 ) ; bcnt += 1 )
-		
-		alist = preADClist[wcnt][bcnt]
-		
-		if ( StringMatch( alist,oldlist ) == 0 )
-		
-			for ( ccnt = 0 ; ccnt < ItemsInList( alist ) ; ccnt += 1 )
-			
-				xlist = StringFromList( ccnt,alist )
-				wname = StringFromList( 0,xlist,"," )
-				
-				strswitch( precision )
-					case "S":
-						Make /O/N=( NumWaves ) $wname = Nan
-						break
-					default:
-						Make /D/O/N=( NumWaves ) $wname = Nan
-				endswitch
-				
-			endfor
-			
-		endif
-		
-		oldlist = alist
-		
-	endfor
-	endfor
 
-End // NidaqWavesInput
+End // NidaqMakeADC
 
 //****************************************************************
 //****************************************************************

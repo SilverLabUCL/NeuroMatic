@@ -155,7 +155,8 @@ Function NMStimWaveLength(sdf, waveNum)
 	
 		for (icnt = 0; icnt < 50; icnt += 1)
 		
-			wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			//wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			wname = sdf + "DAC_" + num2istr(icnt) + "_" + num2istr(waveNum) // changed to "DAC" to allow RandomOrder
 			
 			if (WaveExists($wname) == 1)
 				return rightx($wname)
@@ -189,7 +190,8 @@ Function NMStimWavePoints(sdf, waveNum)
 	
 		for (icnt = 0; icnt < 50; icnt += 1)
 		
-			wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			//wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			wname = sdf + "DAC_" + num2istr(icnt) + "_" + num2istr(waveNum) // changed to "DAC" to allow RandomOrder
 			
 			if (WaveExists($wname) == 1)
 				return numpnts($wname)

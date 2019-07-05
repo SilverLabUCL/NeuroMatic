@@ -163,6 +163,26 @@ End // NMStimAcqModeStr
 //****************************************************************
 //****************************************************************
 
+Function NMStimSampleInterval( sdf [ DAC ] )
+	String sdf // stim data folder path
+	Variable DAC // ( 1 ) for specifying a different sample interval for DAC waveforms
+	
+	sdf = CheckStimDF( sdf )
+	
+	Variable intvl = NumVarOrDefault( sdf + "SampleInterval", 1 )
+
+	if ( DAC )
+		intvl = NumVarOrDefault( sdf + "SampleInterval_DAC", intvl )
+	endif
+	
+	return StimIntervalCheck( intvl )
+
+End // NMStimSampleInterval
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function StimIntervalGet(sdf, boardNum)
 	String sdf // stim data folder path
 	Variable boardNum
