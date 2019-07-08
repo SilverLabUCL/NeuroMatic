@@ -492,7 +492,8 @@ Function NMClampAllowUpSamplingDAC()
 	if ( StringMatch( acqBoard, "NIDAQ" ) )
 		return 1
 	else
-		return 1 //0
+		return 0
+		//return 1
 	endif
 
 End // NMClampAllowUpSamplingDAC
@@ -506,6 +507,8 @@ Function NMStimIntervalSet( sdf, intvl [ DAC ] )
 	Variable intvl
 	Variable DAC // ( 1 ) for specifying a different sample interval for DAC waveforms
 	
+	Variable sampleInterval, upSamples
+	
 	sdf = CheckStimDF(sdf)
 	
 	if ( strlen( sdf ) == 0 )
@@ -518,13 +521,24 @@ Function NMStimIntervalSet( sdf, intvl [ DAC ] )
 	
 	intvl = ( floor( 1e6 * intvl ) / 1e6 ) // round off
 	
+	sampleInterval = intvl
+	
 	if ( NMClampAllowUpSamplingDAC() && DAC )
-		SetNMvar( sdf + "SampleInterval_DAC", intvl )
+	
+		sampleInterval = NumVarOrDefault( sdf + "SampleInterval", NMStimSampleInterval )
+		upSamples = round( sampleInterval / intvl )
+		upSamples = Max( upSamples, 1 )
+		sampleInterval /= upSamples
+	
+		SetNMvar( sdf + "SampleInterval_DAC", sampleInterval )
+		
 	else
-		SetNMvar( sdf + "SampleInterval", intvl )
+	
+		SetNMvar( sdf + "SampleInterval", sampleInterval )
+		
 	endif
 	
-	return intvl
+	return sampleInterval
 	
 End // NMStimIntervalSet
 
