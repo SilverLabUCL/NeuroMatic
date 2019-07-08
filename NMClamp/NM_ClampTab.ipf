@@ -114,17 +114,20 @@ Function CheckClampTab2() // declare Clamp Tab global variables
 	CheckNMstr( NMClampTabDF + "InterStimFxnList", "" )
 	CheckNMstr( NMClampTabDF + "PostStimFxnList", "" )
 	
-	CheckNMvar( NMClampTabDF + "NumStimWaves", 1 )
-	CheckNMvar( NMClampTabDF + "InterStimTime", 0 )
-	CheckNMvar( NMClampTabDF + "WaveLength", 100 )
-	CheckNMvar( NMClampTabDF + "NumStimReps", 1 )
-	CheckNMvar( NMClampTabDF + "InterRepTime", 0 )
-	CheckNMvar( NMClampTabDF + "SampleInterval", 1 )
-	CheckNMvar( NMClampTabDF + "SamplesPerWave", 100 )
-	CheckNMvar( NMClampTabDF + "StimRate", 0 )
-	CheckNMvar( NMClampTabDF + "RepRate", 0 )
+	CheckNMvar( NMClampTabDF + "NumStimWaves", NaN )
+	CheckNMvar( NMClampTabDF + "WaveLength", NaN )
 	
-	CheckNMvar( NMClampTabDF + "TotalTime", 0 )
+	CheckNMvar( NMClampTabDF + "SampleInterval", NaN )
+	CheckNMvar( NMClampTabDF + "SamplesPerWave", NaN )
+	
+	CheckNMvar( NMClampTabDF + "InterStimTime", NaN )
+	CheckNMvar( NMClampTabDF + "StimRate", NaN )
+	
+	CheckNMvar( NMClampTabDF + "NumStimReps", NaN )
+	CheckNMvar( NMClampTabDF + "TotalTime", NaN )
+	
+	CheckNMvar( NMClampTabDF + "InterRepTime", NaN )
+	CheckNMvar( NMClampTabDF + "RepRate", NaN )
 	
 	// config tab
 	
@@ -364,15 +367,18 @@ Function ClampTabMake()
 	
 	// Stim Time Tab
 	
-	y0 = NMPanelTabY + 155 + 38
+	y0 = NMPanelTabY + 155 + 42
 	xinc = 15
 	yinc = 23
 	
 	PopupMenu CT2_AcqMode, title=" ", pos={x0+145,y0}, size={0,0}, bodywidth=130, fsize=fs, win=$NMPanelName
 	PopupMenu CT2_AcqMode, mode=1, value="continuous;episodic;", proc=StimTabPopup, disable=1, win=$NMPanelName
 	
-	PopupMenu CT2_TauBoard, title=" ", pos={x0+240,y0}, size={0,0}, bodywidth=80, fsize=fs, win=$NMPanelName
-	PopupMenu CT2_TauBoard, mode=1, value=" ", proc=StimTabPopup, disable=1, win=$NMPanelName
+	//PopupMenu CT2_TauBoard, title=" ", pos={x0+240,y0}, size={0,0}, bodywidth=80, fsize=fs, win=$NMPanelName
+	//PopupMenu CT2_TauBoard, mode=1, value=" ", proc=StimTabPopup, disable=1, win=$NMPanelName
+	
+	Checkbox CT2_TauDAC, pos={x0+210,y0+4}, title="DAC", size={10,20}, fsize=fs, win=$NMPanelName
+	Checkbox CT2_TauDAC, value=0, proc=StimTabCheckbox, disable=1, win=$NMPanelName
 	
 	y0 +=30
 	
@@ -404,7 +410,7 @@ Function ClampTabMake()
 	SetVariable CT2_NumStimReps, limits={1,inf,0}, value=$tdf + "NumStimReps", proc=StimTabSetTau, disable=1, win=$NMPanelName
 	
 	SetVariable CT2_TotalTime, title= "total time (sec) :", pos={x0+xinc+120,y0+1*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
-	SetVariable CT2_TotalTime, limits={0,inf,0}, value=$tdf + "TotalTime", disable=1, frame=0, win=$NMPanelName
+	SetVariable CT2_TotalTime, limits={0,inf,0}, value=$tdf + "TotalTime", disable=2, frame=0, noedit=1, win=$NMPanelName
 	
 	SetVariable CT2_InterRepTime, title= "interlude (ms)", pos={x0+xinc,y0+2*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
 	SetVariable CT2_InterRepTime, limits={0,inf,0}, value=$tdf + "InterRepTime", proc=StimTabSetTau, disable=1, win=$NMPanelName
@@ -1484,50 +1490,53 @@ Function StimTabTime( enable )
 	Variable enable
 	
 	Variable dis, tempvar, driver, slave, total
+	Variable sInterval, sInterval_DAC, tauDAC = 0, tauDACred = 0
 	String sdf = StimDF()
 	String alist = NMStimAcqModeList()
 	
-	Variable amode = NumVarOrDefault( sdf + "AcqMode", 0 )
-	Variable WaveLength = NumVarOrDefault( sdf + "WaveLength", 0 )
-	Variable SampleInterval = StimIntervalGet( sdf, NumVarOrDefault( NMClampTabDF + "CurrentBoard", 0 ) )
-	Variable nReps = NumVarOrDefault( sdf + "NumStimReps", 0 )
-	Variable repRate = NumVarOrDefault( sdf + "RepRate", 0 )
+	NMStimTauCheck( sdf ) // check/update timing variables
+	
+	if ( NMClampAllowUpSamplingDAC() )
+		tauDAC = NumVarOrDefault( NMClampTabDF + "TauDAC", 0 )
+	endif
+	
+	Variable amode = NumVarOrDefault( sdf + "AcqMode", NaN )
+	Variable waveLength = NumVarOrDefault( sdf + "WaveLength", NaN )
+	Variable sampleInterval = NMStimSampleInterval( sdf, DAC = tauDAC )
 
-	SetNMvar( NMClampTabDF + "NumStimWaves", NumVarOrDefault( sdf + "NumStimWaves", 1 ) )
-	SetNMvar( NMClampTabDF + "InterStimTime", NumVarOrDefault( sdf + "InterStimTime", 0 ) )
+	SetNMvar( NMClampTabDF + "NumStimWaves", NumVarOrDefault( sdf + "NumStimWaves", NaN ) )
+	SetNMvar( NMClampTabDF + "WaveLength", waveLength )
 	
-	SetNMvar( NMClampTabDF + "WaveLength", WaveLength )
-	SetNMvar( NMClampTabDF + "SampleInterval", SampleInterval )
-	SetNMvar( NMClampTabDF + "SamplesPerWave", floor( WaveLength/SampleInterval ) )
+	SetNMvar( NMClampTabDF + "SampleInterval", sampleInterval )
+	SetNMvar( NMClampTabDF + "SamplesPerWave", floor( waveLength / sampleInterval ) )
 	
-	SetNMvar( NMClampTabDF + "StimRate", NumVarOrDefault( sdf + "StimRate", 0 ) )
-	SetNMvar( NMClampTabDF + "NumStimReps", nReps )
-	SetNMvar( NMClampTabDF + "InterRepTime", NumVarOrDefault( sdf + "InterRepTime", 0 ) )
-	SetNMvar( NMClampTabDF + "RepRate", repRate )
+	SetNMvar( NMClampTabDF + "InterStimTime", NumVarOrDefault( sdf + "InterStimTime", NaN ) )
+	SetNMvar( NMClampTabDF + "StimRate", NumVarOrDefault( sdf + "StimRate", NaN ) )
 	
-	total = nReps/repRate
+	SetNMvar( NMClampTabDF + "NumStimReps", NumVarOrDefault( sdf + "NumStimReps", NaN ) )
+	SetNMvar( NMClampTabDF + "TotalTime", NumVarOrDefault( sdf + "TotalTime", NaN ) )
 	
-	SetNMvar( NMClampTabDF + "TotalTime", total )
-	SetNMvar( sdf + "TotalTime", total )
+	SetNMvar( NMClampTabDF + "InterRepTime", NumVarOrDefault( sdf + "InterRepTime", NaN ) )
+	SetNMvar( NMClampTabDF + "RepRate", NumVarOrDefault( sdf + "RepRate", NaN ) )
 	
 	// acquisition mode popup
 	
 	switch( amode )
 		case 0:
-			amode = 1+ WhichListItem( "epic precise", alist, ";", 0, 0 )
+			amode = 1 + WhichListItem( "epic precise", alist, ";", 0, 0 )
 			break
 		case 1:
-			amode = 1+ WhichListItem( "continuous", alist, ";", 0, 0 )
+			amode = 1 + WhichListItem( "continuous", alist, ";", 0, 0 )
 			dis = 1
 			break
 		case 2:
-			amode = 1+ WhichListItem( "episodic", alist, ";", 0, 0 )
+			amode = 1 + WhichListItem( "episodic", alist, ";", 0, 0 )
 			break
 		case 3:
-			amode = 1+ WhichListItem( "epic triggered", alist, ";", 0, 0 )
+			amode = 1 + WhichListItem( "epic triggered", alist, ";", 0, 0 )
 			break
 		case 4:
-			amode = 1+ WhichListItem( "continuous triggered", alist, ";", 0, 0 )
+			amode = 1 + WhichListItem( "continuous triggered", alist, ";", 0, 0 )
 			dis = 1
 			break
 	endswitch
@@ -1536,36 +1545,53 @@ Function StimTabTime( enable )
 		
 	// acq board popup
 	
-	tempvar = NumVarOrDefault( NMClampTabDF + "CurrentBoard", 0 )
-	driver = NumVarOrDefault( NMClampDF + "BoardDriver", 0 )
+	//tempvar = NumVarOrDefault( NMClampTabDF + "CurrentBoard", 0 )
+	//driver = NumVarOrDefault( NMClampDF + "BoardDriver", 0 )
 
-	if ( tempvar == 0 ) // nothing selected
-		tempvar = driver
-	endif
+	//if ( tempvar == 0 ) // nothing selected
+	//	tempvar = driver
+	//endif
 	
-	if ( tempvar != driver )
-		slave = 1
-	endif
+	//if ( tempvar != driver )
+	//	slave = 1
+	//endif
 	
-	if ( tempvar == 0 )
-		tempvar = 1
-	endif
+	//if ( tempvar == 0 )
+		//tempvar = 1
+	//endif
 	
-	PopupMenu CT2_TauBoard, win=$NMPanelName, mode=( tempvar ), value=StrVarOrDefault( NMClampDF+"BoardList", "" ), disable=!enable
+	//PopupMenu CT2_TauBoard, win=$NMPanelName, mode=( tempvar ), value=StrVarOrDefault( NMClampDF+"BoardList", "" ), disable=!enable
+	
+	if ( NMClampAllowUpSamplingDAC() )
+	
+		sInterval = NumVarOrDefault( sdf + "SampleInterval", NaN )
+		sInterval_DAC = NumVarOrDefault( sdf + "SampleInterval_DAC", NaN )
+		
+		if ( ( numtype( sInterval_DAC ) == 0 ) && ( floor( 1e3 * sInterval_DAC ) < floor( 1e3 * sInterval ) ) )
+			tauDACred = 65535 // red // different dt
+		endif
+		
+		CheckBox CT2_TauDAC, win=$NMPanelName, value=( tauDAC ), disable=!enable, fColor=(tauDACred,0,0)
+		
+	else
+	
+		CheckBox CT2_TauDAC, win=$NMPanelName, value=0, disable=1
+		
+	endif
 	
 	GroupBox CT2_WaveGrp, win=$NMPanelName, disable=!enable
-	SetVariable CT2_NumStimWaves, win=$NMPanelName, disable=!enable
-	SetVariable CT2_WaveLength, win=$NMPanelName, disable=!enable
-	SetVariable CT2_SampleInterval, win=$NMPanelName, disable=!enable
-	SetVariable CT2_SamplesPerWave, win=$NMPanelName, disable=!enable
-	SetVariable CT2_InterStimTime, win=$NMPanelName, disable=(!enable || dis)
-	SetVariable CT2_StimRate, win=$NMPanelName, disable=!enable
+	SetVariable CT2_NumStimWaves, win=$NMPanelName, disable=!enable, noedit=tauDAC, frame=!tauDAC
+	SetVariable CT2_WaveLength, win=$NMPanelName, disable=!enable, noedit=tauDAC, frame=!tauDAC
+	SetVariable CT2_SampleInterval, win=$NMPanelName, disable=!enable, fColor=(tauDACred,0,0)
+	SetVariable CT2_SamplesPerWave, win=$NMPanelName, disable=!enable, noedit=tauDAC, fColor=(tauDACred,0,0)
+	SetVariable CT2_InterStimTime, win=$NMPanelName, disable=(!enable || dis), noedit=tauDAC, frame=!tauDAC
+	SetVariable CT2_StimRate, win=$NMPanelName, disable=!enable, noedit=tauDAC
 	
 	GroupBox CT2_RepGrp, win=$NMPanelName, disable=!enable
 	SetVariable CT2_NumStimReps, win=$NMPanelName, disable=!enable
+	SetVariable CT2_TotalTime, win=$NMPanelName, disable=!enable
 	SetVariable CT2_InterRepTime, win=$NMPanelName, disable=(!enable || dis)
 	SetVariable CT2_RepRate, win=$NMPanelName, disable=!enable
-	SetVariable CT2_TotalTime, win=$NMPanelName, disable=!enable
 	
 End // StimTabTime
 
@@ -1845,12 +1871,16 @@ Function StimTabCall( select, varNum, varStr )
 		case "AcqMode":
 			NMStimAcqModeSet( "", varStr )
 			StimWavesCheck( sdf, 1 )
-			StimTabTauCheck()
+			//StimTabTauCheck()
 			break
 			
-		case "TauBoard":
-			SetNMvar( NMClampTabDF + "CurrentBoard", varNum )
+		case "TauDAC":
+			SetNMvar( NMClampTabDF + "TauDAC", varNum )
 			break
+			
+		//case "TauBoard":
+			//SetNMvar( NMClampTabDF + "CurrentBoard", varNum )
+			//break
 			
 		case "GlobalConfigs":
 			NMStimUseGlobalBoardConfigsSet( "", varNum )
@@ -1972,63 +2002,143 @@ Function StimTabSetTau( ctrlName, varNum, varStr, varName ) : SetVariableControl
 	
 	ClampError( 0, "" )
 	
-	Variable inter, update = 1, updateNM
+	Variable nStimWaves, wLength, intvl, interStimT, interRepT 
+	Variable pulseUpdate = 1, updateNM = 0, tauDAC = 0
 	String sdf = StimDF()
-	
-	Variable NumStimWaves = NumVarOrDefault( NMClampTabDF + "NumStimWaves", 0 )
-	Variable InterStimTime = NumVarOrDefault( NMClampTabDF + "InterStimTime", 0 )
-	Variable WaveLength = NumVarOrDefault( NMClampTabDF + "WaveLength", 0 )
-	Variable SampleInterval = NumVarOrDefault( NMClampTabDF + "SampleInterval", 0.1 )
 
 	strswitch( ctrlName[4,inf] )
 	
 		case "NumStimWaves":
+		
 			updateNM = 1
+			
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+				SetNMvar( sdf + "NumStimWaves", round( varNum ) )
+			endif
+			
+			break
+			
+		case "WaveLength":
+		
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+				SetNMvar( sdf + "WaveLength", varNum )
+			endif
+			
 			break
 	
 		case "SampleInterval":
+		
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+			
+				if ( NMClampAllowUpSamplingDAC() )
+					tauDAC = NumVarOrDefault( NMClampTabDF + "TauDAC", 0 )
+				endif
+	
+				NMStimIntervalSet( sdf, varNum, DAC = tauDAC )
+				
+			endif
+			
 			break
 		
 		case "SamplesPerWave":
-			SetNMvar( NMClampTabDF + "WaveLength", varNum * SampleInterval )
+		
+			// must change WaveLength instead of SamplesPerWave
+		
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+			
+				intvl = NumVarOrDefault( sdf + "SampleInterval", NaN )
+				wLength = round( varNum ) * intvl
+				
+				if ( ( numtype( wLength ) == 0 ) && ( wLength > 0 ) )
+					SetNMvar( sdf + "WaveLength", wLength ) 
+				endif
+					
+			endif
+			
+			break
+			
+		case "InterStimTime":
+		
+			pulseUpdate = 0
+		
+			if ( ( numtype( varNum ) == 0 ) && ( varNum >= 0 ) )
+				SetNMvar( sdf + "InterStimTime", varNum )
+			endif
+			
 			break
 		
 		case "StimRate":
-			update = 0
-			inter = ( 1000 / varNum ) - WaveLength
-			if ( inter > 0 )
-				SetNMvar( NMClampTabDF + "InterStimTime", inter )
-			else
-				ClampError( 1, "stim rate not possible." )
+		
+			// must change InterStimTime instead of StimRate
+		
+			pulseUpdate = 0
+			
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+			
+				wLength = NumVarOrDefault( sdf + "WaveLength", NaN )
+				interStimT = ( 1000 / varNum ) - wLength // ms
+				
+				if ( ( numtype( interStimT ) == 0 ) && ( interStimT > 0 ) )
+					SetNMvar( sdf + "InterStimTime", interStimT )
+				endif
+			
 			endif
+			
+			break
+			
+		case "NumStimReps":
+		
+			pulseUpdate = 0
+			
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+				SetNMvar( sdf + "NumStimReps", round( varNum ) )
+			endif
+			
+			break
+			
+		case "InterRepTime":
+		
+			pulseUpdate = 0
+			
+			if ( ( numtype( varNum ) == 0 ) && ( varNum >= 0 ) )
+				SetNMvar( sdf + "InterRepTime", varNum )
+			endif
+			
+			
 			break
 			
 		case "RepRate":
-			update = 0
-			inter = ( 1000 / varNum ) - NumStimWaves * ( WaveLength + InterStimTime )
-			if ( inter > 0 )
-				SetNMvar( NMClampTabDF + "InterRepTime", inter )
-			else
-				ClampError( 1, "rep rate not possible." )
-			endif
-			break
 		
-		case "InterStimTime":
-		case "InterRepTime":
-		case "NumStimReps":
-			update = 0
+			// must change InterRepTime instead of RepRate
+		
+			pulseUpdate = 0
+			
+			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
+				
+				nStimWaves = NumVarOrDefault( sdf + "NumStimWaves", NaN )
+				wLength = NumVarOrDefault( sdf + "WaveLength", NaN )
+				interStimT = NumVarOrDefault( sdf + "InterStimTime", NaN )
+				
+				interRepT = ( 1000 / varNum ) - nStimWaves * ( wLength + interStimT )
+				
+				if ( ( numtype( interRepT ) == 0 ) && ( interRepT >= 0 ) )
+					SetNMvar( sdf + "InterRepTime", interRepT )
+				endif
+			
+			endif
+			
 			break
 			
 	endswitch
 	
-	StimTabTauCheck()
+	//StimTabTauCheck()
 	
-	if ( update == 1 )
+	if ( pulseUpdate )
 		StimWavesCheck( sdf, 1 )
 		PulseGraph( 0 )
 	endif
 	
-	if ( updateNM == 1 )
+	if ( updateNM )
 		UpdateNMPanel( 0 )
 	else
 		StimTab( 1 )
@@ -2040,7 +2150,7 @@ End // StimTabSetTau
 //****************************************************************
 //****************************************************************
 
-Function StimTabTauCheck() // check and save stim time variables
+Function StimTabTauCheck_DEPRECATED() // see NMStimTauCheck, called via StimTabTime
 
 	String varName
 	String sdf = StimDF()
@@ -2048,13 +2158,16 @@ Function StimTabTauCheck() // check and save stim time variables
 	Variable acqMode = NMStimAcqMode( sdf )
 	
 	Variable NumStimWaves = NumVarOrDefault( NMClampTabDF + "NumStimWaves", 1 )
-	Variable InterStimTime = NumVarOrDefault( NMClampTabDF + "InterStimTime", 0 )
-	Variable WaveLength = NumVarOrDefault( NMClampTabDF + "WaveLength", 100 )
-	Variable StimRate = NumVarOrDefault( NMClampTabDF + "StimRate", 0 )
+	Variable WaveLength = NumVarOrDefault( NMClampTabDF + "WaveLength", NMStimWaveLength )
+	
 	Variable SampleInterval = NumVarOrDefault( NMClampTabDF + "SampleInterval", 0.1 )
 	Variable SamplesPerWave = NumVarOrDefault( NMClampTabDF + "SamplesPerWave", 1 )
 	
+	Variable InterStimTime = NumVarOrDefault( NMClampTabDF + "InterStimTime", 0 )
+	Variable StimRate = NumVarOrDefault( NMClampTabDF + "StimRate", 0 )
+	
 	Variable NumStimReps = NumVarOrDefault( NMClampTabDF + "NumStimReps", 1 )
+	
 	Variable InterRepTime = NumVarOrDefault( NMClampTabDF + "InterRepTime", 0 )
 	Variable RepRate = NumVarOrDefault( NMClampTabDF + "RepRate", 0 )
 	
@@ -2092,21 +2205,22 @@ Function StimTabTauCheck() // check and save stim time variables
 	
 	endswitch
 	
-	SampleInterval = floor( 1e8*SampleInterval ) / 1e8
-	SamplesPerWave = floor( WaveLength/SampleInterval )
+	SampleInterval = StimIntervalCheck( SampleInterval )
+	SamplesPerWave = floor( WaveLength / SampleInterval )
 
 	SetNMvar( sdf + "NumStimWaves", NumStimWaves )
 	SetNMvar( "NumGrps", NumStimWaves )
-	SetNMvar( sdf + "InterStimTime", InterStimTime )
 	SetNMvar( sdf + "WaveLength", WaveLength )
-	SetNMvar( sdf + "StimRate", StimRate )
+	
 	SetNMvar( sdf + "SamplesPerWave", SamplesPerWave )
 	
+	SetNMvar( sdf + "InterStimTime", InterStimTime )
+	SetNMvar( sdf + "StimRate", StimRate )
+	
 	SetNMvar( sdf + "NumStimReps", NumStimReps )
+	
 	SetNMvar( sdf + "InterRepTime", InterRepTime )
 	SetNMvar( sdf + "RepRate", RepRate )
-	
-	NMStimIntervalSet( sdf, CurrentBoard, BoardDriver, SampleInterval )
 
 End // StimTabTauCheck
 

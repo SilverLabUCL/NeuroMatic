@@ -169,13 +169,13 @@ Function NMStimSampleInterval( sdf [ DAC ] )
 	
 	sdf = CheckStimDF( sdf )
 	
-	Variable intvl = NumVarOrDefault( sdf + "SampleInterval", 1 )
+	Variable intvl = NumVarOrDefault( sdf + "SampleInterval", NaN )
 
-	if ( DAC )
+	if ( NMClampAllowUpSamplingDAC() && DAC )
 		intvl = NumVarOrDefault( sdf + "SampleInterval_DAC", intvl )
 	endif
 	
-	return StimIntervalCheck( intvl )
+	return ( floor( 1e6 * intvl ) / 1e6 )
 
 End // NMStimSampleInterval
 
@@ -183,21 +183,21 @@ End // NMStimSampleInterval
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalGet(sdf, boardNum)
+Function StimIntervalGet_DEPRECATED1(sdf, boardNum)
 	String sdf // stim data folder path
-	Variable boardNum
+	Variable boardNum // NOT USED
 	
 	sdf = CheckStimDF(sdf)
 	
 	return StimIntervalCheck(NumVarOrDefault(sdf+"SampleInterval", 1))
 		
-End // StimIntervalGet
+End // StimIntervalGet_DEPRECATED1
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalGet_DEPRECATED(sdf, boardNum)
+Function StimIntervalGet_DEPRECATED2(sdf, boardNum)
 	String sdf // stim data folder path
 	Variable boardNum
 	
@@ -216,16 +216,16 @@ Function StimIntervalGet_DEPRECATED(sdf, boardNum)
 	
 	return StimIntervalCheck(sampleInterval)
 		
-End // StimIntervalGet_DEPRECATED
+End // StimIntervalGet_DEPRECATED2
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalCheck(intvl)
+Function StimIntervalCheck( intvl )
 	Variable intvl
 	
-	return (round(1e6*intvl)/1e6)
+	return ( floor( 1e6 * intvl ) / 1e6 )
 	
 End // StimIntervalCheck
 
@@ -432,7 +432,7 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	NMMakeStructNull( m )
 	
 	Variable numWaves = NumVarOrDefault(sdf+"NumStimWaves", 0)
-	Variable wLength = NumVarOrDefault(sdf+"WaveLength", 0)
+	Variable wLength = NumVarOrDefault(sdf+"WaveLength", NMStimWaveLength)
 	Variable pgOff = NumVarOrDefault(sdf+"PulseGenOff", 0)
 	
 	if (DataFolderExists(sdf) == 0)
@@ -467,7 +467,7 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	
 	scale = 1 / OUTscale[config]
 	
-	dt = StimIntervalGet(sdf, OUTboard[config])
+	dt = NMStimSampleInterval( sdf, DAC = 1 )
 	
 	wPrefix = StimWaveName(io, config, -1)
 	
