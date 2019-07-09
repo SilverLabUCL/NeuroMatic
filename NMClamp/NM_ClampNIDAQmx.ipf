@@ -211,17 +211,19 @@ Function NidaqStimCheck()
 	
 	// check sample intervals
 	
-	for ( icnt = 0 ; icnt < ItemsInList( adcList ) ; icnt += 1 )
-		config = str2num( StringFromList( icnt, adcList ) )
-		bnum = WaveValOrDefault( bdf+"ADCboard", config, 0 )
-		minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
-	endfor
+	//for ( icnt = 0 ; icnt < ItemsInList( adcList ) ; icnt += 1 )
+		//config = str2num( StringFromList( icnt, adcList ) )
+		//bnum = WaveValOrDefault( bdf+"ADCboard", config, 0 )
+		//minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
+		//minintvl = min( minintvl, NMStimSampleInterval( sdf ) )
+	//endfor
 	
-	for ( icnt = 0 ; icnt < ItemsInList( dacList ) ; icnt += 1 )
-		config = str2num( StringFromList( icnt, dacList ) )
-		bnum = WaveValOrDefault( bdf+"DACboard", config, 0 )
-		minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
-	endfor
+	//for ( icnt = 0 ; icnt < ItemsInList( dacList ) ; icnt += 1 )
+		//config = str2num( StringFromList( icnt, dacList ) )
+		//bnum = WaveValOrDefault( bdf+"DACboard", config, 0 )
+		//minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
+		//minintvl = min( minintvl, NMStimSampleInterval( sdf ) )
+	//endfor
 	
 	//NidaqIntervalCheck( minintvl )
 	
@@ -929,16 +931,16 @@ Function NidaqDacTimeScale( tscale )
 			wname = sdf + StimWaveName( "DAC", config, wcnt )
 			
 			if ( WaveExists( $wname ) == 1 )
-				dt = tscale * StimIntervalGet( sdf, board )
+				dt = tscale * NMStimSampleInterval( sdf, DAC=1 )
 				Setscale /P x 0, dt, $wname
 			endif
 			
-			wname = sdf + StimWaveName( "pnDAC", config, wcnt )
+			//wname = sdf + StimWaveName( "pnDAC", config, wcnt )
 			
-			if ( WaveExists( $wname ) == 1 )
-				dt = tscale * StimIntervalGet( sdf, board )
-				Setscale /P x 0, dt, $wname
-			endif
+			//if ( WaveExists( $wname ) == 1 )
+				//dt = tscale * NMStimSampleInterval( sdf, DAC=1 )
+				//Setscale /P x 0, dt, $wname
+			//endif
 			
 		endfor
 	

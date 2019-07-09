@@ -477,8 +477,8 @@ Function NMStimDACUpSamplingOK()
 	if ( StringMatch( acqBoard, "NIDAQ" ) )
 		return 1 // only OK with NIDAQ boards
 	else
-		//return 0
-		return 1
+		return 0
+		//return 1 // for testing
 	endif
 
 End // NMStimDACUpSamplingOK
