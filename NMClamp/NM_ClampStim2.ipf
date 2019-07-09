@@ -362,7 +362,6 @@ Function NMStimTauCheck( sdf ) // check/update time variables
 	Variable wLength = NumVarOrDefault( sdf + "WaveLength", NaN )
 	
 	Variable sInterval = NumVarOrDefault( sdf + "SampleInterval", NaN )
-	Variable sInterval_DAC = NumVarOrDefault( sdf + "SampleInterval_DAC", NaN )
 	
 	Variable interStimT = NumVarOrDefault( sdf + "InterStimTime", NaN )
 	Variable stimRate //= NumVarOrDefault( sdf + "StimRate", NaN )
@@ -405,22 +404,8 @@ Function NMStimTauCheck( sdf ) // check/update time variables
 		sInterval = NMStimSampleInterval
 	endif
 	
-	sInterval = ( floor( 1e6 * sInterval ) / 1e6 ) // round off
+	//sInterval = ( floor( 1e6 * sInterval ) / 1e6 ) // round off
 	SetNMvar( sdf + "SampleInterval", sInterval )
-	
-	if ( NMClampAllowUpSamplingDAC() )
-	
-		sInterval_DAC = NumVarOrDefault( sdf + "SampleInterval_DAC", NaN )
-	
-		if ( ( numtype( sInterval_DAC ) == 0 ) && ( sInterval_DAC > sInterval ) )
-			
-			ClampError( 1, "DAC sample interval must be equal to or shorter than ADC sample interval" )
-				
-			SetNMvar( sdf + "SampleInterval_DAC", sInterval )
-		
-		endif
-	
-	endif
 	
 	SetNMvar( sdf + "SamplesPerWave", floor( wLength / sInterval ) )
 	
@@ -485,29 +470,78 @@ End // NMStimTauCheck
 //****************************************************************
 //****************************************************************
 
-Function NMClampAllowUpSamplingDAC()
+Function NMStimDACUpSamplingOK()
 
 	String acqBoard = StrVarOrDefault( NMClampDF + "AcqBoard", "" )
 
 	if ( StringMatch( acqBoard, "NIDAQ" ) )
-		return 1
+		return 1 // only OK with NIDAQ boards
 	else
-		return 0
-		//return 1
+		//return 0
+		return 1
 	endif
 
-End // NMClampAllowUpSamplingDAC
+End // NMStimDACUpSamplingOK
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function NMStimIntervalSet( sdf, intvl [ DAC ] )
+Function NMStimDACUpSamplingCall( sdf )
+	String sdf // stim data folder bath
+	
+	Variable upsamples = NumVarOrDefault( sdf + "DACUpsamples", 1 )
+	
+	if ( !NMStimDACUpSamplingOK() )
+		return -1
+	endif
+	
+	Prompt upsamples, "integer scale factor for rate increase (1 for no increase):"
+	DoPrompt "DAC Upsampling ( n > 1 )", upsamples
+
+	if (V_flag == 1)
+		return 0
+	endif
+	
+	if ( ( numtype( upsamples ) > 0 ) || ( upsamples < 1 ) )
+		upsamples = 1
+	endif
+	
+	return NMStimDACUpSampling( sdf, upsamples )
+
+End // NMStimDACUpSamplingCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMStimDACUpSampling( sdf, upsamples )
+	String sdf // stim data folder bath
+	Variable upsamples // integer factor: ( 1 ) off, ( > 1 ) upsampling
+	
+	if ( !NMStimDACUpSamplingOK() )
+		return -1
+	endif
+	
+	if ( ( numtype( upsamples ) > 0 ) || ( upsamples < 1 ) )
+		upsamples = 1
+	endif
+	
+	SetNMvar( sdf + "DACUpsamples", round( upsamples ) )
+	
+	StimWavesCheck( sdf, 1 )
+	
+	return 0
+	
+End // NMStimDACUpSampling
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMStimIntervalSet( sdf, intvl )
 	String sdf // stim data folder bath
 	Variable intvl
-	Variable DAC // ( 1 ) for specifying a different sample interval for DAC waveforms
-	
-	Variable sampleInterval, upSamples
 	
 	sdf = CheckStimDF(sdf)
 	
@@ -519,26 +553,11 @@ Function NMStimIntervalSet( sdf, intvl [ DAC ] )
 		return -1
 	endif
 	
-	intvl = ( floor( 1e6 * intvl ) / 1e6 ) // round off
+	//intvl = ( floor( 1e6 * intvl ) / 1e6 ) // round off
 	
-	sampleInterval = intvl
+	SetNMvar( sdf + "SampleInterval", intvl )
 	
-	if ( NMClampAllowUpSamplingDAC() && DAC )
-	
-		sampleInterval = NumVarOrDefault( sdf + "SampleInterval", NMStimSampleInterval )
-		upSamples = round( sampleInterval / intvl )
-		upSamples = Max( upSamples, 1 )
-		sampleInterval /= upSamples
-	
-		SetNMvar( sdf + "SampleInterval_DAC", sampleInterval )
-		
-	else
-	
-		SetNMvar( sdf + "SampleInterval", sampleInterval )
-		
-	endif
-	
-	return sampleInterval
+	return intvl
 	
 End // NMStimIntervalSet
 

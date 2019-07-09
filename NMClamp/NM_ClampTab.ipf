@@ -371,14 +371,11 @@ Function ClampTabMake()
 	xinc = 15
 	yinc = 23
 	
-	PopupMenu CT2_AcqMode, title=" ", pos={x0+145,y0}, size={0,0}, bodywidth=130, fsize=fs, win=$NMPanelName
+	PopupMenu CT2_AcqMode, title=" ", pos={x0+150,y0}, size={0,0}, bodywidth=150, fsize=fs, win=$NMPanelName
 	PopupMenu CT2_AcqMode, mode=1, value="continuous;episodic;", proc=StimTabPopup, disable=1, win=$NMPanelName
 	
-	//PopupMenu CT2_TauBoard, title=" ", pos={x0+240,y0}, size={0,0}, bodywidth=80, fsize=fs, win=$NMPanelName
-	//PopupMenu CT2_TauBoard, mode=1, value=" ", proc=StimTabPopup, disable=1, win=$NMPanelName
-	
-	Checkbox CT2_TauDAC, pos={x0+210,y0+4}, title="DAC", size={10,20}, fsize=fs, win=$NMPanelName
-	Checkbox CT2_TauDAC, value=0, proc=StimTabCheckbox, disable=1, win=$NMPanelName
+	PopupMenu CT2_TauDAC, title=" ", pos={x0+260,y0}, size={0,0}, bodywidth=100, fsize=fs, win=$NMPanelName
+	PopupMenu CT2_TauDAC, mode=1, value="", proc=StimTabPopup, disable=1, win=$NMPanelName
 	
 	y0 +=30
 	
@@ -390,7 +387,7 @@ Function ClampTabMake()
 	SetVariable CT2_WaveLength, title= "length (ms)", pos={x0+xinc+120,y0+1*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
 	SetVariable CT2_WaveLength, limits={0.001,inf,0}, value=$tdf + "WaveLength", proc=StimTabSetTau, disable=1, win=$NMPanelName
 	
-	SetVariable CT2_SampleInterval, title= "tstep (ms)", pos={x0+xinc,y0+2*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
+	SetVariable CT2_SampleInterval, title= "dt (ms)", pos={x0+xinc,y0+2*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
 	SetVariable CT2_SampleInterval, limits={0.001,inf,0}, value=$tdf + "SampleInterval", proc=StimTabSetTau, disable=1, win=$NMPanelName
 	
 	SetVariable CT2_SamplesPerWave, title= "samples :", pos={x0+xinc+120,y0+2*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
@@ -1489,26 +1486,19 @@ End // StimTabMisc
 Function StimTabTime( enable )
 	Variable enable
 	
-	Variable dis, tempvar, driver, slave, total
-	Variable sInterval, sInterval_DAC, tauDAC = 0, tauDACred = 0
+	Variable dis, tempvar, driver, slave
 	String sdf = StimDF()
 	String alist = NMStimAcqModeList()
 	
 	NMStimTauCheck( sdf ) // check/update timing variables
 	
-	if ( NMClampAllowUpSamplingDAC() )
-		tauDAC = NumVarOrDefault( NMClampTabDF + "TauDAC", 0 )
-	endif
-	
 	Variable amode = NumVarOrDefault( sdf + "AcqMode", NaN )
-	Variable waveLength = NumVarOrDefault( sdf + "WaveLength", NaN )
-	Variable sampleInterval = NMStimSampleInterval( sdf, DAC = tauDAC )
 
 	SetNMvar( NMClampTabDF + "NumStimWaves", NumVarOrDefault( sdf + "NumStimWaves", NaN ) )
-	SetNMvar( NMClampTabDF + "WaveLength", waveLength )
+	SetNMvar( NMClampTabDF + "WaveLength", NumVarOrDefault( sdf + "WaveLength", NaN ) )
 	
-	SetNMvar( NMClampTabDF + "SampleInterval", sampleInterval )
-	SetNMvar( NMClampTabDF + "SamplesPerWave", floor( waveLength / sampleInterval ) )
+	SetNMvar( NMClampTabDF + "SampleInterval", NumVarOrDefault( sdf + "SampleInterval", NaN ) )
+	SetNMvar( NMClampTabDF + "SamplesPerWave", NumVarOrDefault( sdf + "SamplesPerWave", NaN ) )
 	
 	SetNMvar( NMClampTabDF + "InterStimTime", NumVarOrDefault( sdf + "InterStimTime", NaN ) )
 	SetNMvar( NMClampTabDF + "StimRate", NumVarOrDefault( sdf + "StimRate", NaN ) )
@@ -1562,30 +1552,23 @@ Function StimTabTime( enable )
 	
 	//PopupMenu CT2_TauBoard, win=$NMPanelName, mode=( tempvar ), value=StrVarOrDefault( NMClampDF+"BoardList", "" ), disable=!enable
 	
-	if ( NMClampAllowUpSamplingDAC() )
-	
-		sInterval = NumVarOrDefault( sdf + "SampleInterval", NaN )
-		sInterval_DAC = NumVarOrDefault( sdf + "SampleInterval_DAC", NaN )
+	if ( NMStimDACUpSamplingOK() )
 		
-		if ( ( numtype( sInterval_DAC ) == 0 ) && ( floor( 1e3 * sInterval_DAC ) < floor( 1e3 * sInterval ) ) )
-			tauDACred = 65535 // red // different dt
-		endif
-		
-		CheckBox CT2_TauDAC, win=$NMPanelName, value=( tauDAC ), disable=!enable, fColor=(tauDACred,0,0)
+		PopupMenu CT2_TauDAC, win=$NMPanelName, mode=1, value=StimTabTimeDACdtList(), disable=!enable
 		
 	else
 	
-		CheckBox CT2_TauDAC, win=$NMPanelName, value=0, disable=1
+		PopupMenu CT2_TauDAC, win=$NMPanelName, mode=1, value="", disable=1
 		
 	endif
 	
 	GroupBox CT2_WaveGrp, win=$NMPanelName, disable=!enable
-	SetVariable CT2_NumStimWaves, win=$NMPanelName, disable=!enable, noedit=tauDAC, frame=!tauDAC
-	SetVariable CT2_WaveLength, win=$NMPanelName, disable=!enable, noedit=tauDAC, frame=!tauDAC
-	SetVariable CT2_SampleInterval, win=$NMPanelName, disable=!enable, fColor=(tauDACred,0,0)
-	SetVariable CT2_SamplesPerWave, win=$NMPanelName, disable=!enable, noedit=tauDAC, fColor=(tauDACred,0,0)
-	SetVariable CT2_InterStimTime, win=$NMPanelName, disable=(!enable || dis), noedit=tauDAC, frame=!tauDAC
-	SetVariable CT2_StimRate, win=$NMPanelName, disable=!enable, noedit=tauDAC
+	SetVariable CT2_NumStimWaves, win=$NMPanelName, disable=!enable
+	SetVariable CT2_WaveLength, win=$NMPanelName, disable=!enable
+	SetVariable CT2_SampleInterval, win=$NMPanelName, disable=!enable
+	SetVariable CT2_SamplesPerWave, win=$NMPanelName, disable=!enable
+	SetVariable CT2_InterStimTime, win=$NMPanelName, disable=(!enable || dis)
+	SetVariable CT2_StimRate, win=$NMPanelName, disable=!enable
 	
 	GroupBox CT2_RepGrp, win=$NMPanelName, disable=!enable
 	SetVariable CT2_NumStimReps, win=$NMPanelName, disable=!enable
@@ -1594,6 +1577,28 @@ Function StimTabTime( enable )
 	SetVariable CT2_RepRate, win=$NMPanelName, disable=!enable
 	
 End // StimTabTime
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S StimTabTimeDACdtList()
+
+	Variable sInterval, intvl
+	String sdf = StimDF()
+	
+	Variable upsamples = round( NumVarOrDefault( sdf + "DACUpsamples", 1 ) )
+	
+	if ( ( numtype( upsamples ) > 0 ) || ( upsamples <= 1 ) )
+		return "DAC dt;upsample;" // no upsampling
+	endif
+	
+	sInterval = NumVarOrDefault( sdf + "SampleInterval", NaN )
+	intvl = sInterval / upsamples
+
+	return "DAC dt=" + num2str( intvl ) + ";upsample=" + num2istr( upsamples ) + ";"
+
+End // StimTabTimeDACdtList
 
 //****************************************************************
 //****************************************************************
@@ -1875,7 +1880,9 @@ Function StimTabCall( select, varNum, varStr )
 			break
 			
 		case "TauDAC":
-			SetNMvar( NMClampTabDF + "TauDAC", varNum )
+			if ( strsearch( varStr, "upsample", 0 ) >= 0 )
+				NMStimDACUpSamplingCall( sdf )
+			endif
 			break
 			
 		//case "TauBoard":
@@ -2003,7 +2010,7 @@ Function StimTabSetTau( ctrlName, varNum, varStr, varName ) : SetVariableControl
 	ClampError( 0, "" )
 	
 	Variable nStimWaves, wLength, intvl, interStimT, interRepT 
-	Variable pulseUpdate = 1, updateNM = 0, tauDAC = 0
+	Variable pulseUpdate = 1, updateNM = 0
 	String sdf = StimDF()
 
 	strswitch( ctrlName[4,inf] )
@@ -2029,13 +2036,7 @@ Function StimTabSetTau( ctrlName, varNum, varStr, varName ) : SetVariableControl
 		case "SampleInterval":
 		
 			if ( ( numtype( varNum ) == 0 ) && ( varNum > 0 ) )
-			
-				if ( NMClampAllowUpSamplingDAC() )
-					tauDAC = NumVarOrDefault( NMClampTabDF + "TauDAC", 0 )
-				endif
-	
-				NMStimIntervalSet( sdf, varNum, DAC = tauDAC )
-				
+				NMStimIntervalSet( sdf, varNum )
 			endif
 			
 			break
@@ -2205,7 +2206,6 @@ Function StimTabTauCheck_DEPRECATED() // see NMStimTauCheck, called via StimTabT
 	
 	endswitch
 	
-	SampleInterval = StimIntervalCheck( SampleInterval )
 	SamplesPerWave = floor( WaveLength / SampleInterval )
 
 	SetNMvar( sdf + "NumStimWaves", NumStimWaves )

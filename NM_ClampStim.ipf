@@ -165,17 +165,26 @@ End // NMStimAcqModeStr
 
 Function NMStimSampleInterval( sdf [ DAC ] )
 	String sdf // stim data folder path
-	Variable DAC // ( 1 ) for specifying a different sample interval for DAC waveforms
+	Variable DAC // ( 1 ) for DAC waveform generation (allows upsampling)
+	
+	Variable upsamples
 	
 	sdf = CheckStimDF( sdf )
 	
 	Variable intvl = NumVarOrDefault( sdf + "SampleInterval", NaN )
 
-	if ( NMClampAllowUpSamplingDAC() && DAC )
-		intvl = NumVarOrDefault( sdf + "SampleInterval_DAC", intvl )
+	if ( NMStimDACUpSamplingOK() && DAC )
+	
+		upsamples = round( NumVarOrDefault( sdf + "DACUpsamples", 1 ) )
+		
+		if ( upsamples > 1 )
+			intvl /= upsamples
+		endif
+		
 	endif
 	
-	return ( floor( 1e6 * intvl ) / 1e6 )
+	//return ( floor( 1e6 * intvl ) / 1e6 )
+	return intvl
 
 End // NMStimSampleInterval
 
@@ -189,7 +198,7 @@ Function StimIntervalGet_DEPRECATED1(sdf, boardNum)
 	
 	sdf = CheckStimDF(sdf)
 	
-	return StimIntervalCheck(NumVarOrDefault(sdf+"SampleInterval", 1))
+	return NumVarOrDefault(sdf+"SampleInterval", 1)
 		
 End // StimIntervalGet_DEPRECATED1
 
@@ -214,7 +223,7 @@ Function StimIntervalGet_DEPRECATED2(sdf, boardNum)
 		sampleInterval = NumVarOrDefault(varName, sampleInterval)
 	endif
 	
-	return StimIntervalCheck(sampleInterval)
+	return sampleInterval
 		
 End // StimIntervalGet_DEPRECATED2
 
@@ -222,12 +231,12 @@ End // StimIntervalGet_DEPRECATED2
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalCheck( intvl )
+Function StimIntervalCheck_DEPRECATED( intvl )
 	Variable intvl
 	
 	return ( floor( 1e6 * intvl ) / 1e6 )
 	
-End // StimIntervalCheck
+End // StimIntervalCheck_DEPRECATED
 
 //****************************************************************
 //****************************************************************
