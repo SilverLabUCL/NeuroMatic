@@ -407,7 +407,7 @@ Function ClampTabMake()
 	SetVariable CT2_NumStimReps, limits={1,inf,0}, value=$tdf + "NumStimReps", proc=StimTabSetTau, disable=1, win=$NMPanelName
 	
 	SetVariable CT2_TotalTime, title= "total time (sec) :", pos={x0+xinc+120,y0+1*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
-	SetVariable CT2_TotalTime, limits={0,inf,0}, value=$tdf + "TotalTime", disable=2, frame=0, noedit=1, win=$NMPanelName
+	SetVariable CT2_TotalTime, limits={0,inf,0}, value=$tdf + "TotalTime", disable=1, frame=0, noedit=1, win=$NMPanelName
 	
 	SetVariable CT2_InterRepTime, title= "interlude (ms)", pos={x0+xinc,y0+2*yinc}, size={110,50}, fsize=fs, win=$NMPanelName
 	SetVariable CT2_InterRepTime, limits={0,inf,0}, value=$tdf + "InterRepTime", proc=StimTabSetTau, disable=1, win=$NMPanelName
@@ -1572,7 +1572,7 @@ Function StimTabTime( enable )
 	
 	GroupBox CT2_RepGrp, win=$NMPanelName, disable=!enable
 	SetVariable CT2_NumStimReps, win=$NMPanelName, disable=!enable
-	SetVariable CT2_TotalTime, win=$NMPanelName, disable=!enable
+	SetVariable CT2_TotalTime, win=$NMPanelName, disable=(!enable || dis)
 	SetVariable CT2_InterRepTime, win=$NMPanelName, disable=(!enable || dis)
 	SetVariable CT2_RepRate, win=$NMPanelName, disable=!enable
 	

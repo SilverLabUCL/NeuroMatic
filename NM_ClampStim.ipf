@@ -252,9 +252,11 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	String sdf // stim data folder
 	Variable forceUpdate
 
-	Variable icnt, jcnt, items, config, npnts, new, numWaves
-	String stimName, io, wName, wPrefix, preFxnList, interFxnList
-	String klist, plist, ulist, wList = ""
+	Variable icnt, jcnt, wcnt, items, config, npnts, dt
+	Variable pgoff, new, numWaves
+	String stimName, io, wPrefix, preFxnList, interFxnList
+	String wName, wName2, wName3
+	String kList, pList, myList, uList, wList = ""
 	
 	Variable zeroDACLastPoints = NumVarOrDefault( NMClampDF + "ZeroDACLastPoints", 1 )
 	
@@ -264,11 +266,13 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 		return ""
 	endif
 	
+	pgOff = NumVarOrDefault(sdf+"PulseGenOff", 0)
+	
 	stimName = NMChild( sdf )
 	
 	numWaves = NumVarOrDefault(sdf+"NumStimWaves", 0)
 	
-	plist = StimPrefixListAll(sdf)
+	pList = StimPrefixListAll(sdf)
 	
 	wList = NMFolderWaveList( sdf, "*_pulse", ";", "", 0 )
 	
@@ -277,22 +281,22 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 		NMStimWavesPulseUpdate( sdf, wName )
 	endfor
 	
-	for (icnt = 0; icnt < ItemsInList(plist); icnt += 1)
+	for (icnt = 0; icnt < ItemsInList(pList); icnt += 1)
 	
-		wPrefix = StringFromList(icnt, plist)
+		wPrefix = StringFromList(icnt, pList)
 		io = StimPrefix(wPrefix)
 		config = StimConfigNum(wPrefix)
 		
 		wList = NMFolderWaveList(sdf, wPrefix + "*", ";", "",0)
 		wList = RemoveFromList(wPrefix + "_pulse", wList)
 		
-		ulist = NMFolderWaveList(sdf, "u"+wPrefix + "*", ";", "",0) // unscaled waves for display
+		uList = NMFolderWaveList(sdf, "u"+wPrefix + "*", ";", "",0) // unscaled waves for display
 		
-		if (ItemsInLIst(ulist) == 0)
-			ulist = NMFolderWaveList(sdf, "My"+wPrefix + "*", ";", "",0) // try "My" waves
+		if (ItemsInLIst(uList) == 0)
+			uList = NMFolderWaveList(sdf, "My"+wPrefix + "*", ";", "",0) // try "My" waves
 		endif
 		
-		if (forceUpdate || (ItemsInList(wList) < numWaves) || (ItemsInList(ulist) < numWaves))
+		if (forceUpdate || (ItemsInList(wList) < numWaves) || (ItemsInList(uList) < numWaves))
 			wList += StimWavesMake(sdf, io, config, NaN)
 			new = 1
 		endif
@@ -320,12 +324,92 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	
 	endfor
 	
-	if (new == 1)
+	if ( pgOff )
 	
-		klist = NMFolderWaveList(sdf, "ITCoutWave*", ";", "",0)
+		myList = ""
+	
+		for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
+	
+			wPrefix = StringFromList( icnt, pList )
+			myList = NMFolderWaveList( sdf, "My" + wPrefix + "*", ";", "", 0 )
+			
+			if ( ItemsInList( myList ) > 0 )
+				break // found "My" waves, now check other config waves match
+			endif
+			
+		endfor
 		
-		for (icnt = 0; icnt < ItemsInList(klist); icnt += 1)
-			KillWaves /Z $StringFromList(icnt, klist)
+		if ( ItemsInList( myList ) > 0 )
+		
+			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
+	
+				wPrefix = StringFromList( icnt, pList )
+				
+				wList = NMFolderWaveList(sdf, wPrefix + "*", ";", "", 0 )
+				
+				for ( wcnt = ItemsInList( wList ) - 1 ; wcnt >= 0  ; wcnt -= 1 )
+				
+					wName = StringFromList( wcnt, wList )
+					
+					if ( strsearch( wName, "_pulse", 0 ) > 0 )
+						wList = RemoveFromList( wName, wList )
+					endif
+					
+				endfor
+				
+				uList = NMFolderWaveList(sdf, "u" + wPrefix + "*", ";", "", 0 ) // unscaled waves for display
+				
+				for ( wcnt = ItemsInList( uList ) - 1 ; wcnt >= 0  ; wcnt -= 1 )
+				
+					wName = StringFromList( wcnt, uList )
+					
+					if ( strsearch( wName, "_pulse", 0 ) > 0 )
+						uList = RemoveFromList( wName, uList ) // remove "pulse" waves
+					endif
+					
+				endfor
+				
+				if ( ItemsInList( myList ) != ItemsInList( wList ) )
+					continue // something wrong, different number of stim waves
+				endif
+				
+				if ( ItemsInList( myList ) != ItemsInList( uList ) )
+					continue // something wrong, different number of stim waves
+				endif
+				
+				for ( wcnt = 0 ; wcnt < ItemsInList( myList ) ; wcnt += 1 )
+				
+					wName = StringFromList( wcnt, myList )
+					wName2 = StringFromList( wcnt, wList )
+					wName3 = StringFromList( wcnt, uList )
+					
+					npnts = numpnts( $sdf + wName )
+					dt = deltax( $sdf + wName )
+					
+					if ( numpnts( $sdf + wName2 ) != npnts )
+						Redimension /N=( npnts ) $sdf + wName2
+						Redimension /N=( npnts ) $sdf + wName3
+					endif
+					
+					if ( deltax( $sdf + wName2 ) != dt )
+						Setscale /P x 0, dt, $sdf + wName2
+						Setscale /P x 0, dt, $sdf + wName3
+					endif
+					
+				endfor
+			
+			endfor
+		
+		endif
+	
+	endif
+	
+	if ( new )
+	
+		kList = NMFolderWaveList(sdf, "ITCoutWave*", ";", "",0)
+		
+		for (icnt = 0; icnt < ItemsInList(kList); icnt += 1)
+			KillWaves /Z $StringFromList(icnt, kList)
 		endfor
 		
 	endif
@@ -492,15 +576,6 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	
 	wList2 = wList
 	
-	nm.folder = sdf
-	//nm.wList = wList2
-	//m.xpnts = wLength / dt
-	//m.dx = dt
-	m.overwrite = 1
-	m.xLabel = NMXunits
-	m.yLabel = "V" // OUTunits[ config ]
-	m.value = 0
-	
 	if ( pgOff ) // use "My" waves, such as MyDAC_0_0, MyDac_0_1, etc.
 	
 		for (wcnt = 0; wcnt < ItemsInList(wList); wcnt += 1)
@@ -526,42 +601,6 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 				wList2 = RemoveFromList( wName, wList2 )
 				
 				//print "Updated " + wName
-				
-			else // look for other "My" waves for xpnts and dx
-			
-				for ( ccnt = 0 ; ccnt < 10 ; ccnt += 1 )
-				
-					wName2 = ReplaceString( io + "_" + num2istr( config ), wName, io + "_" + num2istr( ccnt ) )
-					
-					if ( WaveExists( $sdf + "My" + wName2 ) )
-					
-						nm.wList = wName
-						m.xpnts = numpnts( $sdf + "My" + wName2 )
-						m.dx = deltax( $sdf + "My" + wName2 )
-						
-						NMPulseWavesMake2( pName, nm, m, scale = scale )
-						
-						if ( WaveExists( $sdf + wName ) )
-						
-							Duplicate /O $(sdf+wName) $(sdf+"u"+wName)
-				
-							Wave wtemp = $sdf+"u"+wName
-							
-							wtemp /= scale // remove scaling
-							
-							if ( !StringMatch( "V", OUTunits[ config ] ) )
-								NMNoteStrReplace( sdf+"u"+wName, "yLabel", OUTunits[ config ] )
-							endif
-							
-						endif
-						
-						wList2 = RemoveFromList( wName, wList2 )
-					
-						break
-					
-					endif
-				
-				endfor
 	
 			endif
 			
@@ -573,14 +612,14 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 		return wList // finished
 	endif
 	
-	//nm.folder = sdf
+	nm.folder = sdf
 	nm.wList = wList2
 	m.xpnts = wLength / dt
 	m.dx = dt
-	//m.overwrite = 1
-	//m.xLabel = NMXunits
-	//m.yLabel = "V" // OUTunits[ config ]
-	//m.value = 0
+	m.overwrite = 1
+	m.xLabel = NMXunits
+	m.yLabel = "V" // OUTunits[ config ]
+	m.value = 0
 	
 	NMPulseWavesMake2( pName, nm, m, scale = scale )
 		
