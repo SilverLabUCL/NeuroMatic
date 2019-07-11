@@ -430,8 +430,8 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	Variable config // config number
 	Variable xTTL // not used anymore
 	
-	Variable wcnt, dt, scale, alert
-	String pName, wPrefix, wName, wList = "", wList2, ioUnits
+	Variable ccnt, wcnt, dt, scale, alert
+	String pName, wPrefix, wName, wName2, wList = "", wList2, ioUnits
 	String bdf = NMStimBoardDF(sdf)
 	
 	STRUCT NMParams nm
@@ -492,13 +492,22 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	
 	wList2 = wList
 	
-	if (pgOff == 1) // use "My" waves, such as MyDAC_0_0, MyDac_0_1, etc.
+	nm.folder = sdf
+	//nm.wList = wList2
+	//m.xpnts = wLength / dt
+	//m.dx = dt
+	m.overwrite = 1
+	m.xLabel = NMXunits
+	m.yLabel = "V" // OUTunits[ config ]
+	m.value = 0
+	
+	if ( pgOff ) // use "My" waves, such as MyDAC_0_0, MyDac_0_1, etc.
 	
 		for (wcnt = 0; wcnt < ItemsInList(wList); wcnt += 1)
 		
 			wName = StringFromList(wcnt, wList)
 			
-			if (WaveExists($sdf+"My"+wName) == 1)
+			if ( WaveExists( $sdf + "My" + wName ) )
 			
 				//if ((deltax($sdf+"My"+wName) != dt) && (alert == 0))
 					//NMDoAlert("Error: encountered incorrect sample interval for wave: " + sdf + "My" + wName + " : " + num2str(deltax($sdf+"My"+wName)) + " , " + num2str(dt)
@@ -517,6 +526,42 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 				wList2 = RemoveFromList( wName, wList2 )
 				
 				//print "Updated " + wName
+				
+			else // look for other "My" waves for xpnts and dx
+			
+				for ( ccnt = 0 ; ccnt < 10 ; ccnt += 1 )
+				
+					wName2 = ReplaceString( io + "_" + num2istr( config ), wName, io + "_" + num2istr( ccnt ) )
+					
+					if ( WaveExists( $sdf + "My" + wName2 ) )
+					
+						nm.wList = wName
+						m.xpnts = numpnts( $sdf + "My" + wName2 )
+						m.dx = deltax( $sdf + "My" + wName2 )
+						
+						NMPulseWavesMake2( pName, nm, m, scale = scale )
+						
+						if ( WaveExists( $sdf + wName ) )
+						
+							Duplicate /O $(sdf+wName) $(sdf+"u"+wName)
+				
+							Wave wtemp = $sdf+"u"+wName
+							
+							wtemp /= scale // remove scaling
+							
+							if ( !StringMatch( "V", OUTunits[ config ] ) )
+								NMNoteStrReplace( sdf+"u"+wName, "yLabel", OUTunits[ config ] )
+							endif
+							
+						endif
+						
+						wList2 = RemoveFromList( wName, wList2 )
+					
+						break
+					
+					endif
+				
+				endfor
 	
 			endif
 			
@@ -524,14 +569,18 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 		
 	endif
 	
-	nm.folder = sdf
+	if ( ItemsInList( wList2 ) == 0 )
+		return wList // finished
+	endif
+	
+	//nm.folder = sdf
 	nm.wList = wList2
 	m.xpnts = wLength / dt
 	m.dx = dt
-	m.overwrite = 1
-	m.xLabel = NMXunits
-	m.yLabel = "V" // OUTunits[ config ]
-	m.value = 0
+	//m.overwrite = 1
+	//m.xLabel = NMXunits
+	//m.yLabel = "V" // OUTunits[ config ]
+	//m.value = 0
 	
 	NMPulseWavesMake2( pName, nm, m, scale = scale )
 		
