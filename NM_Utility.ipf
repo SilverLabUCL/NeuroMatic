@@ -2473,11 +2473,11 @@ Function /S RangeToSequenceStr( rangeStr )
 	elseif ( strsearch( rangeStr, "-", 0 ) > 0 )
 		rangeStr = ReplaceString( "-", rangeStr, "," )
 	else
-		return rangeStr // unrecognized seperator
+		return "" // unrecognized seperator
 	endif
 	
 	if ( ItemsInList( rangeStr, "," ) != 2 )
-		return rangeStr
+		return "" // bad range
 	endif
 	
 	first = str2num( StringFromList( 0, rangeStr, "," ) )
