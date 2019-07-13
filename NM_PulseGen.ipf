@@ -3986,9 +3986,10 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 		
 	endif
 	
-	NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType )
-	
-	return ""
+	if ( 0 )
+		NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType )
+		return ""
+	endif
 	
 	if ( binomYN )
 		paramList1 = NMPulsePromptWaveAndShape( df, pdf, -1, paramList, title, TTL, pulseType, plasticity = plasticity )
