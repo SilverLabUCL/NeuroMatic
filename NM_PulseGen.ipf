@@ -3331,9 +3331,15 @@ Function /S NMPulseWaveNumSeq( paramList, numWaves [ convert2list ] )
 		seqStr = ""
 	
 		for ( icnt = 0 ; icnt < ItemsInList( valueStr, "," ); icnt += 1 )
+		
 			istr = StringFromList( icnt, valueStr, "," )
 			istr = RangeToSequenceStr( istr )
-			seqStr += istr + ";"
+			
+			
+			if ( strlen( istr ) > 0 )
+				seqStr += istr + ";"
+			endif
+			
 		endfor
 		
 		seqStr = ReplaceString( ";;", seqStr, ";" )
@@ -3987,7 +3993,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	endif
 	
 	if ( 0 )
-		NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType )
+		print NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType )
 		return ""
 	endif
 	
@@ -4142,7 +4148,7 @@ Function /S NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType
 	Variable pulseType
 	
 	Variable icnt, wnum, delta
-	String test, waveNumStr = "", waveNumSeq = "", deltaStr = ""
+	String waveNumStr = "", waveNumSeq = "", deltaStr = ""
 	String wNumList = " ", deltaList = " "
 	
 	if ( numWaves == 1 )
@@ -4162,7 +4168,7 @@ Function /S NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType
 		wNumList += "all;"
 	endif
 	
-	for ( icnt = 1; icnt < numWaves; icnt += 1 )
+	for ( icnt = 2; icnt < numWaves; icnt += 1 )
 		deltaList = AddListItem( num2istr( icnt ), deltaList, ";", inf ) // list of wave #s
 	endfor
 	
@@ -4176,7 +4182,7 @@ Function /S NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType
 		
 			wnum = str2num( waveNumSeq )
 			
-			if ( ( wnum >= 0 ) && ( wnum < numWaves ) )
+			if ( ( numtype( wnum ) == 0 ) && ( wnum >= 0 ) && ( wnum < numWaves ) )
 				waveNumStr = num2istr( wnum )
 			else
 				waveNumStr = "all"
@@ -4215,30 +4221,22 @@ Function /S NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType
 	
 	if ( strlen( waveNumSeq ) > 0 )
 	
-		waveNumStr = "wave=" + waveNumSeq
+		waveNumStr = NMPulseWaveNumSeq( "wave=" + waveNumSeq, numWaves, convert2list = 1 )
 		
-		test = NMPulseWaveNumSeq( waveNumStr, numWaves, convert2list = 1 )
-		
-		print test, ItemsInList( test )
+		if ( ItemsInList( waveNumStr ) > 0 )
+			waveNumStr = waveNumSeq
+		else
+			return "" // cancel // bad sequence
+		endif
 		
 	endif
 	
-	if ( StringMatch( waveNumStr, "all" ) )
-		//waveNum = 0
-		delta = 1
-		waveNumStr = "wave=all;"
+	if ( StringMatch( deltaStr, " " ) )
+		return "wave=" + waveNumStr + ";"
 	else
-		delta = 0
-		//waveNum = str2num( waveNumStr )
-		//waveNumStr = NMPulseParamList( "wave", waveNum )
+		return "wave=" + waveNumStr + ",delta=" + deltaStr + ";"
 	endif
 	
-	if ( !StringMatch( deltaStr, " " ) )
-		delta = str2num( deltaStr )
-	endif
-	
-	return waveNumStr
-
 End // NMPulsePromptWaveSeq
 
 //****************************************************************
