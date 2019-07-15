@@ -3293,7 +3293,7 @@ Function /S NMPulseWaveNumSeq( paramList, numWaves [ convert2list ] )
 	Variable convert2list // convert sequence (e.g. "1-3") to list (e.g. "1;2;3;")
 	
 	Variable icnt, jcnt, value, delta = 0
-	String seqStr, seqStr2, istr, valueStr, deltaStr = ""
+	String seqStr, seqStr2, istr, istr2, valueStr, deltaStr = ""
 	
 	paramList = ReplaceString( " ", paramList, "" )
 	paramList = ReplaceString( ",delta,", paramList, ",delta=" )
@@ -3333,11 +3333,17 @@ Function /S NMPulseWaveNumSeq( paramList, numWaves [ convert2list ] )
 		for ( icnt = 0 ; icnt < ItemsInList( valueStr, "," ); icnt += 1 )
 		
 			istr = StringFromList( icnt, valueStr, "," )
-			istr = RangeToSequenceStr( istr )
+			istr2 = RangeToSequenceStr( istr )
 			
+			if ( strlen( istr2 ) > 0 )
+				seqStr += istr2 + ";" // found a seq
+				continue
+			endif
 			
-			if ( strlen( istr ) > 0 )
-				seqStr += istr + ";"
+			value = str2num( istr )
+			
+			if ( ( numtype( value ) == 0 ) && ( value >= 0 ) && ( value < numWaves ) )
+				seqStr += istr + ";" // found a single value
 			endif
 			
 		endfor
@@ -3431,31 +3437,31 @@ End // PulseWaveName
 //****************************************************************
 //****************************************************************
 
-Function NMPulseConfigWaveSave( wName, paramList [ configNum ] )
-	String wName // full-path wave name
+Function NMPulseConfigWaveSave( pcwName, paramList [ configNum ] )
+	String pcwName // full-path wave name
 	String paramList
 	Variable configNum // pulse number
 	
 	Variable icnt, xpnts, foundEmpty
 	String parentFolder
 	
-	if ( WaveExists( $wName ) && ( WaveType( $wName, 1 ) != 2 ) )
-		return NM2Error( 1, "wName", wName )
+	if ( WaveExists( $pcwName ) && ( WaveType( $pcwName, 1 ) != 2 ) )
+		return NM2Error( 1, "pcwName", pcwName )
 	endif
 
-	if ( !WaveExists( $wName ) )
+	if ( !WaveExists( $pcwName ) )
 	
-		parentFolder = NMParent( wName )
+		parentFolder = NMParent( pcwName )
 	
 		if ( DataFolderExists( parentFolder ) )
-			Make /N=( configNum + 1 )/T $wName
+			Make /N=( configNum + 1 )/T $pcwName
 		else
 			return NM2Error( 30, "parentFolder", parentFolder )
 		endif
 		
 	endif
 	
-	Wave /T pulses = $wName
+	Wave /T pulses = $pcwName
 	
 	if ( !ParamIsDefault( configNum ) )
 	
@@ -3505,16 +3511,16 @@ End // NMPulseConfigWaveSave
 //****************************************************************
 //****************************************************************
 
-Function NMPulseConfigWaveRemove( wName [ configNum, all, off ] )
-	String wName // full-path wave name
+Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off ] )
+	String pcwName // full-path wave name
 	Variable configNum // pulse config number
 	Variable all // all configs
 	Variable off // ( 0 ) turn on config ( 1 ) turn off config
 	
 	Variable icnt, xpnts
 	
-	if ( !WaveExists( $wName ) || ( WaveType( $wName, 1 ) != 2 ) )
-		return NM2Error( 1, "wName", wName )
+	if ( !WaveExists( $pcwName ) || ( WaveType( $pcwName, 1 ) != 2 ) )
+		return NM2Error( 1, "pcwName", pcwName )
 	endif
 	
 	if ( ParamIsDefault( configNum ) )
@@ -3527,7 +3533,7 @@ Function NMPulseConfigWaveRemove( wName [ configNum, all, off ] )
 	
 	else
 	
-		if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $wName ) ) )
+		if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $pcwName ) ) )
 			return NM2Error( 10, "configNum", num2str( configNum ) )
 		endif
 	
@@ -3537,7 +3543,7 @@ Function NMPulseConfigWaveRemove( wName [ configNum, all, off ] )
 		off = -1
 	endif
 	
-	Wave /T pulses = $wName
+	Wave /T pulses = $pcwName
 	
 	xpnts = numpnts( pulses )
 	
@@ -3871,7 +3877,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	String timeUnits // "ms"
 	
 	Variable waveNum, waveDelta, newPulse, train, pulseType
-	Variable binomYN, binomialN, binomialP, trainRP, trainDF, trainDittman
+	Variable binomialYN, binomialN, binomialP, trainRP, trainDF, trainDittman
 	String title, paramList1, paramList2, paramList3 = "", binomList = ""
 	String shape, waveNumStr, trainParamList, trainType = ""
 	
@@ -3934,23 +3940,23 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	if ( newPulse )
 	
 		pulseType = NumVarOrDefault( pdf + promptPrefix + "Type", 1 )
-		binomYN = 1 + NumVarOrDefault( pdf + promptPrefix + "Binomial", 0 )
+		binomialYN = 1 + NumVarOrDefault( pdf + promptPrefix + "Binomial", 0 )
 	
 		Prompt pulseType, "add:", popup "single pulse;fixed-interval pulse train;random-interval pulse train;user-defined pulse train;"
-		Prompt binomYN, "make binomial ( N * P ):", popup "no;yes;"
+		Prompt binomialYN, "make binomial ( N * P ):", popup "no;yes;"
 		
 		if ( binom )
 		
-			DoPrompt title, pulseType, binomYN
+			DoPrompt title, pulseType, binomialYN
 			
 			if ( V_flag == 1 )
 				return "" // cancel
 			endif
 			
-			binomYN -= 1
+			binomialYN -= 1
 			
 			SetNMvar( pdf + promptPrefix + "Type", pulseType )
-			SetNMvar( pdf + promptPrefix + "Binomial", binomYN )
+			SetNMvar( pdf + promptPrefix + "Binomial", binomialYN )
 		
 		else
 		
@@ -3962,7 +3968,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 			
 			SetNMvar( pdf + promptPrefix + "Type", pulseType )
 			
-			binomYN = 0
+			binomialYN = 0
 			
 		endif
 		
@@ -3987,29 +3993,32 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 		endif
 		
 		if ( strlen( StringByKey( "binomialN", paramList, "=" ) ) > 0 )
-			binomYN = 1
+			binomialYN = 1
 		endif
 		
 	endif
 	
-	if ( 0 )
-		print NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType )
-		return ""
-	endif
-	
-	if ( binomYN )
-		paramList1 = NMPulsePromptWaveAndShape( df, pdf, -1, paramList, title, TTL, pulseType, plasticity = plasticity )
+	if ( binomialYN )
+		paramList1 = "wave=all;"
 	else
-		paramList1 = NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL, pulseType, plasticity = plasticity )
+		paramList1 = NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType )
 	endif
 	
 	if ( strlen( paramList1 ) == 0 )
 		return "" // cancel
 	endif
 	
+	paramList2 = NMPulsePromptShape( df, pdf, paramList, title, TTL, pulseType, plasticity = plasticity )
+	
+	if ( strlen( paramList2 ) == 0 )
+		return "" // cancel
+	endif
+	
+	paramList1 += paramList2
+	
 	shape = StringByKey( "pulse", paramList1, "=" )
 	waveNumStr = StringByKey( "wave", paramList1, "=" )
-	waveDelta = NMPulseWaveDelta( paramList1 )
+	waveDelta = NMPulseWaveDelta( waveNumStr )
 	
 	trainRP = NMPulseTrainRPexists( paramList1 )
 	trainDF = NMPulseTrainDFexists( paramList1 )
@@ -4073,8 +4082,14 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	
 	endswitch
 	
-	if ( StringMatch( DSC, "delta" ) && ( waveDelta == 0 ) )
-		DSC = ""
+	if ( StringMatch( DSC, "delta" ) )
+		
+		paramList2 = NMPulseWaveNumSeq( paramList1, numWaves, convert2list = 1 )
+		
+		if ( ItemsInList( paramList2 ) <= 1 )
+			DSC = "" // need multiple waves to prompt for delta
+		endif
+		
 	endif
 	
 	paramList2 = NMPulsePromptPulseParams( shape, df = df, pdf = pdf, paramList = paramList, DSC = DSC, ampUnits = ampUnits, timeUnits = timeUnits, TTL = TTL, train = train )
@@ -4083,51 +4098,12 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 		return "" // cancel
 	endif
 	
-	if ( binomYN )
+	if ( binomialYN )
 	
-		binomialN = NumVarOrDefault( pdf + promptPrefix + "BinomialN", 10 )
-		binomialP = NumVarOrDefault( pdf + promptPrefix + "BinomialP", 0.5 )
+		binomList = NMPulsePromptBinomial( pdf, paramList, trainDF, trainRP, title )
 		
-		binomialN = NMPulseNumByKey( "binomialN", paramList, binomialN, positive = 1 )
-		binomialP = NMPulseNumByKey( "binomialP", paramList, binomialP, positive = 1 )
-		
-		Prompt binomialN, "binomial N:"
-		Prompt binomialP, "binomial P:"
-	
-		if ( trainDF )
-		
-			NMDoAlert( "Alert: binomial N*P does not work for D*F plasticity train. You can use R*P plasticity model instead.", title = title )
-			binomYN = 0
-			
-		elseif ( trainRP )
-		
-			DoPrompt title, binomialN
-			
-			if ( V_flag == 1 )
-				return "" // cancel
-			endif
-			
-			binomialN = round( binomialN )
-			
-			SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
-			
-			binomList = "binomialN=" + num2istr( binomialN ) + ";"
-			
-		else
-		
-			DoPrompt title, binomialN, binomialP
-			
-			if ( V_flag == 1 )
-				return "" // cancel
-			endif
-			
-			binomialN = round( binomialN )
-			
-			SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
-			SetNMvar( pdf + promptPrefix + "BinomialP", binomialP )
-			
-			binomList = "binomialN=" + num2istr( binomialN ) + ";binomialP=" + num2str( binomialP ) + ";"
-		
+		if ( strlen( binomList ) == 0 )
+			return "" // cancel
 		endif
 	
 	endif
@@ -4135,6 +4111,66 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	return "wave=" + waveNumStr + ";" + trainParamList + paramList2 + paramList3 + binomList
 	
 End // NMPulsePrompt
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptBinomial( pdf, paramList, trainDF, trainRP, title )
+	String pdf
+	String paramList
+	Variable trainDF
+	Variable trainRP
+	String title
+	
+	String binomList = ""
+	
+	Variable binomialN = NumVarOrDefault( pdf + promptPrefix + "BinomialN", 10 )
+	Variable binomialP = NumVarOrDefault( pdf + promptPrefix + "BinomialP", 0.5 )
+	
+	binomialN = NMPulseNumByKey( "binomialN", paramList, binomialN, positive = 1 )
+	binomialP = NMPulseNumByKey( "binomialP", paramList, binomialP, positive = 1 )
+	
+	Prompt binomialN, "binomial N:"
+	Prompt binomialP, "binomial P:"
+
+	if ( trainDF )
+	
+		NMDoAlert( "Alert: binomial N*P does not work for D*F plasticity train. You can use R*P plasticity model instead.", title = title )
+		
+	elseif ( trainRP )
+	
+		DoPrompt title, binomialN
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		binomialN = round( binomialN )
+		
+		SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
+		
+		binomList = "binomialN=" + num2istr( binomialN ) + ";"
+		
+	else
+	
+		DoPrompt title, binomialN, binomialP
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		binomialN = round( binomialN )
+		
+		SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
+		SetNMvar( pdf + promptPrefix + "BinomialP", binomialP )
+		
+		binomList = "binomialN=" + num2istr( binomialN ) + ";binomialP=" + num2str( binomialP ) + ";"
+	
+	endif
+	
+	return binomList
+	
+End // NMPulsePromptBinomial
 
 //****************************************************************
 //****************************************************************
@@ -4205,9 +4241,9 @@ Function /S NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType
 	endif
 	
 	if ( pulseType > 1 )
-		Prompt waveNumStr, "add pulse train to output wave:", popup wNumList
+		Prompt waveNumStr, "add pulse train to output wave:", popup wNumList // train
 	else
-		Prompt waveNumStr, "add pulse to output wave:", popup wNumList
+		Prompt waveNumStr, "add pulse to output wave:", popup wNumList // single pulse
 	endif
 	
 	Prompt waveNumSeq, "or enter a comma-delimited sequence (e.g. 1-5,7,9):"
@@ -4229,6 +4265,8 @@ Function /S NMPulsePromptWaveSeq( df, pdf, numWaves, paramList, title, pulseType
 			return "" // cancel // bad sequence
 		endif
 		
+	elseif ( StringMatch( waveNumStr, " " ) )
+		return "" // cancel // no wave number
 	endif
 	
 	if ( StringMatch( deltaStr, " " ) )
@@ -4242,19 +4280,17 @@ End // NMPulsePromptWaveSeq
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL, pulseType [ plasticity ] )
+Function /S NMPulsePromptShape( df, pdf, paramList, title, TTL, pulseType [ plasticity ] )
 	String df
 	String pdf
-	Variable numWaves
 	String paramList
 	String title
 	Variable TTL
 	Variable pulseType
 	Variable plasticity
 	
-	Variable icnt, waveNum = 0, delta
-	String shape, plasticityModel, waveNumStr, waveNumSeq = ""
-	String paramList2 = "", wNumList = " ", wNumList2 = " ", otherWave = ""
+	String shape, plasticityModel
+	String paramList2 = "", otherWave = ""
 	
 	if ( strlen( paramList ) > 0 )
 	
@@ -4271,71 +4307,17 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 			
 		endif
 		
-		waveNumSeq = NMPulseWaveNumSeq( paramList, numWaves )
-		delta = NMPulseWaveDelta( paramList )
-		
 	else
 	
-		waveNum = NumVarOrDefault( pdf + promptPrefix + "WaveN", -1 )
-		delta = NumVarOrDefault( pdf + promptPrefix + "WaveND", 0 )
 		shape = StrVarOrDefault( pdf + promptPrefix + "Shape", "square" )
 	
 	endif
 	
 	plasticityModel = StrVarOrDefault( pdf + promptPrefix + "Plasticity", "none" )
 	
-	for ( icnt = 0; icnt < numWaves; icnt += 1 )
-		wNumList = AddListItem( num2istr( icnt ), wNumList, ";", inf ) // list of wave #s
-	endfor
-	
-	if ( numWaves > 1 )
-		wNumList += "all;"
+	if ( pulseType == 1 )
+		plasticity = 0 // single pulse
 	endif
-	
-	for ( icnt = 1; icnt < numWaves; icnt += 1 )
-		wNumList2 = AddListItem( num2istr( icnt ), wNumList2, ";", inf ) // list of wave #s
-	endfor
-	
-	if ( numWaves == 1 )
-	
-		waveNumStr = "0"
-		delta = 0
-	
-	elseif ( strlen( waveNumSeq ) > 0 ) // existing sequence
-		
-		if ( ( strsearch( waveNumSeq, "-", 0 ) >= 0 ) || ( strsearch( waveNumSeq, ",", 0 ) >= 0 ) )
-		
-			waveNumStr = " "
-		
-		else
-		
-			waveNum = str2num( waveNumSeq )
-			
-			if ( ( waveNum >= 0 ) && ( waveNum < numWaves ) )
-				waveNumStr = num2istr( waveNum )
-			else
-				waveNumStr = "all"
-			endif
-			
-			waveNumSeq = ""
-		
-		endif
-	
-	else
-		
-		waveNumStr = "all"
-		
-	endif
-	
-	if ( pulseType > 1 )
-		Prompt waveNumStr, "add pulse train to output wave:", popup wNumList
-	else
-		Prompt waveNumStr, "add pulse to output wave:", popup wNumList
-		plasticity = 0 // not a pulse train
-	endif
-	
-	Prompt waveNumSeq, "or enter a comma-delimited sequence (e.g. 1-5,7,9):"
-	Prompt delta, "add optional wave increment:", popup wNumList2
 	
 	Prompt shape, "pulse shape:", popup RemoveFromList( "squareTTL", NMPulseList )
 	Prompt plasticityModel, "train plasticity:", popup "none;" + NMPulsePlasticityList
@@ -4344,23 +4326,11 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 	
 		shape = "squareTTL"
 	
-		if ( numWaves > 1 )
-			DoPrompt title, waveNumStr
-		endif
-		
-		if ( V_flag == 1 )
-			return "" // cancel
-		endif
-	
 	else
 	
 		if ( plasticity )
 		
-			if ( numWaves == 1 )
-				DoPrompt title, shape, plasticityModel
-			else
-				DoPrompt title, waveNumStr, shape, plasticityModel
-			endif
+			DoPrompt title, shape, plasticityModel
 			
 			if ( V_flag == 1 )
 				return "" // cancel
@@ -4415,16 +4385,6 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 			endswitch
 		
 		else
-		
-			if ( numWaves > 1 )
-			
-				DoPrompt title, waveNumStr, waveNumSeq, delta
-				
-				if ( V_flag == 1 )
-					return "" // cancel
-				endif
-				
-			endif
 			
 			DoPrompt title, shape
 			
@@ -4438,29 +4398,13 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 	
 	endif
 	
-	if ( StringMatch( waveNumStr, " " ) )
-	
-	elseif ( StringMatch( waveNumStr, "all" ) )
-		waveNum = 0
-		delta = 1
-		waveNumStr = "wave=all;"
-		SetNMvar( pdf + promptPrefix + "WaveN", -1 )
-	else
-		delta = 0
-		waveNum = str2num( waveNumStr )
-		waveNumStr = NMPulseParamList( "wave", waveNum )
-		SetNMvar( pdf + promptPrefix + "WaveN", waveNum )
-	endif
-	
-	SetNMvar( pdf + promptPrefix + "WaveND", delta )
-	
 	if ( StringMatch( shape, "other" ) && ( strlen( otherWave ) > 0 ) )
 		shape = otherWave
 	endif
 	
-	return waveNumStr + "pulse=" + shape + ";" + paramList2
+	return "pulse=" + shape + ";" + paramList2
 
-End // NMPulsePromptWaveAndShape
+End // NMPulsePromptShape
 
 //****************************************************************
 //****************************************************************
@@ -8732,6 +8676,229 @@ Function /S NMPulseTrainRP_GC_NMDA( [ p ] )
 	return NMPulseTrainRPparamList( pp )
 
 End // NMPulseTrainRP_GC_NMDA
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL, pulseType [ plasticity ] ) // DEPRECATED
+	String df
+	String pdf
+	Variable numWaves
+	String paramList
+	String title
+	Variable TTL
+	Variable pulseType
+	Variable plasticity
+	
+	Variable icnt, waveNum = 0, delta
+	String shape, plasticityModel, waveNumStr, waveNumSeq = ""
+	String paramList2 = "", wNumList = " ", wNumList2 = " ", otherWave = ""
+	
+	if ( strlen( paramList ) > 0 )
+	
+		shape = StringByKey( "pulse", paramList, "=" )
+		
+		if ( WhichListItem( shape, NMPulseList, ";", 0, 0 ) == -1 )
+		
+			if ( WaveExists( $df+shape ) )
+				otherWave = shape
+				shape = "other"
+			else
+				shape = "square"
+			endif
+			
+		endif
+		
+		waveNumSeq = NMPulseWaveNumSeq( paramList, numWaves )
+		delta = NMPulseWaveDelta( paramList )
+		
+	else
+	
+		waveNum = NumVarOrDefault( pdf + promptPrefix + "WaveN", -1 )
+		delta = NumVarOrDefault( pdf + promptPrefix + "WaveND", 0 )
+		shape = StrVarOrDefault( pdf + promptPrefix + "Shape", "square" )
+	
+	endif
+	
+	plasticityModel = StrVarOrDefault( pdf + promptPrefix + "Plasticity", "none" )
+	
+	for ( icnt = 0; icnt < numWaves; icnt += 1 )
+		wNumList = AddListItem( num2istr( icnt ), wNumList, ";", inf ) // list of wave #s
+	endfor
+	
+	if ( numWaves > 1 )
+		wNumList += "all;"
+	endif
+	
+	for ( icnt = 1; icnt < numWaves; icnt += 1 )
+		wNumList2 = AddListItem( num2istr( icnt ), wNumList2, ";", inf ) // list of wave #s
+	endfor
+	
+	if ( numWaves == 1 )
+	
+		waveNumStr = "0"
+		delta = 0
+	
+	elseif ( strlen( waveNumSeq ) > 0 ) // existing sequence
+		
+		if ( ( strsearch( waveNumSeq, "-", 0 ) >= 0 ) || ( strsearch( waveNumSeq, ",", 0 ) >= 0 ) )
+		
+			waveNumStr = " "
+		
+		else
+		
+			waveNum = str2num( waveNumSeq )
+			
+			if ( ( waveNum >= 0 ) && ( waveNum < numWaves ) )
+				waveNumStr = num2istr( waveNum )
+			else
+				waveNumStr = "all"
+			endif
+			
+			waveNumSeq = ""
+		
+		endif
+	
+	else
+		
+		waveNumStr = "all"
+		
+	endif
+	
+	if ( pulseType > 1 )
+		Prompt waveNumStr, "add pulse train to output wave:", popup wNumList
+	else
+		Prompt waveNumStr, "add pulse to output wave:", popup wNumList
+		plasticity = 0 // not a pulse train
+	endif
+	
+	Prompt waveNumSeq, "or enter a comma-delimited sequence (e.g. 1-5,7,9):"
+	Prompt delta, "add optional wave increment:", popup wNumList2
+	
+	Prompt shape, "pulse shape:", popup RemoveFromList( "squareTTL", NMPulseList )
+	Prompt plasticityModel, "train plasticity:", popup "none;" + NMPulsePlasticityList
+	
+	if ( TTL )
+	
+		shape = "squareTTL"
+	
+		if ( numWaves > 1 )
+			DoPrompt title, waveNumStr
+		endif
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+	
+	else
+	
+		if ( plasticity )
+		
+			if ( numWaves == 1 )
+				DoPrompt title, shape, plasticityModel
+			else
+				DoPrompt title, waveNumStr, shape, plasticityModel
+			endif
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			SetNMstr( pdf + promptPrefix + "Plasticity", plasticityModel )
+			
+			strswitch( plasticityModel )
+			
+				case "R*P model":
+				
+					STRUCT NMPulseTrainRP rp
+				
+					NMPulseTrainRPinit( rp, pdf = pdf, paramList = paramList )
+				
+					paramList2 = NMPulsePromptTrainRP( pdf = pdf, p = rp )
+					
+					if ( strlen( paramList2 ) == 0 )
+						return "" // cancel
+					endif
+				
+					break
+					
+				case "D*F model":
+				
+					STRUCT NMPulseTrainDF fd
+				
+					NMPulseTrainDFinit( fd, pdf = pdf, paramList = paramList )
+				
+					paramList2 = NMPulsePromptTrainDF( pdf = pdf, p = fd )
+					
+					if ( strlen( paramList2 ) == 0 )
+						return "" // cancel
+					endif
+				
+					break
+			
+				case "Dittman model":
+				
+					STRUCT NMPulseTrainDittman dn
+				
+					NMPulseTrainDittmanInit( dn, pdf = pdf, paramList = paramList )
+				
+					paramList2 = NMPulsePromptTrainDittman( pdf = pdf, p = dn )
+					
+					if ( strlen( paramList2 ) == 0 )
+						return "" // cancel
+					endif
+					
+					break
+					
+			endswitch
+		
+		else
+		
+			if ( numWaves > 1 )
+			
+				DoPrompt title, waveNumStr, waveNumSeq, delta
+				
+				if ( V_flag == 1 )
+					return "" // cancel
+				endif
+				
+			endif
+			
+			DoPrompt title, shape
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+		
+		endif
+		
+		SetNMstr( pdf + promptPrefix + "Shape", shape )
+	
+	endif
+	
+	if ( StringMatch( waveNumStr, " " ) )
+	
+	elseif ( StringMatch( waveNumStr, "all" ) )
+		waveNum = 0
+		delta = 1
+		waveNumStr = "wave=all;"
+		SetNMvar( pdf + promptPrefix + "WaveN", -1 )
+	else
+		delta = 0
+		waveNum = str2num( waveNumStr )
+		waveNumStr = NMPulseParamList( "wave", waveNum )
+		SetNMvar( pdf + promptPrefix + "WaveN", waveNum )
+	endif
+	
+	SetNMvar( pdf + promptPrefix + "WaveND", delta )
+	
+	if ( StringMatch( shape, "other" ) && ( strlen( otherWave ) > 0 ) )
+		shape = otherWave
+	endif
+	
+	return waveNumStr + "pulse=" + shape + ";" + paramList2
+
+End // NMPulsePromptWaveAndShape
 
 //****************************************************************
 //****************************************************************

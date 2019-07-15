@@ -2481,7 +2481,16 @@ Function /S RangeToSequenceStr( rangeStr )
 	endif
 	
 	first = str2num( StringFromList( 0, rangeStr, "," ) )
+	
+	if ( numtype( first ) > 0 )
+		return ""
+	endif
+	
 	last = str2num( StringFromList( 1, rangeStr, "," ) )
+	
+	if ( numtype( last ) > 0 )
+		return ""
+	endif
 	
 	for ( icnt = first; icnt <= last; icnt += 1 )
 		seqStr += num2istr( icnt ) + ";"

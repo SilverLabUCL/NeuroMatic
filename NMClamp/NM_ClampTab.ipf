@@ -232,7 +232,7 @@ Function ClampTabMake()
 	Button CT0_StartRecord, title="Record", pos={x0+110,y0+yinc}, size={60,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
 	Button CT0_Note, title="Note", pos={x0+185,y0+yinc}, size={40,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
 	
-	SetVariable CT0_ErrorMssg, title=" ", pos={x0,587}, size={260,50}, value=$cdf+ "ClampErrorStr", fsize=fs, win=$NMPanelName
+	//SetVariable CT0_ErrorMssg, title=" ", pos={x0,587}, size={260,50}, value=$cdf+ "ClampErrorStr", fsize=fs, win=$NMPanelName
 	
 	Checkbox CT0_DemoMode, pos={x0+180,615}, title="Demo Mode", size={10,20}, mode=0, win=$NMPanelName
 	Checkbox CT0_DemoMode, value=0, proc=NMClampTabCheckbox, fsize=fs, win=$NMPanelName
@@ -449,11 +449,9 @@ Function ClampTabMake()
 	
 	Button CT2_IOtable, title="Table", pos={x0+150,y0+8*yinc}, size={55,20}, proc=StimTabButton, disable=1, fsize=fs, win=$NMPanelName
 	
-	//Button CT2_Tab, title="Configs", pos={x0+200,y0+8*yinc}, size={55,20}, proc=StimTabButton, disable=1, fsize=fs, win=$NMPanelName
-	
 	// Stim Pulse Tab
 	
-	y0 = NMPanelTabY + 155 + 45
+	y0 = NMPanelTabY + 155 + 40
 	xinc = 105
 	yinc = 30
 	
@@ -462,24 +460,21 @@ Function ClampTabMake()
 	
 	Button CT2_Display, title="Plot", pos={x0+190,y0}, size={50,20}, proc=PulseTabButton, disable=1, fsize=fs, win=$NMPanelName
 	
-	if ( !WaveExists( $cdf+"Params" ) )
-		Make /O/T/N=( 1, 2 ) $cdf+"Params"
-	endif
+	NMPulseListboxCheck( df = cdf, lbwName = "PulseConfigs", nrows = 1 )
+	NMPulseListbox2Check( df = cdf, lbwName = "PulseConfig", nrows = 20 )
 	
-	if ( !WaveExists( $cdf+"ParamsEditable" ) )
-		Make /O/N=( 1, 2 ) $cdf+"ParamsEditable"
-	endif
+	y0 += 30
 	
-	y0 += 35
+	Listbox CT2_PulseConfigs, title="Pulses", pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$cdf+"PulseConfigs", selWave=$cdf+"PulseConfigsEditable", win=$NMPanelName
+	Listbox CT2_PulseConfigs, mode=1, userColumnResize=1, proc=NMClampListboxControl, widths={20, 800}, win=$NMPanelName
 	
-	ListBox CT2_PulseListBox, title="Pulses", pos={x0,y0}, size={260,140}, disable=1, fsize=fs, listWave=$cdf+"Params", selWave=$cdf+"ParamsEditable", win=$NMPanelName
-	ListBox CT2_PulseListBox, mode=1, userColumnResize=1, proc=NMClampListBoxControl, widths={20, 800}, win=$NMPanelName
+	y0 += 90
 	
-	y0 += 155
-	yinc = 40
+	Listbox CT2_PulseParams, title="Pulse", pos={x0,y0}, size={260,115}, disable=1, fsize=fs, listWave=$cdf+"PulseConfig", selWave=$cdf+"PulseConfigEditable", win=$NMPanelName
+	Listbox CT2_PulseParams, mode=1, userColumnResize=1, proc=NMClampListboxControl, widths={20, 800}, win=$NMPanelName
 	
-	Checkbox CT2_PulseOff, pos={x0+80,y0}, title="use \"My\" waves", size={10,20}, win=$NMPanelName
-	Checkbox CT2_PulseOff, value=1, disable=1, proc=PulseTabCheckbox, fsize=fs, win=$NMPanelName
+	Checkbox CT2_UseMyWaves, pos={x0+70,615}, title="use \"My\" waves", size={10,20}, win=$NMPanelName
+	Checkbox CT2_UseMyWaves, value=1, disable=1, proc=PulseTabCheckbox, fsize=fs, win=$NMPanelName
 	
 	// Config Tab
 	
@@ -605,93 +600,54 @@ End // ClampTabDisable
 //****************************************************************
 //****************************************************************
 
-Function NMClampListBoxUpdate()
-
-	Variable icnt, ibgn, numConfigs, numRows, extraRows = 3
-	String wName = "Params", ename = "ParamsEditable"
-	
-	String pwName = PulseConfigWaveName()
-	
-	Variable editByPrompt = NumVarOrDefault( NMClampDF + "PulseEditByPrompt", 1 )
-	
-	if ( ( WaveExists( $pwName ) ) && ( WaveType( $pwName, 1 ) == 2 ) )
-	
-		Wave /T pulses = $pwName
-		
-		for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
-			if ( strlen( pulses[ icnt ] ) > 0 )
-				numConfigs += 1
-			endif
-		endfor
-		
-		numRows = numConfigs + extraRows
-		
-	else
-	
-		numRows = extraRows
-	
-	endif
-	
-	Make /O/T/N=( numRows, 2 ) $( NMClampDF + wName ) = ""
-	Make /O/N=( numRows, 2 ) $( NMClampDF + ename ) = 0
-	
-	Wave /T params = $NMClampDF + wName
-	Wave paramsEditable = $NMClampDF + ename
-	
-	if ( ( WaveExists( $pwName ) ) && ( WaveType( $pwName, 1 ) == 2 ) )
-	
-		Wave /T pulses = $pwName
-		
-		for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
-		
-			if ( strlen( pulses[ icnt ] ) > 0 )
-			
-				params[ icnt ][ 0 ] = "-"
-				params[ icnt ][ 1 ] = pulses[ icnt ]
-				
-				if ( editByPrompt )
-					paramsEditable[ icnt ][ 1 ] = 0
-				else
-					paramsEditable[ icnt ][ 1 ] = 3
-				endif
-				
-				ibgn = icnt + 1
-				
-			endif
-			
-		endfor
-	
-	endif
-	
-	for ( icnt = ibgn ; icnt < numRows ; icnt += 1 )
-		params[ icnt ][ 0 ] = "+"
-		paramsEditable[ icnt ][ 1 ] = 0
-	endfor
-	
-End // NMClampListBoxUpdate
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMClampListBoxControl( ctrlName, row, col, event ) : ListboxControl
+Function NMClampListboxControl( ctrlName, row, col, event ) : ListboxControl
 	String ctrlName // name of this control
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code ( 4 - cell selection, 6 - begin cell edit, 7 - finish cell edit )
 	
-	Variable value, TTL
-	String varName, valueStr, paramList, sdf = StimDF()
-	String thisfxn = GetRTStackInfo( 1 )
-	
-	Variable editByPrompt = NumVarOrDefault( NMClampDF + "PulseEditByPrompt", 1 )
+	Variable TTL
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
-	String pwName = PulseConfigWaveName()
 	
-	String wName = NMClampDF + "Params"
+	if ( StringMatch( pPrefix[ 0, 2 ], "TTL" ) )
+		TTL = 1
+	endif
 	
-	if ( strlen( pwName ) == 0 )
+	return NMClampListboxEvent( row, col, event, TTL = TTL )
+	
+End // NMClampListboxControl
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMClampListboxEvent( row, col, event [ df, lbwName, pcwName, TTL ] )
+	Variable row // row if click in interior, -1 if click in title
+	Variable col // column number
+	Variable event // event code ( 4 - cell selection, 6 - begin cell edit, 7 - finish cell edit )
+	String df // data folder
+	String lbwName // e.g. "Configs"
+	String pcwName // see NMPulseConfigWaveName()
+	Variable TTL
+	
+	Variable value
+	String varName, valueStr, paramList
+	String thisfxn = GetRTStackInfo( 1 )
+	
+	if ( ParamIsDefault( df ) )
+		df = NMClampDF
+	endif
+	
+	if ( ParamIsDefault( lbwName ) )
+		lbwName = "PulseConfigs"
+	endif
+	
+	if ( ParamIsDefault( pcwName ) )
+		pcwName = PulseConfigWaveName()
+	endif
+	
+	if ( strlen( pcwName ) == 0 )
 	
 		if ( event == 1 )
 			NMDoAlert( "There is no selected DAC or TTL output." )
@@ -701,21 +657,17 @@ Function NMClampListBoxControl( ctrlName, row, col, event ) : ListboxControl
 		
 	endif
 	
-	if ( StringMatch( pPrefix[ 0, 2 ], "TTL" ) )
-		TTL = 1
-	endif
-	
-	if ( !WaveExists( $wName ) )
-		NMDoAlert( thisfxn + " error: cannot find wave " + NMQuotes( wName ) )
+	if ( !WaveExists( $df + lbwName ) )
+		NMDoAlert( thisfxn + " error: cannot find wave " + NMQuotes( df + lbwName ) )
 		return -1
 	endif
 	
-	if ( !WaveExists( $pwName ) || ( WaveType( $pwName, 1 ) != 2 ) )
+	if ( !WaveExists( $pcwName ) || ( WaveType( $pcwName, 1 ) != 2 ) )
 		return -1
 	endif
 	
-	Wave /T params = $wName
-	Wave /T pulses = $pwName
+	Wave /T params = $df + lbwName
+	Wave /T pulses = $pcwName
 	
 	if ( ( row < 0 ) || ( row >= DimSize( params, 0 ) ) )
 		return -1
@@ -745,42 +697,21 @@ Function NMClampListBoxControl( ctrlName, row, col, event ) : ListboxControl
 	
 	valueStr = params[ row ][ col ]
 	
-	if ( editByPrompt )
+	if ( event == 1 )
 	
-		if ( event == 1 )
-		
-			if ( strlen( valueStr ) > 0 )
-				PulseConfigAdd( configNum = row, TTL = TTL )
-			else
-				PulseConfigAdd( configNum = -1, TTL = TTL )
-			endif
-		
+		if ( strlen( valueStr ) > 0 )
+			PulseConfigAdd( configNum = row, TTL = TTL )
+		else
+			PulseConfigAdd( configNum = -1, TTL = TTL )
 		endif
 	
-	else
-	
-		if ( ( event == 7 ) && ( strlen( valueStr ) > 0 ) )
-	
-			if ( row >= numpnts( pulses ) )
-				Redimension /N=( row + 1 ) pulses
-			endif
-			
-			pulses[ row ] = valueStr
-			
-			NMClampListBoxUpdate()
-			PulseConfigsCheck()
-			StimWavesCheck( sdf, 1 )
-			PulseGraph( 0 )
-		
-		endif
-		
 	endif
 	
 	DoWindow /F $NMPanelName
 	
 	return 0
 	
-End // NMClampListBoxControl
+End // NMClampListboxControl
 
 //****************************************************************
 //****************************************************************
@@ -1658,6 +1589,7 @@ Function StimTabPulse( enable )
 	String gname = NMPulseGraphName
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
+	String pcwName = PulseConfigWaveName()
 	
 	wlist = StimPrefixListAll( sdf )
 	
@@ -1684,11 +1616,13 @@ Function StimTabPulse( enable )
 	
 	PulseConfigsCheck()
 	
-	ListBox CT2_PulseListBox, win=$NMPanelName, disable=!enable
+	Listbox CT2_PulseConfigs, win=$NMPanelName, disable=!enable
+	Listbox CT2_PulseParams, win=$NMPanelName, disable=!enable
 	
-	NMClampListBoxUpdate()
+	NMPulseListboxUpdate( df = NMClampDF, lbwName = "PulseConfigs", pcwName = pcwName )
+	NMPulseListbox2Update( df = NMClampDF, lbwName = "PulseConfig", pcwName = pcwName )
 
-	Checkbox CT2_PulseOff, win=$NMPanelName, value=NumVarOrDefault( sdf + "PulseGenOff", 0 ), disable=!enable
+	Checkbox CT2_UseMyWaves, win=$NMPanelName, value=NumVarOrDefault( sdf + "PulseGenOff", 0 ), disable=!enable
 	
 	PulseGraph( 0 )
 	
@@ -3011,6 +2945,7 @@ Function PulseTabCall( select, varNum, varStr )
 			return 0
 			
 		case "PulseOff":
+		case "UseMyWaves":
 			SetNMvar( sdf + "PulseGenOff", varNum )
 			//StimWavesCheck( sdf, 1 )
 			break
@@ -3145,7 +3080,7 @@ Function /S PulseConfigAdd( [ configNum, TTL ] )
 	String paramList, ampUnits, sdf = StimDF()
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
-	String pwName = PulseConfigWaveName()
+	String pcwName = PulseConfigWaveName()
 	
 	Variable numWaves = NumVarOrDefault( sdf + "NumStimWaves", 1 )
 	Variable waveLength = NumVarOrDefault( sdf + "WaveLength", inf )
@@ -3184,12 +3119,13 @@ Function /S PulseConfigAdd( [ configNum, TTL ] )
 	endif
 	
 	if ( newPulse )
-		NMPulseConfigWaveSave( pwName, paramList )
+		NMPulseConfigWaveSave( pcwName, paramList )
 	else
-		NMPulseConfigWaveSave( pwName, paramList, configNum = configNum )
+		NMPulseConfigWaveSave( pcwName, paramList, configNum = configNum )
 	endif
 	
-	NMClampListBoxUpdate()
+	NMPulseListboxUpdate( df = NMClampDF, lbwName = "PulseConfigs", pcwName = pcwName )
+	NMPulseListbox2Update( df = NMClampDF, lbwName = "PulseConfig", pcwName = pcwName )
 	StimWavesCheck( sdf, 1 )
 	PulseGraph( 0 )
 	
@@ -3209,7 +3145,7 @@ Function PulseConfigOnOffDelete( [ configNum ] )
 	String sdf = StimDF()
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
-	String pwName = PulseConfigWaveName()
+	String pcwName = PulseConfigWaveName()
 	
 	if ( ParamIsDefault( configNum ) )
 		configNum = NaN
@@ -3220,18 +3156,18 @@ Function PulseConfigOnOffDelete( [ configNum ] )
 		return -1
 	endif
 	
-	if ( !WaveExists( $pwName ) || ( WaveType( $pwName, 1 ) != 2 ) )
+	if ( !WaveExists( $pcwName ) || ( WaveType( $pcwName, 1 ) != 2 ) )
 		return -1
 	endif
 	
-	numPulses = numpnts( $pwName )
+	numPulses = numpnts( $pcwName )
 	
 	if ( numPulses == 0 )
 		DoAlert 0, "There are no pulse configs to edit."
 		return -1
 	endif
 	
-	Wave /T pulses = $pwName
+	Wave /T pulses = $pcwName
 	
 	if ( ( configNum == -1 ) && ( numPulses == 1 ) )
 		configNum = 0
@@ -3291,11 +3227,11 @@ Function PulseConfigOnOffDelete( [ configNum ] )
 			return 0
 	
 		case "turn off all pulse configs":
-			NMPulseConfigWaveRemove( pwName, all = 1, off = 1 )
+			NMPulseConfigWaveRemove( pcwName, all = 1, off = 1 )
 			break
 			
 		case "turn on all pulse configs":
-			NMPulseConfigWaveRemove( pwName, all = 1, off = 0 )
+			NMPulseConfigWaveRemove( pcwName, all = 1, off = 0 )
 			break
 			
 		case "delete all pulse configs":
@@ -3303,7 +3239,7 @@ Function PulseConfigOnOffDelete( [ configNum ] )
 			DoAlert 2, "Are you sure you want to delete all pulse configurations?"
 			
 			if ( V_flag == 1 )
-				NMPulseConfigWaveRemove( pwName, all = 1 )
+				NMPulseConfigWaveRemove( pcwName, all = 1 )
 			endif
 			
 			break
@@ -3312,15 +3248,15 @@ Function PulseConfigOnOffDelete( [ configNum ] )
 		
 			if ( strsearch( selectStr, "turn off", 0 ) >= 0 )
 			
-				NMPulseConfigWaveRemove( pwName, configNum = configNum, off = 1 )
+				NMPulseConfigWaveRemove( pcwName, configNum = configNum, off = 1 )
 				
 			elseif ( strsearch( selectStr, "turn on", 0 ) >= 0 )
 			
-				NMPulseConfigWaveRemove( pwName, configNum = configNum, off = 0 )
+				NMPulseConfigWaveRemove( pcwName, configNum = configNum, off = 0 )
 				
 			elseif ( strsearch( selectStr, "delete", 0 ) >= 0 )
 			
-				NMPulseConfigWaveRemove( pwName, configNum = configNum )
+				NMPulseConfigWaveRemove( pcwName, configNum = configNum )
 				
 				if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $sdf + trainStr ) ) )
 				
@@ -3350,7 +3286,8 @@ Function PulseConfigOnOffDelete( [ configNum ] )
 	
 	endswitch
 	
-	NMClampListBoxUpdate()
+	NMPulseListboxUpdate( df = NMClampDF, lbwName = "PulseConfigs", pcwName = pcwName )
+	NMPulseListbox2Update( df = NMClampDF, lbwName = "PulseConfig", pcwName = pcwName )
 	StimWavesCheck( sdf, 1 )
 	PulseGraph( 0 )
 	
@@ -3929,6 +3866,76 @@ Function PulseTableHook( infoStr )
 	return 0
 
 End // PulseTableHook
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMClampListboxUpdate_DEPRECATED()
+
+	Variable icnt, ibgn, numConfigs, numRows, extraRows = 3
+	String wName = "PulseConfigs"
+	String ename = wName + "Editable"
+	
+	String pwName = PulseConfigWaveName()
+	
+	//Variable editByPrompt = NumVarOrDefault( NMClampDF + "PulseEditByPrompt", 1 )
+	
+	if ( ( WaveExists( $pwName ) ) && ( WaveType( $pwName, 1 ) == 2 ) )
+	
+		Wave /T pulses = $pwName
+		
+		for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
+			if ( strlen( pulses[ icnt ] ) > 0 )
+				numConfigs += 1
+			endif
+		endfor
+		
+		numRows = numConfigs + extraRows
+		
+	else
+	
+		numRows = extraRows
+	
+	endif
+	
+	Make /O/T/N=( numRows, 2 ) $( NMClampDF + wName ) = ""
+	Make /O/N=( numRows, 2 ) $( NMClampDF + ename ) = 0
+	
+	Wave /T params = $NMClampDF + wName
+	Wave paramsEditable = $NMClampDF + ename
+	
+	if ( ( WaveExists( $pwName ) ) && ( WaveType( $pwName, 1 ) == 2 ) )
+	
+		Wave /T pulses = $pwName
+		
+		for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
+		
+			if ( strlen( pulses[ icnt ] ) > 0 )
+			
+				params[ icnt ][ 0 ] = "-"
+				params[ icnt ][ 1 ] = pulses[ icnt ]
+				
+				//if ( editByPrompt )
+					paramsEditable[ icnt ][ 1 ] = 0
+				//else
+					//paramsEditable[ icnt ][ 1 ] = 3
+				//endif
+				
+				ibgn = icnt + 1
+				
+			endif
+			
+		endfor
+	
+	endif
+	
+	for ( icnt = ibgn ; icnt < numRows ; icnt += 1 )
+		params[ icnt ][ 0 ] = "+"
+		paramsEditable[ icnt ][ 1 ] = 0
+	endfor
+	
+End // NMClampListboxUpdate_DEPRECATED
 
 //****************************************************************
 //****************************************************************

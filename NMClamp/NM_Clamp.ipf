@@ -236,7 +236,7 @@ Function NMClampCheck()
 	CheckNMstr( cdf+"CurrentStim", "" ) 				// current stimulus protocol
 	CheckNMvar( cdf+"ZeroDACLastPoints", 1 )			// zero last points in DAC waves ( 0 ) no ( 1 ) yes
 	
-	CheckNMvar( cdf+"PulseEditByPrompt", 1 )		// edit pulse listbox configs via user prompts ( 0 ) no ( 1 ) yes
+	//CheckNMvar( cdf+"PulseEditByPrompt", 1 )	 // DEPRECATED
 	CheckNMvar( cdf+"PulsePromptBinomial", 0 )
 	CheckNMvar( cdf+"PulsePromptSTDV", 0 )
 	CheckNMvar( cdf+"PulsePromptCV", 0 )
@@ -294,7 +294,7 @@ Function NMClampConfigs()
 	NMConfigVar( fname, "MultiClamp700Save", 0, "save MultiClamp 700 Commander variables", "boolean" )
 	
 	NMConfigVar( fname, "ZeroDACLastPoints", 1, "zero last points in DAC waves", "boolean" )
-	NMConfigVar( fname, "PulseEditByPrompt", 1, "edit pulse listbox configs via user prompts", "boolean" )
+	//NMConfigVar( fname, "PulseEditByPrompt", 1, "edit pulse listbox configs via user prompts", "boolean" )
 	NMConfigVar( fname, "PulsePromptBinomial", 0, "prompt for binomial pulses", "boolean" )
 	NMConfigVar( fname, "PulsePromptPlasticity", 0, "prompt for plasticity of pulse trains", "boolean" )
 	NMConfigStr( fname, "PulsePromptTypeDSC", "delta", "prompt for \"delta\" or \"stdv\" or \"cv\" of pulse parameters", "delta;stdv;cv;" )
