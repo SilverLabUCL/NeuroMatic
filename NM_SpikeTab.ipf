@@ -2089,6 +2089,10 @@ Function SpikeTmin( xRaster )
 	
 	xRaster = CheckNMSpikeRasterXPath( xRaster )
 	
+	if ( !WaveExists( $xRaster ) )
+		return 0
+	endif
+	
 	tmin = NMNoteVarByKey( xRaster, "Spike Tmin" )
 	
 	if ( numtype( tmin ) == 0 )
@@ -2122,6 +2126,10 @@ Function SpikeTmax( xRaster )
 	
 	xRaster = CheckNMSpikeRasterXPath( xRaster )
 	
+	if ( !WaveExists( $xRaster ) )
+		return 0
+	endif
+	
 	tmax = NMNoteVarByKey( xRaster, "Spike Tmax" )
 	
 	if ( numtype( tmax ) == 0 )
@@ -2140,10 +2148,14 @@ Function SpikeTmax( xRaster )
 		return tmax
 	endif
 	
-	WaveStats /Q $xRaster
+	if ( numpnts( $xRaster ) > 0 )
 	
-	if ( numtype( V_max ) == 0 )
-		return V_max
+		WaveStats /Q $xRaster
+		
+		if ( numtype( V_max ) == 0 )
+			return V_max
+		endif
+		
 	endif
 	
 	return rightx( $ChanDisplayWave( -1 ) )
