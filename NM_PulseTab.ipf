@@ -556,7 +556,7 @@ Function NMPulseMake()
 	Button PU_Execute, pos={x0+10,y0}, title="Execute", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
 	Button PU_Graph, pos={x0+95,y0}, title="Graph", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
 	Button PU_Table, pos={x0+180,y0}, title="Table", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Clear, pos={x0+55,y0+yinc}, title="Clear", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Clear, pos={x0+55,y0+yinc}, title="Remove", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
 	Button PU_Model, pos={x0+140,y0+yinc}, title="Model", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
 	
 	y0 += 65
@@ -731,9 +731,11 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 				return NMPulseConfigRemove( configNum = row, history = 1 )
 		endswitch
 		
+	else
+		
+		NMPulseLB2Update( lb )
+		
 	endif
-	
-	NMPulseUpdate()
 	
 End // NMPulseLB1Control
 
@@ -956,7 +958,7 @@ Function NMPulseConfigRemoveCall()
 	
 	String pcwName = NMPulseConfigWaveName()
 	
-	Prompt select, " ", popup "clear all pulse configs;turn off all pulse configs;"
+	Prompt select, " ", popup "clear all pulse configs;turn off all pulse configs;turn on all pulse configs;"
 	DoPrompt "NM Pulse Configs", select
 	
 	if ( V_flag == 1 )
@@ -967,6 +969,8 @@ Function NMPulseConfigRemoveCall()
 		return NMPulseConfigRemove( all = 1 )
 	elseif ( select == 2 )
 		return NMPulseConfigRemove( all = 1, off = 1 )
+	elseif ( select == 3 )
+		return NMPulseConfigRemove( all = 1, off = 0 )
 	endif
 
 End // NMPulseConfigRemoveCall

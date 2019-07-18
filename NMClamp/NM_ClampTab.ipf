@@ -633,11 +633,16 @@ Function NMClampLB1Control( ctrlName, row, col, event ) : ListboxControl
 	Variable event // event code
 	
 	Variable TTL
+	String pstr = ""
 	String sdf = StimDF()
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
 	
 	Variable numWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
+	
+	STRUCT NMPulseLBWaves lb
+	
+	NMClampPulseLBWavesDefault( lb )
 	
 	if ( event == 2 )
 	
@@ -657,33 +662,15 @@ Function NMClampLB1Control( ctrlName, row, col, event ) : ListboxControl
 		TTL = 1
 	endif
 	
-	return NMClampListboxEvent( row, col, event, TTL = TTL )
-	
-End // NMClampLB1Control
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMClampListboxEvent( row, col, event [ TTL ] )
-	Variable row // row if click in interior, -1 if click in title
-	Variable col // column number
-	Variable event // event code
-	Variable TTL
-	
-	String valueStr, pstr
-	String sdf = StimDF()
-	
-	STRUCT NMPulseLBWaves lb
-	
-	NMClampPulseLBWavesDefault( lb )
-	
 	String estr = NMPulseLB1Event( row, col, event, lb )
 	
 	if ( StringMatch( estr, "+" ) )
 		pstr = PulseConfigAdd( TTL = TTL )
 	elseif ( StringMatch( estr, "-" ) )
 		pstr = PulseConfigOnOffDelete( configNum = row )
+	else
+		NMPulseLB2Update( lb )
+		return 0
 	endif
 	
 	NMPulseLB1Update( lb )

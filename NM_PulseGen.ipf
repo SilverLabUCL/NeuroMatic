@@ -3520,13 +3520,13 @@ Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off ] )
 	
 	if ( ParamIsDefault( configNum ) )
 	
-		configNum = -1
-	
 		if ( !all )
 			return NM2Error( 10, "configNum", num2str( configNum ) )
 		endif
+		
+		configNum = -1
 	
-	else
+	elseif ( !all )
 	
 		if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $pcwName ) ) )
 			return NM2Error( 10, "configNum", num2str( configNum ) )

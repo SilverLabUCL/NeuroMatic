@@ -461,7 +461,9 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 		
 		DoUpdate /W=NMProgressPanel /E=1 // mark this as our progress window
 		
-		SetWindow NMProgressPanel, hook(nmprogwin61)=NMProgWin61Hook
+		if ( WinType( "NMProgressPanel" ) == 7 ) // need if-statement to prevent Igor error
+			SetWindow NMProgressPanel, hook(nmprogwin61)=NMProgWin61Hook
+		endif
 		
 		SetNMvar( NMDF+"NMProgressCancel", 0 )
 		
@@ -481,14 +483,10 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 		TitleBox /Z NM_ProgWinTitle, title=progressStr, win=NMProgressPanel
 		DoUpdate /W=NMProgressPanel
 		
-		if ( WinType( "NMProgressPanel" ) == 7 )
-		
-			if ( fraction > 0 )
-				ValDisplay NM_ProgWinValDisplay,mode=3,value= _NUM:fraction,win=NMProgressPanel // update bar fraction
-			elseif ( fraction < 0 )
-				ValDisplay NM_ProgWinValDisplay,mode=4,value= _NUM:1,win=NMProgressPanel // update candy
-			endif
-		
+		if ( fraction > 0 )
+			ValDisplay NM_ProgWinValDisplay,mode=3,value= _NUM:fraction,win=NMProgressPanel // update bar fraction
+		elseif ( fraction < 0 )
+			ValDisplay NM_ProgWinValDisplay,mode=4,value= _NUM:1,win=NMProgressPanel // update candy
 		endif
 	
 	endif
