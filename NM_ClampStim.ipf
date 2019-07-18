@@ -253,10 +253,10 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	Variable forceUpdate
 
 	Variable icnt, jcnt, wcnt, items, config, npnts, dt
-	Variable pgoff, new, numWaves
-	String stimName, io, wPrefix, preFxnList, interFxnList
-	String wName, wName2, wName3
-	String kList, pList, myList, uList, wList = ""
+	Variable pgoff, new, numWaves, foundMyWave
+	String stimName, io, preFxnList, interFxnList
+	String wPrefix, wSuffix, wName, wName2
+	String kList, pList, uList, wList = ""
 	
 	Variable zeroDACLastPoints = NumVarOrDefault( NMClampDF + "ZeroDACLastPoints", 1 )
 	
@@ -324,83 +324,88 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	
 	endfor
 	
-	if ( pgOff )
+	if ( pgOff ) // if "My" waves exist, check waves have matching npnts and dt
 	
-		myList = ""
-	
-		for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
-	
-			wPrefix = StringFromList( icnt, pList )
-			myList = NMFolderWaveList( sdf, "My" + wPrefix + "*", ";", "", 0 )
-			
-			if ( ItemsInList( myList ) > 0 )
-				break // found "My" waves, now check other config waves match
-			endif
-			
-		endfor
+		for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 		
-		if ( ItemsInList( myList ) > 0 )
+			foundMyWave = 0
 		
 			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
-	
+			
 				wPrefix = StringFromList( icnt, pList )
+				wName = "My" + wPrefix + "_" + num2istr( wcnt )
 				
-				wList = NMFolderWaveList(sdf, wPrefix + "*", ";", "", 0 )
+				if ( WaveExists( $sdf + wName ) )
+					foundMyWave = 1
+					break
+				endif
+			
+			endfor
+		
+			if ( !foundMyWave )
+				break
+			endif
+			
+			npnts = numpnts( $sdf + wName )
+			dt = deltax( $sdf + wName )
+			
+			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
+			
+				wPrefix = StringFromList( icnt, pList )
+				wName2 = "My" + wPrefix + "_" + num2istr( wcnt )
 				
-				for ( wcnt = ItemsInList( wList ) - 1 ; wcnt >= 0  ; wcnt -= 1 )
-				
-					wName = StringFromList( wcnt, wList )
-					
-					if ( strsearch( wName, "_pulse", 0 ) > 0 )
-						wList = RemoveFromList( wName, wList )
-					endif
-					
-				endfor
-				
-				uList = NMFolderWaveList(sdf, "u" + wPrefix + "*", ";", "", 0 ) // unscaled waves for display
-				
-				for ( wcnt = ItemsInList( uList ) - 1 ; wcnt >= 0  ; wcnt -= 1 )
-				
-					wName = StringFromList( wcnt, uList )
-					
-					if ( strsearch( wName, "_pulse", 0 ) > 0 )
-						uList = RemoveFromList( wName, uList ) // remove "pulse" waves
-					endif
-					
-				endfor
-				
-				if ( ItemsInList( myList ) != ItemsInList( wList ) )
-					continue // something wrong, different number of stim waves
+				if ( StringMatch( wName, wName2 ) )
+					continue
 				endif
 				
-				if ( ItemsInList( myList ) != ItemsInList( uList ) )
-					continue // something wrong, different number of stim waves
+				if ( WaveExists( $sdf + wName2 ) )
+				
+					if ( numpnts( $sdf + wName2 ) != npnts )
+						NMHistory( "StimWavesCheck error: different numpnts: " + wName + ", " + wName2 )
+						continue
+					endif
+					
+					if ( deltax( $sdf + wName2 ) != dt )
+						NMHistory( "StimWavesCheck error: different dt: " + wName + ", " + wName2 )
+						continue
+					endif
+				
+					continue
+					
 				endif
 				
-				for ( wcnt = 0 ; wcnt < ItemsInList( myList ) ; wcnt += 1 )
+				wName2 = wPrefix + "_" + num2istr( wcnt ) // DAC/TTL waves
 				
-					wName = StringFromList( wcnt, myList )
-					wName2 = StringFromList( wcnt, wList )
-					wName3 = StringFromList( wcnt, uList )
-					
-					npnts = numpnts( $sdf + wName )
-					dt = deltax( $sdf + wName )
-					
+				
+				if ( WaveExists( $sdf + wName2 ) )
+				
 					if ( numpnts( $sdf + wName2 ) != npnts )
 						Redimension /N=( npnts ) $sdf + wName2
-						Redimension /N=( npnts ) $sdf + wName3
 					endif
 					
 					if ( deltax( $sdf + wName2 ) != dt )
 						Setscale /P x 0, dt, $sdf + wName2
-						Setscale /P x 0, dt, $sdf + wName3
 					endif
 					
-				endfor
+				endif
+				
+				wName2 = "u" + wName2 // uDAC/uTTL waves
+				
+				if ( WaveExists( $sdf + wName2 ) )
+				
+					if ( numpnts( $sdf + wName2 ) != npnts )
+						Redimension /N=( npnts ) $sdf + wName2
+					endif
+					
+					if ( deltax( $sdf + wName2 ) != dt )
+						Setscale /P x 0, dt, $sdf + wName2
+					endif
+					
+				endif
 			
 			endfor
-		
-		endif
+			
+		endfor
 	
 	endif
 	
