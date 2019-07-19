@@ -255,10 +255,11 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	Variable icnt, jcnt, wcnt, items, config, npnts, dt
 	Variable pgoff, new, numWaves, foundMyWave
 	String stimName, io, preFxnList, interFxnList
-	String wPrefix, wSuffix, wName, wName2
+	String wPrefix, wSuffix, wName, wName2, myName
 	String kList, pList, uList, wList = ""
 	
 	Variable zeroDACLastPoints = NumVarOrDefault( NMClampDF + "ZeroDACLastPoints", 1 )
+	Variable forceEvenPoints = NumVarOrDefault( NMClampDF + "ForceEvenPoints", 0 )
 	
 	sdf = CheckStimDF(sdf)
 	
@@ -297,11 +298,32 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 		endif
 		
 		if (forceUpdate || (ItemsInList(wList) < numWaves) || (ItemsInList(uList) < numWaves))
-			wList += StimWavesMake(sdf, io, config, NaN)
+			//wList += StimWavesMake(sdf, io, config, NaN)
+			wList = StimWavesMake(sdf, io, config, NaN)
 			new = 1
 		endif
 	
 		items = ItemsInList( wList )
+		
+		if ( forceEvenPoints && ( items > 0 ) )
+		
+			for ( wcnt = 0 ; wcnt < items ; wcnt += 1 )
+			
+				wName = StringFromList( wcnt, wList )
+				
+				npnts = numpnts( $sdf + wName )
+				
+				if ( mod( npnts, 2 ) == 0 )
+					continue // OK, even
+				endif
+				
+				npnts += 1
+				
+				Redimension /N=( npnts ) $sdf + wName
+				
+			endfor
+			
+		endif
 		
 		if ( zeroDACLastPoints && ( items > 0 ) )
 		
@@ -333,9 +355,10 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
 			
 				wPrefix = StringFromList( icnt, pList )
-				wName = "My" + wPrefix + "_" + num2istr( wcnt )
+				wName = wPrefix + "_" + num2istr( wcnt ) // e.g. DAC_0_0 (copy of MyDAC)
+				myName = "My" + wPrefix + "_" + num2istr( wcnt ) // e.g. MyDAC_0_0
 				
-				if ( WaveExists( $sdf + wName ) )
+				if ( WaveExists( $sdf + myName ) )
 					foundMyWave = 1
 					break
 				endif
@@ -352,30 +375,7 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
 			
 				wPrefix = StringFromList( icnt, pList )
-				wName2 = "My" + wPrefix + "_" + num2istr( wcnt )
-				
-				if ( StringMatch( wName, wName2 ) )
-					continue
-				endif
-				
-				if ( WaveExists( $sdf + wName2 ) )
-				
-					if ( numpnts( $sdf + wName2 ) != npnts )
-						NMHistory( "StimWavesCheck error: different numpnts: " + wName + ", " + wName2 )
-						continue
-					endif
-					
-					if ( deltax( $sdf + wName2 ) != dt )
-						NMHistory( "StimWavesCheck error: different dt: " + wName + ", " + wName2 )
-						continue
-					endif
-				
-					continue
-					
-				endif
-				
 				wName2 = wPrefix + "_" + num2istr( wcnt ) // DAC/TTL waves
-				
 				
 				if ( WaveExists( $sdf + wName2 ) )
 				
