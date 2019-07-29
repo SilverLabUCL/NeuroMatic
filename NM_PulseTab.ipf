@@ -550,18 +550,18 @@ Function NMPulseMake()
 	ListBox PU_params, title="Pulse Configs", pos={x0,y0}, size={260,120}, fsize=fs, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, win=$NMPanelName
 	ListBox PU_params, mode=1, userColumnResize=1, selRow=-1, proc=NMPulseLB2Control, widths={35,70,45}, win=$NMPanelName
 	
-	y0 += 140
+	y0 += 135
 	yinc = 30
 	
-	Button PU_Execute, pos={x0+10,y0}, title="Execute", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Graph, pos={x0+95,y0}, title="Graph", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Table, pos={x0+180,y0}, title="Table", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Clear, pos={x0+55,y0+yinc}, title="Remove", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Model, pos={x0+140,y0+yinc}, title="Model", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Execute, pos={x0+20,y0}, title="Execute", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Model, pos={x0+140,y0}, title="Model", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Graph, pos={x0+20,y0+yinc}, title="Graph", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Table, pos={x0+140,y0+yinc}, title="Table", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	//Button PU_Clear, pos={x0+55,y0+yinc}, title="Remove", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
 	
 	y0 += 65
 	
-	CheckBox PU_AutoExecute, title="auto execute", pos={x0+120,y0}, size={200,50}, value=0, proc=NMPulseCheckBox, fsize=fs, win=$NMPanelName
+	CheckBox PU_AutoExecute, title="auto execute", pos={x0+125,y0}, size={200,50}, value=0, proc=NMPulseCheckBox, fsize=fs, win=$NMPanelName
 	
 	NMPulseUpdate( stopAutoExecute = 1 )
 	
@@ -702,7 +702,8 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 	Variable col // column number
 	Variable event // event code
 	
-	String paramList, ood
+	String paramList, ood, titleStr, trainStr
+	String sf = NMPulseSubfolder()
 	
 	STRUCT NMPulseLBWaves lb
 	
@@ -719,17 +720,9 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 		endif
 	
 	elseif ( StringMatch( estr, "-" ) )
-	
-		ood = NMPulseLB1PromptOOD( lb )
-		
-		strswitch( ood )
-			case "on":
-				return NMPulseConfigRemove( configNum = row, off = 0, history = 1 )
-			case "off":
-				return NMPulseConfigRemove( configNum = row, off = 1, history = 1 )
-			case "delete":
-				return NMPulseConfigRemove( configNum = row, history = 1 )
-		endswitch
+
+		ood = NMPulseLB1PromptOODE( lb, sf )
+		NMPulseConfigOODE( lb, sf, ood )
 		
 	else
 		
@@ -889,6 +882,7 @@ End // NMPulseSet
 Function /S NMPulseLB1PromptNew()
 	
 	String titleEnding = ""
+	String sf = NMPulseSubfolder()
 	
 	Variable numWaves = NMPulseVar( "NumWaves" )
 	Variable waveLength = NMPulseVar( "WaveLength" )
@@ -901,7 +895,7 @@ Function /S NMPulseLB1PromptNew()
 	String timeUnits = NMPulseStr( "Xunits" )
 	String ampUnits = NMPulseStr( "Yunits" )
 	
-	return NMPulsePrompt( pdf=NMPulseDF, numWaves=numWaves, timeLimit=waveLength, TTL=TTL, titleEnding=titleEnding, binom=binom, DSC=DSCG, plasticity=plasticity, timeUnits=timeUnits, ampUnits=ampUnits )
+	return NMPulsePrompt( udf=sf, pdf=NMPulseDF, numWaves=numWaves, timeLimit=waveLength, TTL=TTL, titleEnding=titleEnding, binom=binom, DSC=DSCG, plasticity=plasticity, timeUnits=timeUnits, ampUnits=ampUnits )
 
 End // NMPulseLB1PromptNew
 
@@ -978,10 +972,95 @@ End // NMPulseConfigRemoveCall
 //****************************************************************
 //****************************************************************
 
-Function NMPulseConfigRemove( [ configNum, all, off, update, history ] )
+Function NMPulseConfigOODE( lb, udf, ood [ noPrompt ] ) // code copied from NMPulseLB1OODE()
+	STRUCT NMPulseLBWaves &lb
+	String udf // data folder where user waves are located 
+	String ood // see NMPulseLB1PromptOOD
+	Variable noPrompt // for delete
+	
+	Variable configNum, deleteAll = 0
+	Variable deleteTrain = 2 // user prompt to delete
+	String trainStr, titleStr
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return -1
+	endif
+	
+	if ( noPrompt )
+		deleteTrain = 1 // delete w/o prompt
+	endif
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	strswitch( ood )
+		
+			case "on":
+				//return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, off = 0 )
+				return NMPulseConfigRemove( configNum = configNum, off = 0, history = 1 )
+			case "off":
+				//return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, off = 1 )
+				return NMPulseConfigRemove( configNum = configNum, off = 1, history = 1 )
+			case "delete":
+				//return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, deleteTrain = deleteTrain )
+				return NMPulseConfigRemove( configNum = configNum, deleteTrain = deleteTrain, history = 1 )
+			case "off all":
+				//return NMPulseConfigWaveRemove( lb.pcwName, all = 1, off = 1 )
+				return NMPulseConfigRemove( off = 1, all = 1, history = 1 )
+			case "on all":
+				//return NMPulseConfigWaveRemove( lb.pcwName, all = 1, off = 0 )
+				return NMPulseConfigRemove( off = 0, all = 1, history = 1 )
+				
+			case "delete all":
+			
+				if ( noPrompt )
+				
+					deleteAll = 1
+					
+				else
+			
+					DoAlert 2, "Are you sure you want to delete all pulse configurations?"
+					
+					if ( V_flag == 1 ) // yes
+						deleteAll = 1
+					endif
+				
+				endif
+				
+				if ( deleteAll )
+					//return NMPulseConfigWaveRemove( lb.pcwName, all = 1, deleteTrain = deleteTrain )
+					return NMPulseConfigRemove( all = 1, deleteTrain = deleteTrain, history = 1 )
+				endif
+				
+				break
+		
+			default:
+			
+				if ( StringMatch( ood[ 0, 3 ], "edit" ) )
+				
+					trainStr = ReplaceString( "edit ", ood, "" )
+				
+					if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $udf + trainStr ) ) )
+						titleStr = udf + trainStr
+						Edit /K=1 $udf + trainStr as titleStr
+					endif
+					
+				endif
+		
+		endswitch
+		
+		return 0
+	
+End // NMPulseConfigOODE
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseConfigRemove( [ configNum, all, off, deleteTrain, update, history ] )
+	// wrapper to NMPulseConfigWaveRemove(), this function adds history option
 	Variable configNum
 	Variable all
 	Variable off // ( 0 ) turn on config ( 1 ) turn off config
+	Variable deleteTrain // delete wave of random pulse times ( 0 ) no ( 1 ) yes ( 2 ) user prompt
 	Variable update
 	Variable history
 	
@@ -1015,7 +1094,7 @@ Function NMPulseConfigRemove( [ configNum, all, off, update, history ] )
 		NMCommandHistory( vlist )
 	endif
 	
-	error = NMPulseConfigWaveRemove( pcwName, configNum = configNum, all = all, off = off )
+	error = NMPulseConfigWaveRemove( pcwName, configNum = configNum, all = all, off = off, deleteTrain = deleteTrain )
 	
 	if ( update )
 		NMPulseUpdate()
@@ -2186,7 +2265,7 @@ Function /S NMPulsePromptCall( [ row, OOD ] ) // DEPRECATED // use NMPulseLB1Pro
 	NMPulseTabLBWavesDefault( lb )
 	
 	if ( OOD )
-		return NMPulseLB1PromptOOD( lb )
+		return NMPulseLB1PromptOODE( lb, sf )
 	else
 		return NMPulseLB1PromptNew()
 	endif

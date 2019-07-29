@@ -633,10 +633,11 @@ Function NMClampLB1Control( ctrlName, row, col, event ) : ListboxControl
 	Variable event // event code
 	
 	Variable TTL
-	String pstr = ""
+	String trainStr, titleStr, pstr = ""
 	String sdf = StimDF()
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
+	String pcwName = PulseConfigWaveName()
 	
 	Variable numWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
 	
@@ -667,7 +668,8 @@ Function NMClampLB1Control( ctrlName, row, col, event ) : ListboxControl
 	if ( StringMatch( estr, "+" ) )
 		pstr = PulseConfigAdd( TTL = TTL )
 	elseif ( StringMatch( estr, "-" ) )
-		pstr = PulseConfigOnOffDelete( configNum = row )
+		pstr = NMPulseLB1PromptOODE( lb, sdf )
+		NMPulseLB1OODE( lb, sdf, pstr )
 	else
 		NMPulseLB2Update( lb )
 		return 0
@@ -707,7 +709,7 @@ Function /S PulseConfigAdd( [ TTL ] )
 	
 	String ampUnits = StimConfigStr( sdf, pPrefix, "units" )
 	
-	paramList = NMPulsePrompt( df=sdf, pdf=NMClampTabDF, numWaves=numWaves, timeLimit=waveLength, paramList=paramList, TTL=TTL, titleEnding=pPrefix, binom=binom, plasticity=plasticity, DSC=DSC, timeUnits=NMXunits, ampUnits=ampUnits )
+	paramList = NMPulsePrompt( udf=sdf, pdf=NMClampTabDF, numWaves=numWaves, timeLimit=waveLength, paramList=paramList, TTL=TTL, titleEnding=pPrefix, binom=binom, plasticity=plasticity, DSC=DSC, timeUnits=NMXunits, ampUnits=ampUnits )
 	
 	if ( ItemsInList( paramList ) > 0 )
 		NMPulseConfigWaveSave( pcwName, paramList )
@@ -716,154 +718,6 @@ Function /S PulseConfigAdd( [ TTL ] )
 	return paramList
 	
 End // PulseConfigAdd
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function /S PulseConfigOnOffDelete( [ configNum ] )
-	Variable configNum // pulse config number ( -1 ) for all
-	
-	Variable icnt, numPulses, off
-	String paramList, pStr, selectStr, trainStr = "", allStr, noteStr, plist = "", titleStr
-	String sdf = StimDF()
-	
-	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
-	String pcwName = PulseConfigWaveName()
-	
-	if ( ParamIsDefault( configNum ) )
-		configNum = NaN
-	endif
-	
-	if ( !WaveExists( $pcwName ) )
-		return ""
-	endif
-	
-	numPulses = numpnts( $pcwName )
-	
-	if ( numPulses == 0 )
-		DoAlert 0, "There are no pulse configs to edit."
-		return ""
-	endif
-	
-	Wave /T pulses = $pcwName
-	
-	if ( ( configNum == -1 ) && ( numPulses == 1 ) )
-		configNum = 0
-	endif
-	
-	titleStr = "Remove Pulse Config"
-	
-	if ( ( numtype( configNum ) == 0 ) && ( configNum >= 0 ) && ( configNum < numPulses ) )
-	
-		paramList = pulses[ configNum ]
-	
-		pStr = num2istr( configNum )
-	
-		off = str2num( StringByKey( "off", paramList, "=" ) )
-		
-		trainStr = StringByKey( "train", paramList, "=" )
-		
-		allStr = "turn off all pulse configs;turn on all pulse configs;delete all pulse configs;"
-		
-		if ( off )
-			plist = "turn on;delete;"
-		else
-			plist = "turn off;delete;"
-		endif
-		
-		if ( numPulses > 1 )
-			plist += "---;" + allStr
-		endif
-		
-		if ( WaveExists( $sdf + trainStr ) )
-			plist += "---;edit " + trainStr + ";"
-		endif
-		
-		titleStr = "Remove Pulse Config #" + pStr
-		
-	else
-	
-		plist = allStr
-		
-	endif
-	
-	selectStr = ""
-	
-	Prompt selectStr, " ", popup plist
-	DoPrompt titleStr, selectStr
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	strswitch( selectStr )
-	
-		case "turn off all pulse configs":
-			NMPulseConfigWaveRemove( pcwName, all = 1, off = 1 )
-			break
-			
-		case "turn on all pulse configs":
-			NMPulseConfigWaveRemove( pcwName, all = 1, off = 0 )
-			break
-			
-		case "delete all pulse configs":
-		
-			DoAlert 2, "Are you sure you want to delete all pulse configurations?"
-			
-			if ( V_flag == 1 )
-				NMPulseConfigWaveRemove( pcwName, all = 1 )
-			else
-				return ""
-			endif
-			
-			break
-	
-		default:
-		
-			if ( strsearch( selectStr, "turn off", 0 ) >= 0 )
-			
-				NMPulseConfigWaveRemove( pcwName, configNum = configNum, off = 1 )
-				
-			elseif ( strsearch( selectStr, "turn on", 0 ) >= 0 )
-			
-				NMPulseConfigWaveRemove( pcwName, configNum = configNum, off = 0 )
-				
-			elseif ( strsearch( selectStr, "delete", 0 ) >= 0 )
-			
-				NMPulseConfigWaveRemove( pcwName, configNum = configNum )
-				
-				if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $sdf + trainStr ) ) )
-				
-					noteStr = note( $sdf + trainStr )
-					
-					if ( strsearch( noteStr, "NM Random Pulses", 0 ) >= 0 )
-					
-						DoAlert 1, "Do you want to delete pulse wave " + NMQuotes( trainStr ) + "?"
-						
-						if ( V_flag == 1 )
-							KillWaves /Z $sdf + trainStr
-						endif
-					
-					endif
-					
-				endif
-				
-			elseif ( strsearch( selectStr, "edit", 0 ) >= 0 )
-			
-				if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $sdf + trainStr ) ) )
-					titleStr = sdf + trainStr
-					Edit /K=1 $sdf + trainStr as titleStr
-					return ""
-				endif
-				
-			endif
-	
-	endswitch
-	
-	return "OOD"
-
-End // PulseConfigOnOffDelete
 
 //****************************************************************
 //****************************************************************
@@ -3908,6 +3762,138 @@ Function NMClampListboxUpdate_DEPRECATED()
 	endfor
 	
 End // NMClampListboxUpdate_DEPRECATED
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S PulseConfigOnOffDelete( [ configNum ] ) // DEPRECATED // use NMPulseLB1PromptOOD()
+	Variable configNum // pulse config number ( -1 ) for all
+	
+	Variable icnt, numPulses, off
+	String paramList, pStr, selectStr, trainStr = "", allStr, noteStr, plist = "", titleStr
+	String sdf = StimDF()
+	
+	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
+	String pcwName = PulseConfigWaveName()
+	
+	if ( ParamIsDefault( configNum ) )
+		configNum = NaN
+	endif
+	
+	if ( !WaveExists( $pcwName ) )
+		return ""
+	endif
+	
+	numPulses = numpnts( $pcwName )
+	
+	if ( numPulses == 0 )
+		DoAlert 0, "There are no pulse configs to edit."
+		return ""
+	endif
+	
+	Wave /T pulses = $pcwName
+	
+	if ( ( configNum == -1 ) && ( numPulses == 1 ) )
+		configNum = 0
+	endif
+	
+	titleStr = "Remove Pulse Config"
+	
+	if ( ( numtype( configNum ) == 0 ) && ( configNum >= 0 ) && ( configNum < numPulses ) )
+	
+		paramList = pulses[ configNum ]
+	
+		pStr = num2istr( configNum )
+	
+		off = str2num( StringByKey( "off", paramList, "=" ) )
+		
+		trainStr = StringByKey( "train", paramList, "=" )
+		
+		allStr = "turn off all pulse configs;turn on all pulse configs;delete all pulse configs;"
+		
+		if ( off )
+			plist = "turn on;delete;"
+		else
+			plist = "turn off;delete;"
+		endif
+		
+		if ( numPulses > 1 )
+			plist += "---;" + allStr
+		endif
+		
+		if ( WaveExists( $sdf + trainStr ) )
+			plist += "---;edit " + trainStr + ";"
+		endif
+		
+		titleStr = "Remove Pulse Config #" + pStr
+		
+	else
+	
+		plist = allStr
+		
+	endif
+	
+	selectStr = ""
+	
+	Prompt selectStr, " ", popup plist
+	DoPrompt titleStr, selectStr
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	strswitch( selectStr )
+	
+		case "turn off all pulse configs":
+			NMPulseConfigWaveRemove( pcwName, all = 1, off = 1 )
+			break
+			
+		case "turn on all pulse configs":
+			NMPulseConfigWaveRemove( pcwName, all = 1, off = 0 )
+			break
+			
+		case "delete all pulse configs":
+		
+			DoAlert 2, "Are you sure you want to delete all pulse configurations?"
+			
+			if ( V_flag == 1 )
+				NMPulseConfigWaveRemove( pcwName, all = 1 )
+			else
+				return ""
+			endif
+			
+			break
+	
+		default:
+		
+			if ( strsearch( selectStr, "turn off", 0 ) >= 0 )
+			
+				NMPulseConfigWaveRemove( pcwName, configNum = configNum, off = 1 )
+				
+			elseif ( strsearch( selectStr, "turn on", 0 ) >= 0 )
+			
+				NMPulseConfigWaveRemove( pcwName, configNum = configNum, off = 0 )
+				
+			elseif ( strsearch( selectStr, "delete", 0 ) >= 0 )
+			
+				NMPulseConfigWaveRemove( pcwName, configNum = configNum, deleteTrain = 2 )
+				
+			elseif ( strsearch( selectStr, "edit", 0 ) >= 0 )
+			
+				if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $sdf + trainStr ) ) )
+					titleStr = sdf + trainStr
+					Edit /K=1 $sdf + trainStr as titleStr
+					return ""
+				endif
+				
+			endif
+	
+	endswitch
+	
+	return "OOD"
+
+End // PulseConfigOnOffDelete
 
 //****************************************************************
 //****************************************************************
