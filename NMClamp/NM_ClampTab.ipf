@@ -92,7 +92,7 @@ Function CheckClampTab2() // declare Clamp Tab global variables
 		return 0 // folder doesnt exist
 	endif
 	
-	CheckNMstr( NMClampTabDF + "TabControlList", "File,CT1_;Stim,CT2_;DAQ,CT3_;" + NMPanelName + ",CT0_Tab;" )
+	CheckNMstr( NMClampTabDF + "TabControlList", "File,CT1_;Stim,CT2_;DAQ,CT3_;Notes,CT4_;" + NMPanelName + ",CT0_Tab;" )
 	
 	CheckNMvar( NMClampTabDF + "CurrentTab", 0 )
 	CheckNMvar( NMClampTabDF + "StatsOn", 0 )
@@ -204,7 +204,8 @@ Function ClampTabMake()
 	
 	STRUCT NMRGB c
 	STRUCT NMRGB c2
-	STRUCT NMPulseLBWaves lb
+	STRUCT NMPulseLBWaves lbp
+	STRUCT NMClampNotesLBWaves lbn
 
 	ControlInfo /W=$NMPanelName CT0_StimList 
 	
@@ -461,17 +462,17 @@ Function ClampTabMake()
 	
 	Button CT2_Display, title="Plot", pos={x0+190,y0}, size={50,20}, proc=PulseTabButton, disable=1, fsize=fs, win=$NMPanelName
 	
-	NMClampPulseLBWavesDefault( lb )
+	NMClampPulseLBWavesDefault( lbp )
 	
 	y0 += 30
 	
-	Listbox CT2_PulseConfigs, title="Pulses", pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lb.lb1wName, selWave=$lb.lb1wNameSel, win=$NMPanelName
-	Listbox CT2_PulseConfigs, mode=1, userColumnResize=1, proc=NMClampLB1Control, widths={25,1500}, win=$NMPanelName
+	Listbox CT2_PulseConfigs, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbp.lb1wName, selWave=$lbp.lb1wNameSel, win=$NMPanelName
+	Listbox CT2_PulseConfigs, mode=1, userColumnResize=1, proc=NMClampPulseLB1Control, widths={25,1500}, win=$NMPanelName
 	
 	y0 += 90
 	
-	Listbox CT2_PulseParams, title="Pulse", pos={x0,y0}, size={260,115}, disable=1, fsize=fs, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, win=$NMPanelName
-	Listbox CT2_PulseParams, mode=1, userColumnResize=1, selRow=-1, proc=NMClampLB2Control, widths={35,70,45}, win=$NMPanelName
+	Listbox CT2_PulseParams, pos={x0,y0}, size={260,115}, disable=1, fsize=fs, listWave=$lbp.lb2wName, selWave=$lbp.lb2wNameSel, win=$NMPanelName
+	Listbox CT2_PulseParams, mode=1, userColumnResize=1, selRow=-1, proc=NMClampPulseLB2Control, widths={35,70,45}, win=$NMPanelName
 	
 	Checkbox CT2_UseMyWaves, pos={x0+70,615}, title="use \"My\" waves", size={10,20}, win=$NMPanelName
 	Checkbox CT2_UseMyWaves, value=1, disable=1, proc=PulseTabCheckbox, fsize=fs, win=$NMPanelName
@@ -541,6 +542,27 @@ Function ClampTabMake()
 	Button CT3_IOreset, title="Reset", pos={x0+10+1*xinc,y0}, size={50,20}, proc=ConfigsTabButton, disable=1, fsize=fs, win=$NMPanelName
 	Button CT3_IOextract, title="Extract", pos={x0+10+2*xinc,y0}, size={50,20}, proc=ConfigsTabButton, disable=1, fsize=fs, win=$NMPanelName
 	Button CT3_IOsave, title="Save", pos={x0+10+3*xinc,y0}, size={50,20}, proc=ConfigsTabButton, disable=1, fsize=fs, win=$NMPanelName
+	
+	// Notes Tab
+	
+	NMClampNotesLBWavesDefault( lbn )
+	
+	y0 = NMPanelTabY + 140
+	xinc = 90
+	yinc = 28
+	
+	Listbox CT4_NotesHeader, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.header, win=$NMPanelName
+	Listbox CT4_NotesHeader, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,60,80,15}, win=$NMPanelName
+	
+	y0 += 100
+	
+	Listbox CT4_NotesFile, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.file, win=$NMPanelName
+	Listbox CT4_NotesFile, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,60,80,15}, win=$NMPanelName
+	
+	y0 += 100
+	
+	Listbox CT4_NotesAcq, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.acq, win=$NMPanelName
+	Listbox CT4_NotesAcq, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,200}, win=$NMPanelName
 	
 	SetNMvar( tdf + "CurrentTab", 0 )
 
@@ -626,7 +648,7 @@ End // NMClampPulseLBWavesDefault
 //****************************************************************
 //****************************************************************
 
-Function NMClampLB1Control( ctrlName, row, col, event ) : ListboxControl
+Function NMClampPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 	String ctrlName // name of this control
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
@@ -686,7 +708,7 @@ Function NMClampLB1Control( ctrlName, row, col, event ) : ListboxControl
 	
 	return 0
 	
-End // NMClampListboxEvent
+End // NMClampPulseLB1Control
 
 //****************************************************************
 //****************************************************************
@@ -722,7 +744,7 @@ End // PulseConfigAdd
 //****************************************************************
 //****************************************************************
 
-Function NMClampLB2Control( ctrlName, row, col, event ) : ListboxControl
+Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	String ctrlName // name of this control
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
@@ -762,7 +784,7 @@ Function NMClampLB2Control( ctrlName, row, col, event ) : ListboxControl
 		PulseGraph( 0 )
 	endif
 
-End // NMClampLB2Control
+End // NMClampPulseLB2Control
 
 //****************************************************************
 //****************************************************************
@@ -1352,7 +1374,6 @@ End // FileTabCall
 //
 //	Stim tab control functions defined below
 //
-//
 //****************************************************************
 //****************************************************************
 //****************************************************************
@@ -1360,7 +1381,7 @@ End // FileTabCall
 Function StimTab( enable )
 	Variable enable
 	
-	Variable misc, tim, board, pulse
+	Variable misc, tim, insouts, pulse
 	
 	Variable chain = NMStimChainOn( "" )
 	String select = StimTabMode()
@@ -1383,7 +1404,7 @@ Function StimTab( enable )
 				Checkbox CT2_Pulsecheck, win=$NMPanelName, value=0, title="Pulse"
 				break
 			case "Ins/Outs":
-				board = 1
+				insouts = 1
 				Checkbox CT2_MiscCheck, win=$NMPanelName, value=0, title="Misc"
 				Checkbox CT2_TimeCheck, win=$NMPanelName, value=0, title="Time"
 				Checkbox CT2_Boardcheck, win=$NMPanelName, value=1, title="\f01Ins / Outs"
@@ -1399,7 +1420,7 @@ Function StimTab( enable )
 		
 		if ( chain == 1 )
 			tim = 0
-			board = 0
+			insouts = 0
 			pulse = 0
 		endif
 		
@@ -1407,7 +1428,7 @@ Function StimTab( enable )
 		
 		StimTabMisc( misc )
 		StimTabTime( tim )
-		StimTabBoard( board )
+		StimTabBoard( insouts )
 		StimTabPulse( pulse )
 		
 		if ( chain == 1 )
@@ -2267,7 +2288,7 @@ End // StimIOtable
 //****************************************************************
 //****************************************************************
 //
-//	Board tab control functions defined below
+//	DAQ Board tab control functions defined below
 //
 //
 //****************************************************************
@@ -2932,6 +2953,229 @@ Function ConfigsTabConfigsFromStims()
 	endif
 	
 End // ConfigsTabConfigsFromStims
+
+//****************************************************************
+//****************************************************************
+//
+//	Notes tab control functions defined below
+//
+//****************************************************************
+//****************************************************************
+
+Function NMNotesTab( enable )
+	Variable enable
+	
+	if ( enable )
+	
+		NMClampNotesWavesUpdate()
+		
+	endif
+	
+End // NMNotesTab
+
+//****************************************************************
+//****************************************************************
+
+Structure NMClampNotesLBWaves
+
+	String header, file, acq
+
+EndStructure // NMClampNotesLBWaves
+
+//****************************************************************
+//****************************************************************
+
+Function NMClampNotesLBWavesDefault( lb )
+	STRUCT NMClampNotesLBWaves &lb
+	
+	lb.header = NMClampTabDF + "LBNotesHeader"
+	lb.file = NMClampTabDF + "LBNotesFile"
+	lb.acq = NMClampTabDF + "LBNotesAcq"
+	
+	if ( !WaveExists( $lb.header ) )
+		Make /T/N=( 3, 4 ) $lb.header = ""
+	endif
+	
+	if ( !WaveExists( $lb.file ) )
+		Make /T/N=( 3, 4 ) $lb.file = ""
+	endif
+	
+	if ( !WaveExists( $lb.acq ) )
+		Make /T/N=( 3, 2 ) $lb.acq = ""
+	endif
+	
+End // NMClampNotesLBWavesDefault
+
+//****************************************************************
+//****************************************************************
+
+Function NMClampNotesWavesUpdate()
+	
+	Variable numItems, rows, icnt, jcnt, numValue
+	String varName, varName2, strValue
+	
+	String hnlist = NMNotesVarList( NMNotesDF, "H_", "numeric" )
+	String hslist = NMNotesVarList( NMNotesDF, "H_", "string" )
+	String fnlist = NMNotesVarList( NMNotesDF, "F_", "numeric" )
+	String fslist = NMNotesVarList( NMNotesDF, "F_", "string" )
+	
+	String notelist = ListMatch( fslist, "*note*", ";" ) // note strings
+	
+	notelist = SortList( notelist, ";", 16 )
+	
+	fslist = RemoveFromList( notelist, fslist, ";") // remove note strings
+	
+	fnlist = RemoveFromList( NMNotesBasicList( "F", 0 ), fnlist, ";" )
+	fslist = RemoveFromList( NMNotesBasicList( "F", 1 ), fslist, ";" )
+	
+	STRUCT NMClampNotesLBWaves lb
+	
+	NMClampNotesLBWavesDefault( lb )
+	
+	numItems = ItemsInList( hslist ) + ItemsInList( hnlist )
+	rows = numItems + 3
+	
+	if ( DimSize( $lb.header, 0 ) < rows )
+		Redimension /N=( rows, -1 ) $lb.header
+	endif
+	
+	Wave /T wtemp = $lb.header
+	
+	wtemp = ""
+	wtemp[][ 0 ] = "+"
+	
+	for ( icnt = 0 ; icnt < ItemsInList( hslist ) ; icnt += 1 )
+		varName = StringFromList( icnt, hslist )
+		varName2 = ReplaceString( "H_", varName, "" )
+		strValue = StrVarOrDefault( NMNotesDF + varName, "" )
+		wtemp[ jcnt][ 0 ] = "-"
+		wtemp[ jcnt][ 1 ] = varName2
+		wtemp[ jcnt][ 2 ] = strValue
+		wtemp[ jcnt][ 3 ] = "T"
+		jcnt += 1
+	endfor
+	
+	for ( icnt = 0 ; icnt < ItemsInList( hnlist ) ; icnt += 1 )
+	
+		varName = StringFromList( icnt, hnlist )
+		varName2 = ReplaceString( "H_", varName, "" )
+		numValue = NumVarOrDefault( NMNotesDF + varName, Nan )
+		
+		wtemp[ jcnt][ 0 ] = "-"
+		wtemp[ jcnt][ 1 ] = varName2
+		
+		if ( numtype( numValue ) == 2 )
+			wtemp[ jcnt][ 2 ] = ""
+		else
+			wtemp[ jcnt][ 2 ] = num2str( numValue )
+		endif
+		
+		wtemp[ jcnt][ 3 ] = "N"
+		
+		jcnt += 1
+		
+	endfor
+	
+	numItems = ItemsInList( fslist ) + ItemsInList( fnlist )
+	rows = numItems + 3
+	
+	if ( DimSize( $lb.file, 0 ) < rows )
+		Redimension /N=( rows, -1 ) $lb.file
+	endif
+	
+	Wave /T wtemp = $lb.file
+	
+	wtemp = ""
+	wtemp[][ 0 ] = "+"
+	
+	jcnt = 0
+	
+	for ( icnt = 0 ; icnt < ItemsInList( fslist ) ; icnt += 1 )
+		varName = StringFromList( icnt, fslist )
+		varName2 = ReplaceString( "F_", varName, "" )
+		strValue = StrVarOrDefault( NMNotesDF + varName, "" )
+		wtemp[ jcnt][ 0 ] = "-"
+		wtemp[ jcnt][ 1 ] = varName2
+		wtemp[ jcnt][ 2 ] = strValue
+		wtemp[ jcnt][ 3 ] = "T"
+		jcnt += 1
+	endfor
+	
+	for ( icnt = 0 ; icnt < ItemsInList( fnlist ) ; icnt += 1 )
+		varName = StringFromList( icnt, fnlist )
+		varName2 = ReplaceString( "F_", varName, "" )
+		numValue = NumVarOrDefault( NMNotesDF + varName, Nan )
+		
+		wtemp[ jcnt][ 0 ] = "-"
+		wtemp[ jcnt][ 1 ] = varName2
+		
+		if ( numtype( numValue ) == 2 )
+			wtemp[ jcnt][ 2 ] = ""
+		else
+			wtemp[ jcnt][ 2 ] = num2str( numValue )
+		endif
+		
+		wtemp[ jcnt][ 3 ] = "N"
+		
+		jcnt += 1
+		
+	endfor
+	
+	Wave /T wtemp = $lb.acq
+	
+	wtemp = ""
+	wtemp[][ 0 ] = "+"
+	
+End // NMClampNotesWavesUpdate
+
+//****************************************************************
+//****************************************************************
+
+Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
+	String ctrlName // name of this control
+	Variable row // row if click in interior, -1 if click in title
+	Variable col // column number
+	Variable event // event code
+	
+	if ( event != 2 )
+		return 0
+	endif
+	
+	STRUCT NMClampNotesLBWaves lb
+	
+	NMClampNotesLBWavesDefault( lb )
+	
+	String cname = ReplaceString( "CT4_Notes", ctrlName, "" )
+	
+	strswitch( cname )
+	
+		case "Header":
+		
+			Wave /T wtemp = $lb.header
+			
+			if ( StringMatch( wtemp[ row ][ 0 ], "+" ) )
+			
+				print "add"
+			
+			elseif ( StringMatch( wtemp[ row ][ 0 ], "-" ) )
+			
+				if ( col == 0 )
+					print "remove"
+				else
+					print "edit"
+				endif
+			
+			endif
+			
+			break
+			
+		case "File":
+			break
+		case "Acq":
+			break
+	endswitch
+
+End // NMClampNotesLBControl
 
 //****************************************************************
 //****************************************************************

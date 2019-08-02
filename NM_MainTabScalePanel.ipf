@@ -177,7 +177,7 @@ Function /S NMScalePanel( [ mode, align ] )
 	
 	w0 = 20; w1 = 100; w2 = 20; w3 = 100; w4 = 0
 
-	ListBox MD_ScaleInputs, title="Input Parameters", pos={x0,y0}, size={width,height}, fsize=fs, win=$NMScalePanelName
+	ListBox MD_ScaleInputs, pos={x0,y0}, size={width,height}, fsize=fs, win=$NMScalePanelName
 	ListBox MD_ScaleInputs, listWave=$wNameLB, selWave=$wNameLBS, colorWave=$wNameLBC, win=$NMScalePanelName
 	ListBox MD_ScaleInputs, mode=1, proc=NMScalePanelListBoxInput, win=$NMScalePanelName
 	ListBox MD_ScaleInputs, selRow=-1, editStyle=1, userColumnResize=1, win=$NMScalePanelName

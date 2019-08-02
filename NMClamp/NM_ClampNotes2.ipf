@@ -81,7 +81,7 @@ End // NMNotesBasicUpdate
 //****************************************************************
 //****************************************************************
 
-Function NMNotesCheck()
+Function NMClampNotesCheck() // auto run via NM Package function
 
 	Variable icnt
 	String olist, ndf = NMNotesDF
@@ -122,15 +122,15 @@ Function NMNotesCheck()
 	
 	return 0
 
-End // NMNotesCheck
+End // NMClampNotesCheck
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function NMNotesConfigs()
+Function NMClampNotesConfigs() // auto run via NM Package function
 
-	String fname = "Notes"
+	String fname = "ClampNotes"
 
 	//
 	// Header Notes: use name prefix "H_"
@@ -158,7 +158,7 @@ Function NMNotesConfigs()
 	
 	//NMConfigStr(fname, "F_Drug", "", "Experimental drugs")
 
-End // NMNotesConfigs
+End // NMClampNotesConfigs
 
 //****************************************************************
 //****************************************************************

@@ -898,7 +898,7 @@ Function LogNoteBookUpdate(ldf) // update existing notebook
 	endif
 	
 	if (WinType(nbName) == 5)
-		LogNoteBookFileVars(NMPackageDF("Notes"), nbName)
+		LogNoteBookFileVars(NMNotesDF, nbName)
 	else
 		LogNoteBook(ldf)
 	endif

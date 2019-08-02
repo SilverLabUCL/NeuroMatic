@@ -116,7 +116,7 @@ Function NMClampTab( enable )
 		CheckNMPackage( "Stats", 1 ) // necessary for auto-stats
 		CheckNMPackage( "Spike", 1 ) // necessary for auto-spike
 		CheckNMPackage( "Clamp", 1 ) // create clamp global variables
-		CheckNMPackage( "Notes", 1 ) // create Notes folder
+		CheckNMPackageNotes()
 		
 		//LogParentCheck()
 		CheckNMStimsDF()
@@ -144,6 +144,35 @@ Function NMClampTab( enable )
 	NMStimCurrentChanSet( "", CurrentNMChannel() ) // update current channel
 
 End // NMClampTab
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function CheckNMPackageNotes()
+
+	String df, oldDF, newDF
+	String newName = "ClampNotes"
+	
+	df = "root:Packages:NeuroMatic:"
+	oldDF = df + "Notes:"
+	newDF = df + newName + ":"
+	
+	if ( DataFolderExists( oldDF ) && !DataFolderExists( newDF ) )
+		RenameDataFolder $oldDF, $newName
+	endif
+	
+	df = "root:Packages:NeuroMatic:Configurations:"
+	oldDF = df + "Notes:"
+	newDF = df + newName + ":"
+	
+	if ( DataFolderExists( oldDf ) && !DataFolderExists( newDF ) )
+		RenameDataFolder $oldDf, $newName
+	endif
+	
+	CheckNMPackage( newName, 1 )
+
+End // CheckNMPackageNotes
 
 //****************************************************************
 //****************************************************************
@@ -256,7 +285,7 @@ End // NMClampCheck
 
 Function NMClampConfigEdit() // called from NM_Configurations
 
-	//NMConfigEdit( "Notes" )
+	//NMConfigEdit( "ClampNotes" )
 
 End // NMClampConfigEdit
 
@@ -310,7 +339,7 @@ Function NMClampConfigs()
 	
 	ClampBoardConfigs()
 	
-	CheckNMConfig( "Notes" )
+	CheckNMConfig( "ClampNotes" )
 
 End // NMClampConfigs
 

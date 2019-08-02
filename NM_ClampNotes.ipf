@@ -39,7 +39,7 @@
 //****************************************************************
 //****************************************************************
 
-StrConstant NMNotesDF = "root:Packages:NeuroMatic:Notes:"
+StrConstant NMNotesDF = "root:Packages:NeuroMatic:ClampNotes:"
 StrConstant NMNotesTableName = "CT0_NotesTable"
 StrConstant NMNotesStr = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
@@ -79,7 +79,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	Variable type // ( 0 ) clamp ( 1 ) review
 	
 	Variable ocnt, icnt, items
-	String objName
+	String objName, df
 	
 	STRUCT Rect w
 	
@@ -91,7 +91,16 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	
 	if ( type == 1 )
 	
-		ndf = GetDataFolder( 1 ) + "Notes:"
+		df = GetDataFolder( 1 )
+	
+		if ( DataFolderExists( df + "Notes:" ) )
+			ndf = df + "Notes:"
+		elseif ( DataFolderExists( df + "ClampNotes:" ) )
+			ndf = df + "ClampNotes:"
+		else
+			return ""
+		endif
+		
 		cdf = ndf
 		
 		tableName = CurrentNMFolderPrefix() + "NotesTable"
@@ -100,7 +109,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 		
 	endif
 	
-	if ( DataFolderExists( ndf ) == 0 )
+	if ( !DataFolderExists( ndf ) )
 		return ""
 	endif
 	
@@ -240,7 +249,7 @@ Function /S NMNotesVarList(ndf, prefix, varType)
 	Variable ocnt, vtype = 2
 	String objName, olist, vlist = ""
 	
-	if (DataFolderExists(ndf) == 0)
+	if ( !DataFolderExists(ndf) )
 		return ""
 	endif
 	
@@ -289,12 +298,16 @@ End // NMNotesCheckVarName
 Function NMNotesPrint()
 	
 	Variable ocnt, items
-	String objName
+	String objName, ndf
 	
 	String cdf = NMDF + "Clamp:"
-	String ndf = GetDataFolder( 1 ) + "Notes:"
+	String df = GetDataFolder( 1 )
 	
-	if ( DataFolderExists( ndf ) == 0 )
+	if ( DataFolderExists( df + "Notes:" ) )
+		ndf = df + "Notes:"
+	elseif ( DataFolderExists( df + "ClampNotes:" ) )
+		ndf = df + "ClampNotes:"
+	else
 		return -1
 	endif
 	

@@ -542,12 +542,12 @@ Function NMPulseMake()
 	
 	y0 += 80
 	
-	ListBox PU_configs, title="Pulse Configs", pos={x0,y0}, size={260,100}, fsize=fs, listWave=$lb.lb1wName, selWave=$lb.lb1wNameSel, win=$NMPanelName
+	ListBox PU_configs, pos={x0,y0}, size={260,100}, fsize=fs, listWave=$lb.lb1wName, selWave=$lb.lb1wNameSel, win=$NMPanelName
 	ListBox PU_configs, mode=1, userColumnResize=1, proc=NMPulseLB1Control, widths={25,1500}, win=$NMPanelName
 	
 	y0 += 115
 	
-	ListBox PU_params, title="Pulse Configs", pos={x0,y0}, size={260,120}, fsize=fs, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, win=$NMPanelName
+	ListBox PU_params, pos={x0,y0}, size={260,120}, fsize=fs, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, win=$NMPanelName
 	ListBox PU_params, mode=1, userColumnResize=1, selRow=-1, proc=NMPulseLB2Control, widths={35,70,45}, win=$NMPanelName
 	
 	y0 += 135

@@ -31,13 +31,16 @@
 //****************************************************************
 //****************************************************************
 
-Constant NMProgWinWidth = 260 // pixels
-Constant NMProgWinHeight = 100 // pixels
+Static Constant NMProgWinWidth = 260 // pixels
+Static Constant NMProgWinHeight = 100 // pixels
 
-Constant NMProgButtonX0 = 90
-Constant NMProgButtonY0 = 70
-Constant NMProgButtonXwidth = 80
-Constant NMProgButtonYwidth = 20
+Static Constant NMProgButtonX0 = 90
+Static Constant NMProgButtonY0 = 70
+Static Constant NMProgButtonXwidth = 80
+Static Constant NMProgButtonYwidth = 20
+
+Static Constant NMProgPopupX0 = 240
+Static Constant NMProgPopupY0 = 70
 
 //****************************************************************
 //****************************************************************
@@ -405,14 +408,25 @@ End // NMProgWinXOPCancel
 //****************************************************************
 //****************************************************************
 
-Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
+Function NMProgWin61( fraction, progressStr [ popupList, popupFxn ] ) // Igor Progress Window
 	Variable fraction
 	String progressStr
+	String popupList
+	String popupFxn
 	
 	// fraction of progress between 0 and 1, where ( 0 ) creates and ( 1 ) kills progress window
 	// candy ( -1 ) create candy ( -2 ) spin candy ( 1 ) kill candy
 	
-	Variable xProgress, yProgress, x0
+	Variable xProgress, yProgress, xw
+	Variable fs = 12
+	
+	if ( ParamIsDefault( popupList ) )
+		popupList = ""
+	endif
+	
+	if ( ParamIsDefault( popupFxn ) )
+		popupFxn = ""
+	endif
 	
 	if ( numtype( fraction ) > 0 )
 		return -1
@@ -437,14 +451,14 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 		xProgress = NMProgressX()
 		yProgress = NMProgressY()
 		
-		x0 = NMProgWinWidth - 10
+		xw = NMProgWinWidth - 10
 	
 		NewPanel /FLT/K=1/N=NMProgressPanel /W=(xProgress,yProgress,xProgress+NMProgWinWidth,yProgress+NMProgWinHeight) as "NM Progress"
 		
-		TitleBox /Z NM_ProgWinTitle, pos={5,10}, size={x0,18}, fsize=9, fixedSize=1, win=NMProgressPanel
+		TitleBox /Z NM_ProgWinTitle, pos={5,10}, size={xw,18}, fsize=fs, fixedSize=1, win=NMProgressPanel
 		TitleBox /Z NM_ProgWinTitle, frame=0, title=progressStr, anchor=MC, win=NMProgressPanel
 	
-		ValDisplay NM_ProgWinValDisplay, pos={5,40}, size={x0,18}, limits={0,1,0}, barmisc={0,0}, win=NMProgressPanel
+		ValDisplay NM_ProgWinValDisplay, pos={5,40}, size={xw,18}, limits={0,1,0}, barmisc={0,0}, win=NMProgressPanel
 		ValDisplay NM_ProgWinValDisplay, highColor=(1,34817,52428), win=NMProgressPanel // green
 		
 		if ( fraction == -1 )
@@ -452,11 +466,18 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 		else
 			ValDisplay NM_ProgWinValDisplay, mode=3, value= _NUM:0, win=NMProgressPanel // bar with no fractional part
 		endif
+	
+		Button NM_ProgWinButtonCancel, pos={NMProgButtonX0,NMProgButtonY0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, fsize=fs, title="Cancel", win=NMProgressPanel, proc=NMProgWin61Button
+	
+		if ( ( ItemsInList( popupList ) > 0 ) && ( exists( popupFxn ) == 6 ) )
 		
-		x0 = NMProgWinWidth / 2 - 40
-	
-		Button NM_ProgWinButtonStop, pos={NMProgButtonX0,NMProgButtonY0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, title="Cancel", win=NMProgressPanel, proc=NMProgWin61Button
-	
+			SetNMstr( NMDF+"NMProgressPopupList", popupList )
+			
+			PopupMenu NM_ProgWinPopup, title="+ ", pos={NMProgPopupX0, NMProgPopupY0}, size={0,0}, bodyWidth=20, proc=$popupFxn, win=NMProgressPanel
+			PopupMenu NM_ProgWinPopup, mode=1, value=NMProgWin61PopupList(), fsize=fs, win=NMProgressPanel
+			
+		endif
+		
 		SetActiveSubwindow _endfloat_
 		
 		DoUpdate /W=NMProgressPanel /E=1 // mark this as our progress window
@@ -494,6 +515,22 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 	return 0
 
 End // NMProgWin61
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMProgWin61PopupList()
+
+	String pList = StrVarOrDefault( NMDF + "NMProgressPopupList", "" )
+	
+	if ( ItemsInList( pList ) > 0 )
+		return " ;" + pList
+	endif
+
+	return ""
+
+End // NMProgWin61PopupList
 
 //****************************************************************
 //****************************************************************
@@ -559,6 +596,28 @@ Function NMProgWin61Button( ctrlName ) : ButtonControl // DOES NOT ALWAYS WORK
 	KillWindow NMProgressPanel
 
 End // NMProgWin61Button
+
+//****************************************************************
+//****************************************************************
+
+Function NMProgWin61Popup(ctrlName, popNum, popStr) : PopupMenuControl
+	String ctrlName; Variable popNum; String popStr
+	
+	
+	PopupMenu NM_ProgWinPopup, mode=1, win=NMProgressPanel
+	
+	strswitch( popStr )
+	
+		case " ":
+			return 0 // nothing
+	
+		default:
+
+			Print popStr
+			
+	endswitch
+
+End // NMProgWin61Popup
 
 //****************************************************************
 //****************************************************************

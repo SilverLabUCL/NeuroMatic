@@ -1635,7 +1635,7 @@ Function NMModelTabMake( force ) // create Model tab on NM panel
 	PopupMenu MD_ModelSelect, pos={x0+190,y0}, bodywidth=200, fsize=fs, win=$NMPanelName
 	PopupMenu MD_ModelSelect, value="Model Select;---;" + NMModelList(), proc=NMModelPopup, win=$NMPanelName
 	
-	ListBox MD_Inputs, title="Input Parameters", pos={x0,y0+1*yinc}, size={280,280}, fsize=fs, listWave=$df+"Params", selWave=$df+"ParamsEditable", win=$NMPanelName
+	ListBox MD_Inputs, pos={x0,y0+1*yinc}, size={280,280}, fsize=fs, listWave=$df+"Params", selWave=$df+"ParamsEditable", win=$NMPanelName
 	ListBox MD_Inputs, mode=1, userColumnResize=1, proc=NMModelListbox, widths={110, 70, 55, 400}, win=$NMPanelName
 	
 	y0 += 280 + 35 + 15
