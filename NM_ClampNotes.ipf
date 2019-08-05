@@ -243,7 +243,7 @@ End // NMNotesTableHook
 
 Function /S NMNotesVarList(ndf, prefix, varType)
 	String ndf // notes data folder
-	String prefix // prefix string ("H_" for header, "F_" for file)
+	String prefix // prefix string ("H_" for Header, "F_" for File, "P_" for Progress popup item)
 	String varType // "numeric" or "string"
 
 	Variable ocnt, vtype = 2

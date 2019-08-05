@@ -458,23 +458,25 @@ Function NMProgWin61( fraction, progressStr [ popupList, popupFxn ] ) // Igor Pr
 		TitleBox /Z NM_ProgWinTitle, pos={5,10}, size={xw,18}, fsize=fs, fixedSize=1, win=NMProgressPanel
 		TitleBox /Z NM_ProgWinTitle, frame=0, title=progressStr, anchor=MC, win=NMProgressPanel
 	
-		ValDisplay NM_ProgWinValDisplay, pos={5,40}, size={xw,18}, limits={0,1,0}, barmisc={0,0}, win=NMProgressPanel
-		ValDisplay NM_ProgWinValDisplay, highColor=(1,34817,52428), win=NMProgressPanel // green
+		ValDisplay /Z NM_ProgWinValDisplay, pos={5,40}, size={xw,18}, limits={0,1,0}, barmisc={0,0}, win=NMProgressPanel
+		ValDisplay /Z NM_ProgWinValDisplay, highColor=(1,34817,52428), win=NMProgressPanel // green
 		
 		if ( fraction == -1 )
-			ValDisplay NM_ProgWinValDisplay, mode=4, value= _NUM:0, win=NMProgressPanel // candy stripe
+			ValDisplay /Z NM_ProgWinValDisplay, mode=4, value= _NUM:0, win=NMProgressPanel // candy stripe
 		else
-			ValDisplay NM_ProgWinValDisplay, mode=3, value= _NUM:0, win=NMProgressPanel // bar with no fractional part
+			ValDisplay /Z NM_ProgWinValDisplay, mode=3, value= _NUM:0, win=NMProgressPanel // bar with no fractional part
 		endif
 	
 		Button NM_ProgWinButtonCancel, pos={NMProgButtonX0,NMProgButtonY0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, fsize=fs, title="Cancel", win=NMProgressPanel, proc=NMProgWin61Button
 	
 		if ( ( ItemsInList( popupList ) > 0 ) && ( exists( popupFxn ) == 6 ) )
 		
-			SetNMstr( NMDF+"NMProgressPopupList", popupList )
+			//SetNMstr( NMDF+"NMProgressPopupList", popupList )
 			
-			PopupMenu NM_ProgWinPopup, title="+ ", pos={NMProgPopupX0, NMProgPopupY0}, size={0,0}, bodyWidth=20, proc=$popupFxn, win=NMProgressPanel
-			PopupMenu NM_ProgWinPopup, mode=1, value=NMProgWin61PopupList(), fsize=fs, win=NMProgressPanel
+			//PopupMenu NM_ProgWinPopup, title="+ ", pos={NMProgPopupX0, NMProgPopupY0}, size={0,0}, bodyWidth=20, proc=$popupFxn, win=NMProgressPanel
+			//PopupMenu NM_ProgWinPopup, mode=1, value=" ;1;2;3;", fsize=fs, win=NMProgressPanel
+			
+			Button NM_ProgWinButton0, pos={NMProgButtonX0+100,NMProgButtonY0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, fsize=fs, title="B0", win=NMProgressPanel, proc=NMProgWin61Button
 			
 		endif
 		
@@ -505,9 +507,9 @@ Function NMProgWin61( fraction, progressStr [ popupList, popupFxn ] ) // Igor Pr
 		DoUpdate /W=NMProgressPanel
 		
 		if ( fraction > 0 )
-			ValDisplay NM_ProgWinValDisplay,mode=3,value= _NUM:fraction,win=NMProgressPanel // update bar fraction
+			ValDisplay /Z NM_ProgWinValDisplay,mode=3,value= _NUM:fraction,win=NMProgressPanel // update bar fraction
 		elseif ( fraction < 0 )
-			ValDisplay NM_ProgWinValDisplay,mode=4,value= _NUM:1,win=NMProgressPanel // update candy
+			ValDisplay /Z NM_ProgWinValDisplay,mode=4,value= _NUM:1,win=NMProgressPanel // update candy
 		endif
 	
 	endif
@@ -574,6 +576,7 @@ Function NMProgWin61Hook(s)
 		if ( ( s.mouseLoc.h >= NMProgButtonX0 ) && ( s.mouseLoc.h <= NMProgButtonX0 + NMProgButtonXwidth ) )
 			if ( ( s.mouseLoc.v >= NMProgButtonY0 ) && ( s.mouseLoc.v <= NMProgButtonY0 + NMProgButtonYwidth ) )
 				SetNMvar( NMDF+"NMProgressCancel", 1 )
+				print "Hook Cancel"
 				return 1
 			endif
 		endif
@@ -591,9 +594,23 @@ End //NMProgWin61Hook
 Function NMProgWin61Button( ctrlName ) : ButtonControl // DOES NOT ALWAYS WORK
 	String ctrlName
 	
-	SetNMvar( NMDF+"NMProgressCancel", 1 )
+	strswitch( ctrlName )
 	
-	KillWindow NMProgressPanel
+		case "NM_ProgWinButtonCancel":
+			SetNMvar( NMDF+"NMProgressCancel", 1 )
+			//KillWindow NMProgressPanel
+			Print "ButtonControl Cancel"
+			break
+			
+		case "NM_ProgWinButton0":
+			//print "Button0"
+			NMNotesAddNote("Button0")
+			break
+	
+	
+	endswitch
+	
+	return 0
 
 End // NMProgWin61Button
 
@@ -602,7 +619,6 @@ End // NMProgWin61Button
 
 Function NMProgWin61Popup(ctrlName, popNum, popStr) : PopupMenuControl
 	String ctrlName; Variable popNum; String popStr
-	
 	
 	PopupMenu NM_ProgWinPopup, mode=1, win=NMProgressPanel
 	

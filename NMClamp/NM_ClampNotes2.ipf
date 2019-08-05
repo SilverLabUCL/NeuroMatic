@@ -164,6 +164,30 @@ End // NMClampNotesConfigs
 //****************************************************************
 //****************************************************************
 
+Function /S NMClampNotesVarType( df, varName )
+	String df
+	String varName
+				
+	NVAR /Z varH = $df + varName
+	
+	if ( NVAR_Exists( varH ) )
+		return "N"
+	endif
+	
+	SVAR /Z strH = $df + varName
+		
+	if ( SVAR_Exists( strH ) )
+		return "S"
+	endif
+	
+	return ""
+
+End // NMClampNotesVarType
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function NMNotesTable2Vars() // save table values to note vars
 
 	String cdf = NMClampDF, ndf = NMNotesDF
@@ -323,6 +347,168 @@ End // NMNotesCheckStrValue
 //****************************************************************
 //****************************************************************
 
+Function NMNotesAddPrompt( df, typeHFP )
+	String df
+	String typeHFP // "H" for Header, "F" for File, "P" for Progress popup item
+	
+	String title, varName = "", varName2, typeNS = "numeric"
+	Variable askValue = 1, numValue = NaN
+	String strValue = "", typeExists, pslist
+	
+	strswitch( typeHFP )
+		case "H": // heade
+			title = "NM Clamp Notes : Add Header Parameter"
+			typeNS = "text"
+			break
+		case "F": // file
+			title = "NM Clamp Notes : Add File Parameter"
+			typeNS = "numeric"
+			askValue = 0 // file values are set manually
+			break
+		case "P": // acq progress popup
+			title = "NM Clamp Notes : Add Progress Popup Item"
+			typeNS = "text"
+			pslist = NMNotesVarList( df, "P_", "string" )
+	endswitch
+	
+	Prompt varName "enter parameter name:"
+	Prompt typeNS "select parameter type:", popup "numeric;text;"
+	Prompt numValue "enter parameter value:"
+	Prompt strValue "enter parameter text:"
+	
+	if ( StringMatch( typeHFP, "P" ) )
+	
+		varName = "Item" + num2istr( ItemsInList( pslist ) )
+		
+	else
+	
+		DoPrompt title, varName, typeNS
+		
+		if (V_flag == 1)
+			return 0 // cancel
+		endif
+	
+	endif
+	
+	varName2 = typeHFP + "_" + varName
+	
+	varName2 = ReplaceString( "H_H_", varName2, "H_" )
+	varName2 = ReplaceString( "F_F_", varName2, "F_" )
+	varName2 = ReplaceString( "P_P_", varName2, "P_" )
+	
+	typeExists = NMClampNotesVarType( df, varName2 )
+	
+	strswitch( typeExists )
+		case "N":
+			DoAlert /T=title 0, NMQuotes( varName ) + " already exists as a numerica parameter"
+			return -1
+		case "S":
+			DoAlert /T=title 0, NMQuotes( varName ) + " already exists as a text parameter"
+			return -1
+	endswitch
+	
+	if ( askValue )
+		if ( StringMatch( typeNS, "numeric" ) )
+			DoPrompt title, numValue
+		else
+			DoPrompt title, strValue
+		endif
+	endif
+	
+	if (V_flag == 1)
+		return 0 // cancel
+	endif
+	
+	if ( StringMatch( typeNS, "numeric" ) )
+		return NMNotesVarAdd( df, varName, typeHFP, value = numValue )
+	endif
+	
+	if ( StringMatch( typeNS, "text" ) )
+		return NMNotesStrAdd( df, varName, typeHFP, strValue = strValue )
+	endif
+	
+End // NMNotesAddPrompt
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesVarAdd( df, varName, typeHFP [ value ] )
+	String df
+	String varName
+	String typeHFP // "H" for Header, "F" for File, "P" for Progress popup item
+	Variable value
+	
+	String typeExists, varName2
+	
+	if ( ParamIsDefault( value ) )
+		value = NaN
+	endif
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	varName2 = typeHFP + "_" + varName
+	
+	varName2 = ReplaceString( "H_H_", varName2, "H_" )
+	varName2 = ReplaceString( "F_F_", varName2, "F_" )
+	varName2 = ReplaceString( "P_P_", varName2, "P_" )
+	
+	typeExists = NMClampNotesVarType( df, varName2 )
+	
+	if ( strlen( typeExists ) == 1 )
+		return -1 // aleady exists
+	endif
+	
+	SetNMvar( df + varName2, value )
+	
+	return 0
+	
+End // NMNotesVarAdd
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesStrAdd( df, varName, typeHFP [ strValue ] )
+	String df
+	String varName
+	String typeHFP // "H" for Header, "F" for File, "P" for Progress popup item
+	String strValue
+	
+	String typeExists, varName2
+	
+	if ( ParamIsDefault( strValue ) )
+		strValue = ""
+	endif
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	varName2 = typeHFP + "_" + varName
+	
+	varName2 = ReplaceString( "H_H_", varName2, "H_" )
+	varName2 = ReplaceString( "F_F_", varName2, "F_" )
+	varName2 = ReplaceString( "P_P_", varName2, "P_" )
+	
+	typeExists = NMClampNotesVarType( df, varName2 )
+	
+	if ( strlen( typeExists ) == 1 )
+		return -1 // aleady exists
+	endif
+	
+	SetNMstr( df + varName2, strValue )
+	
+	return 0
+	
+End // NMNotesStrAdd
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function NMNotesKillVar(df, vlist, ask)
 	String df, vlist
 	Variable ask
@@ -465,6 +651,28 @@ End // NMNotesCopyToFolder
 
 //****************************************************************
 //****************************************************************
+
+Function NMNotesProgressPopup(ctrlName, popNum, popStr) : PopupMenuControl
+	String ctrlName; Variable popNum; String popStr
+	
+	PopupMenu NM_ProgWinPopup, mode=1, win=NMProgressPanel
+	
+	strswitch( popStr )
+	
+		case " ":
+			return 0 // nothing
+	
+		default:
+
+			Print popStr
+			
+	endswitch
+	
+	return 0
+
+End // NMNotesProgressPopup
+
+//****************************************************************
 //****************************************************************
 
 Function NMNotesAddNote(usernote) // add user note
@@ -504,7 +712,9 @@ Function NMNotesAddNote(usernote) // add user note
 	
 	SetNMstr(varname, "[" + t + "] " + usernote)
 	
-	NMNotesTable( 0 )
+	if (WinType(NMNotesTableName) == 2)
+		NMNotesTable( 0 )
+	endif
 
 End // NMNotesAddNote
 
