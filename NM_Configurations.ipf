@@ -1498,9 +1498,8 @@ Function NMConfigCleanUp( fname )
 		
 		if ( DataFolderExists( pdf ) == 1 )
 			KillVariables /Z $pdf + vName
+			//Print "Killed variable " + pdf + vName
 		endif
-		
-		//Print "Killed variable " + cdf + vName
 		
 	endfor
 	
@@ -1531,9 +1530,8 @@ Function NMConfigCleanUp( fname )
 		
 		if ( DataFolderExists( pdf ) == 1 )
 			KillStrings /Z $pdf + vName
+			//Print "Killed string " + pdf + vName
 		endif
-		
-		//Print "Killed string " + cdf + vName
 		
 	endfor
 	

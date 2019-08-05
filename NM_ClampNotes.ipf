@@ -42,6 +42,10 @@
 StrConstant NMNotesDF = "root:Packages:NeuroMatic:ClampNotes:"
 StrConstant NMNotesTableName = "CT0_NotesTable"
 StrConstant NMNotesStr = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+StrConstant NMNotesHeaderVarList = ""
+StrConstant NMNotesHeaderStrList = "H_Name;H_Lab;H_Title;"
+StrConstant NMNotesFileVarList = ""
+StrConstant NMNotesFileStrList = "F_Folder;F_Stim;F_Tbgn;F_Tend;"
 
 //****************************************************************
 //****************************************************************
@@ -55,16 +59,16 @@ Function /S NMNotesBasicList(prefix, varType)
 	
 		case "H":
 			if (varType == 0)
-				return ""
+				return NMNotesHeaderVarList
 			else
-				return "H_Name;H_Lab;H_Title;"
+				return NMNotesHeaderStrList
 			endif
 		
 		case "F":
 			if (varType == 0)
-				return ""
+				return NMNotesFileVarList
 			else
-				return "F_Folder;F_Stim;F_Tbgn;F_Tend;"
+				return NMNotesFileStrList
 			endif
 			
 	endswitch
@@ -121,8 +125,8 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	
 	notelist = SortList(notelist, ";", 16)
 	
-	fnlist = RemoveFromList(NMNotesBasicList("F",0), fnlist, ";")
-	fslist = RemoveFromList(NMNotesBasicList("F",1), fslist, ";")
+	fnlist = RemoveFromList(NMNotesFileVarList, fnlist, ";")
+	fslist = RemoveFromList(NMNotesFileStrList, fslist, ";")
 	fslist = RemoveFromList(notelist, fslist, ";") // remove note strings
 	
 	items = ItemsInList(hslist) + ItemsInList(hnlist) + ItemsInList(fslist) + ItemsInList(fnlist)
@@ -243,7 +247,7 @@ End // NMNotesTableHook
 
 Function /S NMNotesVarList(ndf, prefix, varType)
 	String ndf // notes data folder
-	String prefix // prefix string ("H_" for Header, "F_" for File, "P_" for Progress popup item)
+	String prefix // prefix string ("H_" for Header, "F_" for File, "P_" for Progress button)
 	String varType // "numeric" or "string"
 
 	Variable ocnt, vtype = 2
@@ -278,12 +282,18 @@ End // NMNotesVarList
 //****************************************************************
 //****************************************************************
 
-Function /S NMNotesCheckVarName(objname) // vars require prefix "H_" or "F_"
+Function /S NMNotesCheckVarName( objname ) // vars require prefix "H_" or "F_" or "P_"
 	String objname
 	
-	String prefix = objname[0,1]
+	String prefix
 	
-	if ((StringMatch(prefix, "H_") == 1) || (StringMatch(prefix, "F_") == 1))
+	objname = ReplaceString( "H_H_", objname, "H_" )
+	objname = ReplaceString( "F_F_", objname, "F_" )
+	objname = ReplaceString( "P_P_", objname, "P_" )
+	
+	prefix = objname[0,1]
+	
+	if ( StringMatch(prefix, "H_") || StringMatch(prefix, "F_") || StringMatch(prefix, "P_") )
 		return objname // ok
 	else
 		return "F_" + objname // file var is default
@@ -321,8 +331,8 @@ Function NMNotesPrint()
 	
 	notelist = SortList(notelist, ";", 16)
 	
-	fnlist = RemoveFromList(NMNotesBasicList("F",0), fnlist, ";")
-	fslist = RemoveFromList(NMNotesBasicList("F",1), fslist, ";")
+	fnlist = RemoveFromList(NMNotesFileVarList, fnlist, ";")
+	fslist = RemoveFromList(NMNotesFileStrList, fslist, ";")
 	fslist = RemoveFromList(notelist, fslist, ";") // remove note strings
 	
 	items = ItemsInList(hslist) + ItemsInList(hnlist) + ItemsInList(fslist) + ItemsInList(fnlist)
