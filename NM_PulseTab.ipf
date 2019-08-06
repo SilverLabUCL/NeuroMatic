@@ -31,6 +31,7 @@ Static Constant DeltaxDefault = 0.1
 Static Constant WaveLengthDefault = 100
 Static StrConstant WavePrefixDefault = "Pulse"
 Static StrConstant ConfigWaveName = "PulseParamLists"
+Static Constant EditByPrompt = 1 // Listbox2 edit by prompt
 
 //****************************************************************
 //****************************************************************
@@ -606,7 +607,7 @@ Function NMPulseUpdate( [ stopAutoExecute ] )
 	ListBox PU_params, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, selRow=-1, win=$NMPanelName
 	
 	NMPulseLB1Update( lb )
-	NMPulseLB2Update( lb )
+	NMPulseLB2Update( lb, editByPrompt=EditByPrompt )
 	
 	if ( !stopAutoExecute && auto )
 		NMPulseExecute()
@@ -726,7 +727,7 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 		
 	else
 		
-		NMPulseLB2Update( lb )
+		NMPulseLB2Update( lb, editByPrompt=EditByPrompt )
 		
 	endif
 	
@@ -741,6 +742,7 @@ Function NMPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	Variable col // column number
 	Variable event // event code
 	
+	Variable numWaves = NMPulseVar( "NumWaves" )
 	Variable TTL = NMPulseVar( "TTL" )
 	String sf = NMPulseSubfolder()
 	
@@ -748,7 +750,7 @@ Function NMPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	
 	NMPulseTabLBWavesDefault( lb )
 	
-	NMPulseLB2Event( row, col, event, lb, TTL = TTL )
+	NMPulseLB2Event( row, col, event, lb, numWaves = numWaves, TTL = TTL )
 	
 	NMPulseUpdate()
 	

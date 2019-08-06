@@ -42,6 +42,7 @@
 StrConstant NMClampTabDF = "root:Packages:NeuroMatic:Clamp:TabObjects:"
 
 Static Constant NumInsOuts = 7
+Static Constant PulseEditByPrompt = 1 // Stim Pulse listbox2 edit by prompt
 Static Constant NotesEditByPrompt = 1 // Notes tab listbox edit by prompt
 
 //****************************************************************
@@ -552,19 +553,21 @@ Function ClampTabMake()
 	xinc = 90
 	yinc = 28
 	
-	Listbox CT4_NotesHeader, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.header, selWave=$lbn.headerSel, win=$NMPanelName
-	Listbox CT4_NotesHeader, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,60,100}, win=$NMPanelName
-	Listbox CT4_NotesHeader, titleWave=$lbn.header+"ColNames", win=$NMPanelName
+	Listbox CT4_NotesHeader, pos={x0,y0}, size={260,90}, disable=1, fsize=fs, listWave=$lbn.header, selWave=$lbn.headerSel, win=$NMPanelName
+	Listbox CT4_NotesHeader, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,90,120}, win=$NMPanelName
+	Listbox CT4_NotesHeader, titleWave=$lbn.headerTitles, win=$NMPanelName
 	
 	y0 += 100
 	
-	Listbox CT4_NotesFile, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.file, selWave=$lbn.fileSel, win=$NMPanelName
-	Listbox CT4_NotesFile, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,60,100}, win=$NMPanelName
+	Listbox CT4_NotesFile, pos={x0,y0}, size={260,90}, disable=1, fsize=fs, listWave=$lbn.file, selWave=$lbn.fileSel, win=$NMPanelName
+	Listbox CT4_NotesFile, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,90,120}, win=$NMPanelName
+	Listbox CT4_NotesFile, titleWave=$lbn.fileTitles, win=$NMPanelName
 	
 	y0 += 100
 	
-	Listbox CT4_NotesProgress, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.progress, selWave=$lbn.progressSel, win=$NMPanelName
-	Listbox CT4_NotesProgress, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,60,100}, win=$NMPanelName
+	Listbox CT4_NotesProgress, pos={x0,y0}, size={260,90}, disable=1, fsize=fs, listWave=$lbn.progress, selWave=$lbn.progressSel, win=$NMPanelName
+	Listbox CT4_NotesProgress, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,90,120}, win=$NMPanelName
+	Listbox CT4_NotesProgress, titleWave=$lbn.progressTitles, win=$NMPanelName
 	
 	SetNMvar( tdf + "CurrentTab", 0 )
 
@@ -695,12 +698,12 @@ Function NMClampPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 		pstr = NMPulseLB1PromptOODE( lb, sdf )
 		NMPulseLB1OODE( lb, sdf, pstr )
 	else
-		NMPulseLB2Update( lb )
+		NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
 		return 0
 	endif
 	
 	NMPulseLB1Update( lb )
-	NMPulseLB2Update( lb )
+	NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
 	
 	if ( strlen( pstr ) > 0 )
 		StimWavesCheck( sdf, 1 )
@@ -760,6 +763,7 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	
 	String sdf = StimDF()
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
+	Variable numWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
 	
 	if ( strlen( lb.pcwName ) == 0 )
 	
@@ -777,14 +781,16 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	
 	configNum = NumVarOrDefault( lb.pcvName, 0 )
 	
-	pvar = NMPulseLB2Event( row, col, event, lb, TTL=TTL )
+	pvar = NMPulseLB2Event( row, col, event, lb, pdf=NMClampTabDF, numWaves = numWaves, TTL = TTL )
 	
-	if ( pvar >= 0)
+	if ( pvar > 0 )
 		NMPulseLB1Update( lb )
-		NMPulseLB2Update( lb )
+		NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
 		StimWavesCheck( sdf, 1 )
 		PulseGraph( 0 )
 	endif
+	
+	Listbox CT2_PulseParams, selRow=-1, win=$NMPanelName
 
 End // NMClampPulseLB2Control
 
@@ -1350,9 +1356,9 @@ Function FileTabCall( select, varNum, varStr )
 		case "UserName":
 		case "UserLab":
 		case "ExpTitle":
-			if ( WinType( NMNotesTableName ) == 2 )
-				NMNotesTable( 0 ) // update Notes table
-			endif
+			//if ( WinType( NMNotesTableName ) == 2 )
+				//NMNotesTable( 0 ) // update Notes table
+			//endif
 			break
 			
 		case "NotesEdit":
@@ -1700,7 +1706,7 @@ Function StimTabPulse( enable )
 	NMClampPulseLBWavesDefault( lb )
 	
 	NMPulseLB1Update( lb )
-	NMPulseLB2Update( lb )
+	NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
 
 	Checkbox CT2_UseMyWaves, win=$NMPanelName, value=NumVarOrDefault( sdf + "PulseGenOff", 0 ), disable=!enable
 	
@@ -2983,6 +2989,7 @@ Structure NMClampNotesLBWaves
 
 	String header, file, progress
 	String headerSel, fileSel, progressSel // editable
+	String headerTitles, fileTitles, progressTitles // titles
 
 EndStructure // NMClampNotesLBWaves
 
@@ -2992,6 +2999,9 @@ EndStructure // NMClampNotesLBWaves
 Function NMClampNotesLBWavesDefault( lb )
 	STRUCT NMClampNotesLBWaves &lb
 	
+	Variable cols = 3
+	Variable forceMake = 0
+	
 	lb.header = NMClampTabDF + "LBNotesHeader"
 	lb.file = NMClampTabDF + "LBNotesFile"
 	lb.progress = NMClampTabDF + "LBNotesProgress"
@@ -3000,28 +3010,59 @@ Function NMClampNotesLBWavesDefault( lb )
 	lb.fileSel = NMClampTabDF + "LBNotesFileEditable"
 	lb.progressSel = NMClampTabDF + "LBNotesProgressEditable"
 	
-	if ( !WaveExists( $lb.header ) )
-		Make /T/N=( 3, 3 ) $lb.header = ""
+	lb.headerTitles = NMClampTabDF + "LBNotesHeaderTitles"
+	lb.fileTitles = NMClampTabDF + "LBNotesFileTitles"
+	lb.progressTitles = NMClampTabDF + "LBNotesProgressTitles"
+	
+	if ( forceMake || !WaveExists( $lb.header ) )
+		Make /O/N=( 3, cols )/T $lb.header = ""
 	endif
 	
-	if ( !WaveExists( $lb.headerSel ) )
-		Make /N=( 3, 3 ) $lb.headerSel = 0
+	if ( forceMake || !WaveExists( $lb.file ) )
+		Make /O/N=( 3, cols )/T $lb.file = ""
 	endif
 	
-	if ( !WaveExists( $lb.file ) )
-		Make /T/N=( 3, 3 ) $lb.file = ""
+	if ( forceMake || !WaveExists( $lb.progress ) )
+		Make /O/N=( 3, cols )/T $lb.progress = ""
 	endif
 	
-	if ( !WaveExists( $lb.fileSel ) )
-		Make /N=( 3, 3 ) $lb.fileSel = 0
+	if ( forceMake || !WaveExists( $lb.headerSel ) )
+		Make /O/N=( 3, cols ) $lb.headerSel = 0
 	endif
 	
-	if ( !WaveExists( $lb.progress ) )
-		Make /T/N=( 3, 3 ) $lb.progress = ""
+	if ( forceMake || !WaveExists( $lb.fileSel ) )
+		Make /O/N=( 3, cols ) $lb.fileSel = 0
 	endif
 	
-	if ( !WaveExists( $lb.progressSel ) )
-		Make /N=( 3, 3 ) $lb.progressSel = 0
+	if ( forceMake || !WaveExists( $lb.progressSel ) )
+		Make /O/N=( 3, cols ) $lb.progressSel = 0
+	endif
+	
+	if ( forceMake || !WaveExists( $lb.headerTitles ) )
+		Make /O/N=( cols )/T $lb.headerTitles = ""
+		Wave /T wtemp = $lb.headerTitles
+		wtemp[ 1 ] = "Header Notes"
+		wtemp[ 2 ]  = "value"
+		//wtemp[ 3 ]  = "units"
+		//wtemp[ 4 ]  = "description"
+	endif
+	
+	if ( forceMake || !WaveExists( $lb.fileTitles ) )
+		Make /O/N=( cols )/T $lb.fileTitles = ""
+		Wave /T wtemp = $lb.fileTitles
+		wtemp[ 1 ] = "File Notes"
+		wtemp[ 2 ]  = "value"
+		//wtemp[ 3 ]  = "units"
+		//wtemp[ 4 ]  = "description"
+	endif
+	
+	if ( forceMake || !WaveExists( $lb.progressTitles ) )
+		Make /O/N=( cols )/T $lb.progressTitles = ""
+		Wave /T wtemp = $lb.progressTitles
+		wtemp[ 1 ] = "Progress Notes"
+		wtemp[ 2 ]  = "value"
+		//wtemp[ 3 ]  = "units"
+		//wtemp[ 4 ]  = "description"
 	endif
 	
 End // NMClampNotesLBWavesDefault
@@ -3045,7 +3086,7 @@ End // NMClampNotesUpdate
 Function NMClampNotesWavesUpdate()
 	
 	Variable numItems, rows, icnt, jcnt, numValue, canedit
-	String varName, varName2, strValue
+	String varName, varName2, strValue, units, description
 	String df = NMNotesDF
 	
 	String hnlist = NMNotesVarList( df, "H_", "numeric" )
@@ -3089,14 +3130,23 @@ Function NMClampNotesWavesUpdate()
 	editable = 0
 	
 	for ( icnt = 0 ; icnt < ItemsInList( hslist ) ; icnt += 1 )
+	
 		varName = StringFromList( icnt, hslist )
 		varName2 = ReplaceString( "H_", varName, "" )
 		strValue = StrVarOrDefault( df + varName, "" )
+		units = StrVarOrDefault( df + "T_" + varName, "" )
+		description = StrVarOrDefault( df + "D_" + varName, "" )
+		
 		wtemp[ jcnt][ 0 ] = "-"
 		wtemp[ jcnt][ 1 ] = varName2
 		wtemp[ jcnt][ 2 ] = strValue
+		//wtemp[ jcnt][ 3 ] = units
+		//wtemp[ jcnt][ 4 ] = description
+		
 		editable[ jcnt][ 2 ] = canedit
+		
 		jcnt += 1
+		
 	endfor
 	
 	for ( icnt = 0 ; icnt < ItemsInList( hnlist ) ; icnt += 1 )
@@ -3104,6 +3154,8 @@ Function NMClampNotesWavesUpdate()
 		varName = StringFromList( icnt, hnlist )
 		varName2 = ReplaceString( "H_", varName, "" )
 		numValue = NumVarOrDefault( df + varName, Nan )
+		units = StrVarOrDefault( df + "T_" + varName, "" )
+		description = StrVarOrDefault( df + "D_" + varName, "" )
 		
 		wtemp[ jcnt][ 0 ] = "-"
 		wtemp[ jcnt][ 1 ] = varName2
@@ -3113,6 +3165,9 @@ Function NMClampNotesWavesUpdate()
 		else
 			wtemp[ jcnt][ 2 ] = num2str( numValue )
 		endif
+		
+		//wtemp[ jcnt][ 3 ] = units
+		//wtemp[ jcnt][ 4 ] = description
 		
 		editable[ jcnt][ 2 ] = canedit
 		
@@ -3137,9 +3192,12 @@ Function NMClampNotesWavesUpdate()
 	jcnt = 0
 	
 	for ( icnt = 0 ; icnt < ItemsInList( fnlist ) ; icnt += 1 )
+	
 		varName = StringFromList( icnt, fnlist )
 		varName2 = ReplaceString( "F_", varName, "" )
 		numValue = NumVarOrDefault( df + varName, Nan )
+		units = StrVarOrDefault( df + "T_" + varName, "" )
+		description = StrVarOrDefault( df + "D_" + varName, "" )
 		
 		wtemp[ jcnt][ 0 ] = "-"
 		wtemp[ jcnt][ 1 ] = varName2
@@ -3150,6 +3208,9 @@ Function NMClampNotesWavesUpdate()
 			wtemp[ jcnt][ 2 ] = num2str( numValue )
 		endif
 		
+		//wtemp[ jcnt][ 3 ] = units
+		//wtemp[ jcnt][ 4 ] = description
+		
 		editable[ jcnt][ 2 ] = canedit
 		
 		jcnt += 1
@@ -3157,25 +3218,43 @@ Function NMClampNotesWavesUpdate()
 	endfor
 	
 	for ( icnt = 0 ; icnt < ItemsInList( fslist ) ; icnt += 1 )
+	
 		varName = StringFromList( icnt, fslist )
 		varName2 = ReplaceString( "F_", varName, "" )
 		strValue = StrVarOrDefault( df + varName, "" )
+		units = StrVarOrDefault( df + "T_" + varName, "" )
+		description = StrVarOrDefault( df + "D_" + varName, "" )
+		
 		wtemp[ jcnt][ 0 ] = "-"
 		wtemp[ jcnt][ 1 ] = varName2
 		wtemp[ jcnt][ 2 ] = strValue
+		//wtemp[ jcnt][ 3 ] = units
+		//wtemp[ jcnt][ 4 ] = description
+		
 		editable[ jcnt][ 2 ] = canedit
+		
 		jcnt += 1
+		
 	endfor
 	
 	for ( icnt = 0 ; icnt < ItemsInList( notelist ) ; icnt += 1 )
+	
 		varName = StringFromList( icnt, notelist )
 		varName2 = ReplaceString( "F_", varName, "" )
 		strValue = StrVarOrDefault( df + varName, "" )
+		units = StrVarOrDefault( df + "T_" + varName, "" )
+		description = StrVarOrDefault( df + "D_" + varName, "" )
+		
 		wtemp[ jcnt][ 0 ] = "-"
 		wtemp[ jcnt][ 1 ] = varName2
 		wtemp[ jcnt][ 2 ] = strValue
+		//wtemp[ jcnt][ 3 ] = units
+		//wtemp[ jcnt][ 4 ] = description
+		
 		editable[ jcnt][ 2 ] = canedit
+		
 		jcnt += 1
+		
 	endfor
 	
 	numItems = ItemsInList( pslist )
@@ -3195,14 +3274,23 @@ Function NMClampNotesWavesUpdate()
 	jcnt = 0
 	
 	for ( icnt = 0 ; icnt < ItemsInList( pslist ) ; icnt += 1 )
+	
 		varName = StringFromList( icnt, pslist )
 		varName2 = ReplaceString( "P_", varName, "" )
 		strValue = StrVarOrDefault( df + varName, "" )
+		units = StrVarOrDefault( df + "T_" + varName, "" )
+		description = StrVarOrDefault( df + "D_" + varName, "" )
+		
 		wtemp[ jcnt][ 0 ] = "-"
 		wtemp[ jcnt][ 1 ] = varName2
 		wtemp[ jcnt][ 2 ] = strValue
+		//wtemp[ jcnt][ 3 ] = units
+		//wtemp[ jcnt][ 4 ] = description
+		
 		editable[ jcnt][ 2 ] = canedit
+		
 		jcnt += 1
+		
 	endfor
 	
 End // NMClampNotesWavesUpdate
@@ -3216,14 +3304,20 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 	Variable col // column number
 	Variable event // event code
 	
-	String killAlert, varName, typeHFP = "", typeNS = ""
+	Variable icnt
+	String killAlert, varName, varName2, typeHFP = "", typeNS = ""
+	String selectStr
 	String df = NMNotesDF
 	
 	switch( event )
 		case 2: // unclick
 			break
 		case 7: // enter
-			break
+			if ( NotesEditByPrompt )
+				return 0 // only event = 2 allowed
+			else
+				break
+			endif
 		default:	
 			return 0
 	endswitch
@@ -3249,7 +3343,7 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 			break
 	endswitch
 	
-	if ( ( row >= DimSize( wtemp, 0 ) ) || ( col >= DimSize( wtemp, 1 ) ) )
+	if ( ( row < 0 ) || ( row >= DimSize( wtemp, 0 ) ) || ( col < 0 ) || ( col >= DimSize( wtemp, 1 ) ) )
 		return -1
 	endif
 	
@@ -3260,27 +3354,69 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 	elseif ( StringMatch( wtemp[ row ][ 0 ], "-" ) )
 	
 		varName = typeHFP + "_" + wtemp[ row ][ 1 ]
+		varName2 = wtemp[ row ][ 1 ]
 		typeNS = NMClampNotesTypeNS( df, varName )
 		
-		if ( StringMatch( typeHFP, "P" ) )
-			killAlert = "Are you sure you want to kill Progress button " + NMQuotes( wtemp[ row ][ 1 ] ) + "?"
-		else
-			killAlert = "Are you sure you want to kill note parameter " + NMQuotes( wtemp[ row ][ 1 ] ) + "?"
+		if ( strlen( varName2 ) == 0 )
+			return -1
+		endif
+		
+		if ( strlen( typeNS ) == 0 )
+			return -1
 		endif
 	
 		if ( col == 0 ) // kill
 		
-			DoAlert /T="NM Clamp Notes" 2, killAlert
+			Prompt selectStr, " ", popup "delete;clear;clear all;"
+			DoPrompt "NM Clamp Notes : " + varName2, selectStr
 			
 			if ( V_flag == 1 )
-			
-				if ( StringMatch( typeNS, "N" ) )
-					KillVariables $df + varName
-				elseif( StringMatch( typeNS, "S" ) )
-					KillStrings $df + varName
-				endif
-			
+				return 0 // cancel
 			endif
+			
+			strswitch( selectStr )
+			
+				case "delete":
+				
+					if ( StringMatch( typeNS, "N" ) )
+						KillVariables /Z $df + varName
+					elseif( StringMatch( typeNS, "S" ) )
+						KillStrings /Z $df + varName
+					endif
+					
+					KillVariables /Z $df + "D_" + varName // description
+					KillVariables /Z $df + "T_" + varName // units
+					
+					break
+					
+				case "clear":
+				
+					if ( StringMatch( typeNS, "N" ) )
+						SetNMvar( df + varName, NaN )
+					elseif( StringMatch( typeNS, "S" ) )
+						SetNMstr( df + varName, "" )
+					endif
+					
+					break
+					
+				case "clear all":
+				
+					for ( icnt = 0 ; icnt < DimSize( wtemp, 0 ) ; icnt += 1 )
+						
+						varName = typeHFP + "_" + wtemp[ icnt ][ 1 ]
+						typeNS = NMClampNotesTypeNS( df, varName )
+						
+						if ( StringMatch( typeNS, "N" ) )
+							SetNMvar( df + varName, NaN )
+						elseif( StringMatch( typeNS, "S" ) )
+							SetNMstr( df + varName, "" )
+						endif
+					
+					endfor
+					
+					break
+					
+			endswitch
 			
 		elseif ( NotesEditByPrompt )
 		

@@ -51,34 +51,6 @@ StrConstant NMNotesFileStrList = "F_Folder;F_Stim;F_Tbgn;F_Tend;"
 //****************************************************************
 //****************************************************************
 
-Function /S NMNotesBasicList(prefix, varType)
-	String prefix // ("H") Header ("F") File
-	Variable varType // (0) numeric (1) string
-	
-	strswitch(prefix)
-	
-		case "H":
-			if (varType == 0)
-				return NMNotesHeaderVarList
-			else
-				return NMNotesHeaderStrList
-			endif
-		
-		case "F":
-			if (varType == 0)
-				return NMNotesFileVarList
-			else
-				return NMNotesFileStrList
-			endif
-			
-	endswitch
-
-End // NMNotesBasicList
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Function /S NMNotesTable( type ) // create table to edit note vars
 	Variable type // ( 0 ) clamp ( 1 ) review
 	
@@ -154,7 +126,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 		Execute "ModifyTable width(" + cdf + "NumValue)=60, width(" + cdf + "StrValue)=200"
 		
 		if ( type == 0 )
-			SetWindow $tableName hook=NMNotesTableHook
+			//SetWindow $tableName hook=NMNotesTableHook
 		endif
 		
 	endif
@@ -236,7 +208,7 @@ Function NMNotesTableHook(infoStr)
 	strswitch(event)
 		case "deactivate":
 		case "kill":
-			Execute /Z "NMNotesTable2Vars()" // update note values
+			//Execute /Z "NMNotesTable2Vars()" // update note values
 	endswitch
 
 End // NMNotesTableHook
@@ -388,6 +360,34 @@ Function NMNotesPrint()
 	return 0
 
 End // NMNotesPrint
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMNotesBasicList(prefix, varType) // DEPRECATED
+	String prefix // ("H") Header ("F") File
+	Variable varType // (0) numeric (1) string
+	
+	strswitch(prefix)
+	
+		case "H":
+			if (varType == 0)
+				return NMNotesHeaderVarList
+			else
+				return NMNotesHeaderStrList
+			endif
+		
+		case "F":
+			if (varType == 0)
+				return NMNotesFileVarList
+			else
+				return NMNotesFileStrList
+			endif
+			
+	endswitch
+
+End // NMNotesBasicList
 
 //****************************************************************
 //****************************************************************

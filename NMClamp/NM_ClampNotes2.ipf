@@ -112,30 +112,30 @@ Function NMClampNotesCheck( [ df ] ) // auto run via NM Package function
 	// Header string/numeric parameters begin with "H_"
 	
 	// NMNotesHeaderStrList = "H_Name;H_Lab;H_Title;"
-	NMNotesStrCheck( df, "H_Name", strValue="Your Name", description="Your Name", units="" )
-	NMNotesStrCheck( df, "H_Lab", strValue="Your Lab/Address", description="Your lab/address", units="" )
-	NMNotesStrCheck( df, "H_Title", strValue="Your Experiment Title", description="Your experiment title", units="" )
+	NMNotesStrCheck( df, "H_Name", strValue="Your Name", description="Your name" )
+	NMNotesStrCheck( df, "H_Lab", strValue="Your Lab/Address", description="Your lab/address" )
+	NMNotesStrCheck( df, "H_Title", strValue="Your Experiment Title", description="Your experiment title" )
 	
-	//NMNotesVarCheck( df, "H_Age", numValue=Nan, description="Age", units="days" )
+	//NMNotesVarCheck( df, "H_Age", numValue=Nan, units="days", description="Age" )
 	
 	// File string/numeric parameters begin with "F_"
 	
 	// NMNotesFileStrList = "F_Folder;F_Stim;F_Tbgn;F_Tend;"
-	NMNotesStrCheck( df, "F_Folder", strValue="", description="NM data folder", units="" )
-	NMNotesStrCheck( df, "F_Stim", strValue="", description="NM stim name", units="" )
-	NMNotesStrCheck( df, "F_Tbgn", strValue="", description="Acquisition start time", units="" )
-	NMNotesStrCheck( df, "F_Tend", strValue="", description="Acquisition end time", units="" )
+	NMNotesStrCheck( df, "F_Folder", strValue="", description="NM data folder" )
+	NMNotesStrCheck( df, "F_Stim", strValue="", description="NM stim" )
+	NMNotesStrCheck( df, "F_Tbgn", strValue="", description="Acquisition start time" )
+	NMNotesStrCheck( df, "F_Tend", strValue="", description="Acquisition end time" )
 	
-	//NMNotesStrCheck( df, "F_Drug", strValue="", description="Experimental drug", units="" )
+	//NMNotesStrCheck( df, "F_Drug", strValue="", description="Experimental drug" )
 	
-	NMNotesVarCheck( df, "F_Temp", numValue=Nan, description="temperature", units="°C" )
-	NMNotesVarCheck( df, "F_Relectrode", numValue=Nan, description="electrode resistance, computed via Rstep()", units="MOhms" )
-	NMNotesVarCheck( df, "F_Rs", numValue=Nan, description="electrode series resistance", units="MOhms" )
-	NMNotesVarCheck( df, "F_Cm", numValue=Nan, description="cell capacitance", units="pF" )
+	NMNotesVarCheck( df, "F_Temp", numValue=Nan, units="°C", description="temperature" )
+	NMNotesVarCheck( df, "F_Relectrode", numValue=Nan, units="MOhms", description="electrode resistance, computed via Rstep()" )
+	NMNotesVarCheck( df, "F_Rs", numValue=Nan, units="MOhms", description="electrode series resistance" )
+	NMNotesVarCheck( df, "F_Cm", numValue=Nan, units="pF", description="cell capacitance" )
 	
 	// Progress Button string parameters begin with "P_"
 	
-	//NMNotesStrCheck( df, "P_TTX", strValue="Added 100 nM TTX", description="", units="" )
+	//NMNotesStrCheck( df, "P_TTX", strValue="Added 100 nM TTX" )
 	
 	return 0
 
@@ -178,174 +178,6 @@ Function /S NMClampNotesTypeNS( df, varName )
 	return ""
 
 End // NMClampNotesTypeNS
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesTable2Vars( [ df ] ) // save table values to note vars
-	String df
-
-	Variable icnt, objNum, type, nitem, sitem
-	String objName, objStr
-	
-	String cdf = NMClampDF
-	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
-	
-	if ( !DataFolderExists( df ) )
-		return -1
-	endif
-	
-	String nlist = NMNotesVarList( df, "H_", "numeric" ) + NMNotesVarList( df, "F_", "numeric" )
-	String slist = NMNotesVarList( df, "H_", "string" ) + NMNotesVarList( df, "F_", "string" )
-	
-	nlist = RemoveFromList( NMNotesFileVarList, nlist, ";" )
-	slist = RemoveFromList( NMNotesFileStrList, slist, ";" )
-	
-	String tName = NMNotesTableName
-
-	if ( WinType( tName ) != 2 )
-		return 0 // table doesnt exist
-	endif
-	
-	if ( WaveExists( $cdf+"VarName" ) == 0 )
-		return 0 // waves dont exist
-	endif
-	
-	Wave /T VarName = $cdf+"VarName"
-	Wave /T StrValue = $cdf+"StrValue"
-	Wave NumValue = $cdf+"NumValue"
-	
-	for ( icnt = 0; icnt < numpnts( VarName ); icnt += 1 )
-	
-		objName = VarName[icnt]
-		
-		if ( strlen( objName ) == 0 )
-			continue
-		endif
-		
-		if ( StringMatch( objName, "Header Notes:" ) == 1 )
-			continue
-		endif
-		
-		if ( StringMatch( objName, "File Notes:" ) == 1 )
-			continue
-		endif
-		
-		objName = NMNotesCheckVarName( objName )
-		
-		if ( icnt < numpnts( NumValue ) )
-			objNum = NumValue[ icnt ]
-		else
-			objNum = NaN
-		endif
-		
-		if ( icnt < numpnts( StrValue ) )
-			objStr = StrValue[ icnt ]
-		else
-			objStr = ""
-		endif
-		
-		type = 0 // undefined
-		
-		nitem = WhichListItem( objName, nlist, ";", 0, 0 )
-		sitem = WhichListItem( objName, slist, ";", 0, 0 )
-		
-		if ( nitem >= 0 ) // numeric variable
-			type = 1
-			nlist = RemoveListItem( nitem, nlist )
-			objNum = NMNotesCheckNumValue( objName, objStr, objNum )
-		elseif ( sitem >= 0 ) // string variable
-			type = 2
-			slist = RemoveListItem( sitem, slist )
-			objStr = NMNotesCheckStrValue( objName, objStr, objNum )
-		endif
-
-		if ( type == 0 )
-			if ( strlen( objStr ) > 0 )
-				type = 2
-				objStr = NMNotesCheckStrValue( objName, objStr, objNum )
-			else
-				type = 1
-			endif
-		endif
-		
-		KillStrings /Z $df + objName
-		KillVariables /Z $df + objName
-		
-		if ( type == 1 )
-			SetNMvar( df + objName, objNum )
-		elseif ( type == 2 )
-			SetNMstr( df + objName, objStr )
-		endif
-		
-	endfor
-	
-	// kill deleted variables
-	
-	NMNotesKillVar( df, nlist, 0 )
-	NMNotesKillStr( df, slist, 0 )
-	
-End // NMNotesTable2Vars
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesCheckNumValue( varName, strValue, numValue )
-	String varName, strValue
-	Variable numValue
-	
-	if ( ( strlen( strValue ) > 0 ) && ( StringMatch( strValue, NMNotesStr ) == 0 ) )
-	
-		if ( numtype( numValue ) > 0 )
-			numValue = str2num( strValue )
-		endif
-		
-		Prompt numValue, varName
-		DoPrompt "Please Check Numeric Input Value", numValue
-		
-		if ( V_flag == 1 )
-			numValue = Nan // cancel
-		endif
-		
-	endif
-	
-	return numValue
-
-End // NMNotesCheckNumValue
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function /S NMNotesCheckStrValue( varName, strValue, numValue )
-	String varName, strValue
-	Variable numValue
-	
-	if ( numtype( numValue ) == 0 )
-	
-		if ( strlen( strValue ) == 0 )
-			strValue += num2str( numValue )
-		else
-			strValue += " : " + num2str( numValue )
-		endif
-		
-		Prompt strValue, varName
-		DoPrompt "Please Check String Input Value", strValue
-		
-		if ( V_flag == 1 )
-			strValue = "" // cancel
-		endif
-		
-	endif
-	
-	return strValue
-
-End // NMNotesCheckStrValue
 
 //****************************************************************
 //****************************************************************
@@ -430,11 +262,11 @@ Function NMNotesAddPrompt( df, typeHFP )
 	varName = typeHFP + "_" + varName
 	
 	if ( StringMatch( typeNS, "numeric" ) )
-		return NMNotesVarCheck( df, varName, numValue = numValue, units = units, description = description, setValues = 1 )
+		return NMNotesVarCheck( df, varName, numValue = numValue, units = units, description = description, setValue = 1 )
 	endif
 	
 	if ( StringMatch( typeNS, "text" ) )
-		return NMNotesStrCheck( df, varName, strValue = strValue, units = units, description = description, setValues = 1 )
+		return NMNotesStrCheck( df, varName, strValue = strValue, units = units, description = description, setValue = 1 )
 	endif
 	
 End // NMNotesAddPrompt
@@ -443,13 +275,13 @@ End // NMNotesAddPrompt
 //****************************************************************
 //****************************************************************
 
-Function NMNotesVarCheck( df, varName [ numValue, units, description, setValues ] )
+Function NMNotesVarCheck( df, varName [ numValue, units, description, setValue ] )
 	String df
 	String varName
 	Variable numValue
 	String units
 	String description
-	Variable setValues
+	Variable setValue
 	
 	String typeNS, varName2, varName3
 	String cf = "ClampNotes"
@@ -480,7 +312,7 @@ Function NMNotesVarCheck( df, varName [ numValue, units, description, setValues 
 		return -1 // aleady exists as string variable
 	endif
 	
-	if ( setValues )
+	if ( setValue )
 		SetNMvar( df + varName, numValue )
 		SetNMstr( df + varName2, units )
 		SetNMstr( df + varName3, description )
@@ -500,13 +332,13 @@ End // NMNotesVarCheck
 //****************************************************************
 //****************************************************************
 
-Function NMNotesStrCheck( df, varName [ strValue, units, description, setValues ] )
+Function NMNotesStrCheck( df, varName [ strValue, units, description, setValue ] )
 	String df
 	String varName
 	String strValue
 	String units
 	String description
-	Variable setValues
+	Variable setValue
 	
 	String typeNS, varName2, varName3
 	String cf = "ClampNotes"
@@ -537,7 +369,7 @@ Function NMNotesStrCheck( df, varName [ strValue, units, description, setValues 
 		return -1 // aleady exists as numeric variable
 	endif
 	
-	if ( setValues )
+	if ( setValue )
 		SetNMstr( df + varName, strValue )
 		SetNMstr( df + varName2, units )
 		SetNMstr( df + varName3, description )
@@ -574,7 +406,7 @@ Function NMNotesEditPrompt( df, varName )
 	
 	String varName2 = "T_" + varName // units
 	String varName3 = "D_" + varName // description
-	String title = "NM Clamp Notes Edit " + NMQuotes( varName[ 2, inf ] )
+	String title = "NM Clamp Notes Edit : " + varName[ 2, inf ]
 	String typeNS = NMClampNotesTypeNS( df, varName )
 	String typeHFP = varName[ 0, 1 ] // prefix
 	
@@ -587,8 +419,8 @@ Function NMNotesEditPrompt( df, varName )
 			return -1
 	endswitch
 	
-	Prompt numValue "enter parameter value:"
-	Prompt strValue "enter parameter text:"
+	Prompt numValue "enter value of " + varName[ 2, inf ] + ":"
+	Prompt strValue "enter value of " + varName[ 2, inf ] + ":"
 	Prompt units "optional units:"
 	Prompt description "optional description:"
 	
@@ -667,70 +499,6 @@ End // NMNotesProgressPopup
 //****************************************************************
 //****************************************************************
 
-Function NMNotesKillVar( df, vlist, ask )
-	String df, vlist
-	Variable ask
-	
-	Variable icnt, kill = 2
-	String objName
-	
-	if ( !DataFolderExists( df ) )
-		return -1
-	endif
-	
-	for ( icnt = 0; icnt < ItemsInList( vlist ); icnt += 1 ) // kill unused variables
-	
-		objName = StringFromList( icnt, vlist )
-		
-		if ( ask == 1 )
-			Prompt kill, "kill variable " + NMQuotes( objName ) + "?", popup "no;yes;"
-			DoPrompt "Encountered Unused Note Variable", kill
-		endif
-		
-		if ( kill == 2 )
-			KillVariables $df + objName
-		endif
-		
-	endfor
-	
-End // NMNotesKillVar
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesKillStr( df, vlist, ask )
-	String df, vlist
-	Variable ask
-	
-	Variable icnt, kill = 2
-	String objName
-	
-	if ( !DataFolderExists( df ) )
-		return -1
-	endif
-	
-	for ( icnt = 0; icnt < ItemsInList( vlist ); icnt += 1 ) // kill unused strings
-	
-		objName = StringFromList( icnt, vlist )
-		
-		if ( ask == 1 )
-			Prompt kill, "kill variable " + NMQuotes( objName ) + "?", popup "no;yes;"
-			DoPrompt "Encountered Unused Note Variable", kill
-		endif
-		
-		if ( kill == 2 )
-			KillStrings $df + objName
-		endif
-		
-	endfor
-	
-End // NMNotesKillStr
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Function NMNotesClearFileVars( [ df ] )
 	String df
 	
@@ -749,8 +517,15 @@ Function NMNotesClearFileVars( [ df ] )
 	String fnlist = NMNotesVarList( df, "F_", "numeric" )
 
 	for ( ocnt = 0; ocnt < ItemsInList( fslist ); ocnt += 1 )
+	
 		objName = StringFromList( ocnt,fslist )
-		SetNMstr( df + objName, "" )
+		
+		if ( StringMatch( objName[ 0, 5 ] "F_Note" ) )
+			KillStrings /Z $df + objName
+		else
+			SetNMstr( df + objName, "" )
+		endif
+		
 	endfor
 	
 	for ( ocnt = 0; ocnt < ItemsInList( fnlist ); ocnt += 1 )
@@ -758,9 +533,9 @@ Function NMNotesClearFileVars( [ df ] )
 		SetNMvar( df + objName, Nan )
 	endfor
 	
-	if ( WinType( NMNotesTableName ) == 2 )
-		NMNotesTable( 0 )
-	endif
+	//if ( WinType( NMNotesTableName ) == 2 )
+		//NMNotesTable( 0 )
+	//endif
 
 End // NMNotesClearFileVars
 
@@ -805,7 +580,7 @@ End // NMNotesCopyVars
 Function NMNotesCopyToFolder( df ) // save note variables to appropriate data folders
 	String df // folder where to save Notes
 
-	String cdf = NMClampDF, ndf = NMNotesDF
+	String ndf = NMNotesDF
 	String path = NMParent( df )
 	
 	df = RemoveEnding( df, ":" )
@@ -861,7 +636,7 @@ Function NMNotesAddNote( usernote [ df, history ] ) // add user note
 		
 	endif
 	
-	NMNotesTable2Vars()
+	//NMNotesTable2Vars()
 	
 	do
 	
@@ -886,71 +661,13 @@ Function NMNotesAddNote( usernote [ df, history ] ) // add user note
 		NMHistory( txt )
 	endif
 	
-	if ( WinType( NMNotesTableName ) == 2 )
-		NMNotesTable( 0 )
-	endif
+	//if ( WinType( NMNotesTableName ) == 2 )
+		//NMNotesTable( 0 )
+	//endif
 	
 	return 0
 
 End // NMNotesAddNote
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesHeaderVar( varName, value [ df ] )
-	String varName
-	Variable value
-	String df
-	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
-	
-	if ( !DataFolderExists( df ) )
-		return -1
-	endif
-	
-	if ( StringMatch( varName[0,1], "H_" ) == 0 )
-		varName = "H_" + varName
-	endif
-	
-	SetNMvar( df + varName, value )
-	
-	if ( WinType( NMNotesTableName ) == 2 )
-		NMNotesTable( 0 )
-	endif
-
-End // NMNotesHeaderVar
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesHeaderStr( varName, strValue [ df ] )
-	String varName
-	String strValue
-	String df
-	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
-	
-	if ( !DataFolderExists( df ) )
-		return -1
-	endif
-	
-	if ( StringMatch( varName[0,1], "H_" ) == 0 )
-		varName = "H_" + varName
-	endif
-	
-	SetNMstr( df + varName, strValue )
-	
-	if ( WinType( NMNotesTableName ) == 2 )
-		NMNotesTable( 0 )
-	endif
-
-End // NMNotesHeaderStr
 
 //****************************************************************
 //****************************************************************
@@ -975,9 +692,9 @@ Function NMNotesFileVar( varName, value [ df ] )
 	
 	SetNMvar( df + varName, value )
 	
-	if ( WinType( NMNotesTableName ) == 2 )
-		NMNotesTable( 0 )
-	endif
+	//if ( WinType( NMNotesTableName ) == 2 )
+		//NMNotesTable( 0 )
+	//endif
 
 End // NMNotesFileVar
 
@@ -1004,11 +721,301 @@ Function NMNotesFileStr( varName, strValue [ df ] )
 	
 	SetNMstr( df + varName, strValue )
 	
-	if ( WinType( NMNotesTableName ) == 2 )
-		NMNotesTable( 0 )
-	endif
+	//if ( WinType( NMNotesTableName ) == 2 )
+		//NMNotesTable( 0 )
+	//endif
 
 End // NMNotesFileStr
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesTable2Vars_DEPRECATED( [ df ] )
+	String df
+
+	Variable icnt, objNum, type, nitem, sitem
+	String objName, objStr
+	
+	String cdf = NMClampDF
+	
+	if ( ParamIsDefault( df ) )
+		df = NMNotesDF
+	endif
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	String nlist = NMNotesVarList( df, "H_", "numeric" ) + NMNotesVarList( df, "F_", "numeric" )
+	String slist = NMNotesVarList( df, "H_", "string" ) + NMNotesVarList( df, "F_", "string" )
+	
+	nlist = RemoveFromList( NMNotesFileVarList, nlist, ";" )
+	slist = RemoveFromList( NMNotesFileStrList, slist, ";" )
+	
+	String tName = NMNotesTableName
+
+	if ( WinType( tName ) != 2 )
+		return 0 // table doesnt exist
+	endif
+	
+	if ( WaveExists( $cdf+"VarName" ) == 0 )
+		return 0 // waves dont exist
+	endif
+	
+	Wave /T VarName = $cdf+"VarName"
+	Wave /T StrValue = $cdf+"StrValue"
+	Wave NumValue = $cdf+"NumValue"
+	
+	for ( icnt = 0; icnt < numpnts( VarName ); icnt += 1 )
+	
+		objName = VarName[icnt]
+		
+		if ( strlen( objName ) == 0 )
+			continue
+		endif
+		
+		if ( StringMatch( objName, "Header Notes:" ) == 1 )
+			continue
+		endif
+		
+		if ( StringMatch( objName, "File Notes:" ) == 1 )
+			continue
+		endif
+		
+		objName = NMNotesCheckVarName( objName )
+		
+		if ( icnt < numpnts( NumValue ) )
+			objNum = NumValue[ icnt ]
+		else
+			objNum = NaN
+		endif
+		
+		if ( icnt < numpnts( StrValue ) )
+			objStr = StrValue[ icnt ]
+		else
+			objStr = ""
+		endif
+		
+		type = 0 // undefined
+		
+		nitem = WhichListItem( objName, nlist, ";", 0, 0 )
+		sitem = WhichListItem( objName, slist, ";", 0, 0 )
+		
+		if ( nitem >= 0 ) // numeric variable
+			type = 1
+			nlist = RemoveListItem( nitem, nlist )
+			//objNum = NMNotesCheckNumValue( objName, objStr, objNum )
+		elseif ( sitem >= 0 ) // string variable
+			type = 2
+			slist = RemoveListItem( sitem, slist )
+			//objStr = NMNotesCheckStrValue( objName, objStr, objNum )
+		endif
+
+		if ( type == 0 )
+			if ( strlen( objStr ) > 0 )
+				type = 2
+				//objStr = NMNotesCheckStrValuex( objName, objStr, objNum )
+			else
+				type = 1
+			endif
+		endif
+		
+		KillStrings /Z $df + objName
+		KillVariables /Z $df + objName
+		
+		if ( type == 1 )
+			SetNMvar( df + objName, objNum )
+		elseif ( type == 2 )
+			SetNMstr( df + objName, objStr )
+		endif
+		
+	endfor
+	
+	// kill deleted variables
+	
+	//NMNotesKillVar( df, nlist, 0 )
+	//NMNotesKillStr( df, slist, 0 )
+	
+End // NMNotesTable2Vars
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesCheckNumValue_DEPRECATED( varName, strValue, numValue )
+	String varName, strValue
+	Variable numValue
+	
+	if ( ( strlen( strValue ) > 0 ) && ( StringMatch( strValue, NMNotesStr ) == 0 ) )
+	
+		if ( numtype( numValue ) > 0 )
+			numValue = str2num( strValue )
+		endif
+		
+		Prompt numValue, varName
+		DoPrompt "Please Check Numeric Input Value", numValue
+		
+		if ( V_flag == 1 )
+			numValue = Nan // cancel
+		endif
+		
+	endif
+	
+	return numValue
+
+End // NMNotesCheckNumValue
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMNotesCheckStrValue_DEPRECATED( varName, strValue, numValue )
+	String varName, strValue
+	Variable numValue
+	
+	if ( numtype( numValue ) == 0 )
+	
+		if ( strlen( strValue ) == 0 )
+			strValue += num2str( numValue )
+		else
+			strValue += " : " + num2str( numValue )
+		endif
+		
+		Prompt strValue, varName
+		DoPrompt "Please Check String Input Value", strValue
+		
+		if ( V_flag == 1 )
+			strValue = "" // cancel
+		endif
+		
+	endif
+	
+	return strValue
+
+End // NMNotesCheckStrValue
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesKillVar_DEPRECATED( df, vlist, ask )
+	String df, vlist
+	Variable ask
+	
+	Variable icnt, kill = 2
+	String objName
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	for ( icnt = 0; icnt < ItemsInList( vlist ); icnt += 1 ) // kill unused variables
+	
+		objName = StringFromList( icnt, vlist )
+		
+		if ( ask == 1 )
+			Prompt kill, "kill variable " + NMQuotes( objName ) + "?", popup "no;yes;"
+			DoPrompt "Encountered Unused Note Variable", kill
+		endif
+		
+		if ( kill == 2 )
+			KillVariables $df + objName
+		endif
+		
+	endfor
+	
+End // NMNotesKillVar
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesKillStr_DEPRECATED( df, vlist, ask )
+	String df, vlist
+	Variable ask
+	
+	Variable icnt, kill = 2
+	String objName
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	for ( icnt = 0; icnt < ItemsInList( vlist ); icnt += 1 ) // kill unused strings
+	
+		objName = StringFromList( icnt, vlist )
+		
+		if ( ask == 1 )
+			Prompt kill, "kill variable " + NMQuotes( objName ) + "?", popup "no;yes;"
+			DoPrompt "Encountered Unused Note Variable", kill
+		endif
+		
+		if ( kill == 2 )
+			KillStrings $df + objName
+		endif
+		
+	endfor
+	
+End // NMNotesKillStr
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesHeaderVar_DEPRECATED( varName, value [ df ] )
+	String varName
+	Variable value
+	String df
+	
+	if ( ParamIsDefault( df ) )
+		df = NMNotesDF
+	endif
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	if ( StringMatch( varName[0,1], "H_" ) == 0 )
+		varName = "H_" + varName
+	endif
+	
+	SetNMvar( df + varName, value )
+	
+	//if ( WinType( NMNotesTableName ) == 2 )
+		//NMNotesTable( 0 )
+	//endif
+
+End // NMNotesHeaderVar
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMNotesHeaderStr_DEPRECATED( varName, strValue [ df ] )
+	String varName
+	String strValue
+	String df
+	
+	if ( ParamIsDefault( df ) )
+		df = NMNotesDF
+	endif
+	
+	if ( !DataFolderExists( df ) )
+		return -1
+	endif
+	
+	if ( StringMatch( varName[0,1], "H_" ) == 0 )
+		varName = "H_" + varName
+	endif
+	
+	SetNMstr( df + varName, strValue )
+	
+	//if ( WinType( NMNotesTableName ) == 2 )
+		//NMNotesTable( 0 )
+	//endif
+
+End // NMNotesHeaderStr
 
 //****************************************************************
 //****************************************************************

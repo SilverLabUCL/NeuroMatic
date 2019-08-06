@@ -96,8 +96,8 @@ Function /S LogVarList(ndf, prefix, varType)
 	String prefix // prefix string ("H_" for header, "F_" for file)
 	String varType // "numeric" or "string"
 
-	Variable ocnt, vtype = 2
-	String objName, olist = ""
+	Variable icnt, vtype = 2
+	String objName, olist, olist2 = ""
 	
 	if (DataFolderExists(ndf) == 0)
 		return ""
@@ -108,9 +108,19 @@ Function /S LogVarList(ndf, prefix, varType)
 	endif
 	
 	olist = FolderObjectList(ndf, vtype)
-	olist = RemoveFromList("FileType", olist)
+	//olist = RemoveFromList("FileType", olist)
 	
-	return olist
+	for ( icnt = 0 ; icnt < ItemsInList( olist ) ; icnt += 1 )
+		
+		objName = StringFromList( icnt, olist )
+		
+		if ( StringMatch( objName[ 0, 1 ], prefix ) )
+			olist2 += objName + ";"
+		endif
+		
+	endfor
+	
+	return olist2
 
 End // LogVarList
 

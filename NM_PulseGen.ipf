@@ -51,6 +51,7 @@ Static Constant refracDefault = 0
 
 Static StrConstant promptPrefix = "Prompt_"
 Static StrConstant paramWavePrefix = "PP_"
+Static StrConstant noDSCGList = "off;config;pulse;train;tbgn;tend;interval;refrac;"
 
 StrConstant NMPulseDF = "root:Packages:NeuroMatic:Pulse:"
 
@@ -4246,12 +4247,13 @@ End // NMPulsePromptBinomial
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptWaveSeq( pdf, numWaves, paramList, title, pulseType )
+Function /S NMPulsePromptWaveSeq( pdf, numWaves, paramList, title, pulseType [ noDelta ] )
 	String pdf
 	Variable numWaves
 	String paramList
 	String title
 	Variable pulseType
+	Variable noDelta
 	
 	Variable icnt, wnum, delta = 0
 	String waveNumStr = "", waveNumSeq = ""
@@ -4308,8 +4310,13 @@ Function /S NMPulsePromptWaveSeq( pdf, numWaves, paramList, title, pulseType )
 	
 	Prompt waveNumSeq, "or enter a comma-delimited sequence (e.g. 1-5,7,9):"
 	Prompt delta, "optional wave increment ( > 1 ):"
-		
-	DoPrompt title, waveNumStr, waveNumSeq, delta
+	
+	if ( noDelta )
+		DoPrompt title, waveNumStr, waveNumSeq
+		delta = 0
+	else
+		DoPrompt title, waveNumStr, waveNumSeq, delta
+	endif
 	
 	if ( V_flag == 1 )
 		return "" // cancel
@@ -5107,7 +5114,7 @@ End // NMPulsePromptPulseParams
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptAOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] )
+Function /S NMPulsePromptAOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] ) // Amplitude, Onset, Width
 	String pdf, type
 	String DSC // "delta" or "stdv" or "cv"
 	String ampUnits // "pA"
@@ -5260,7 +5267,7 @@ End // NMPulsePromptAOW
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] )
+Function /S NMPulsePromptOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] ) // Onset, Width
 	String pdf, type
 	String DSC // "delta" or "stdv" or "cv"
 	String ampUnits // "pA"
@@ -6556,8 +6563,9 @@ End // NMPulseLB1OODE
 //****************************************************************
 //****************************************************************
 
-Function NMPulseLB2Update( lb )
+Function NMPulseLB2Update( lb [ editByPrompt ] )
 	STRUCT NMPulseLBWaves &lb
+	Variable editByPrompt // ( 0 ) edit directly via listbox ( 1 ) edit by user prompts
 
 	Variable configNum, icnt, ipnt, jcnt, kcnt
 	Variable numParams, slen, canedit, items
@@ -6602,7 +6610,11 @@ Function NMPulseLB2Update( lb )
 			
 			params[ ipnt ][ 0 ] = paramName
 			
-			canedit = 3
+			if ( editByPrompt )
+				canedit = 0
+			else
+				canedit = 3
+			endif
 			
 			if ( StringMatch( paramName, "train" ) )
 				//canedit = 0
@@ -6647,7 +6659,7 @@ Function NMPulseLB2Update( lb )
 			
 			endfor
 			
-			if ( StringMatch( paramName, "pulse" ) )
+			if ( WhichListItem( paramName, noDSCGList ) >= 0 )
 				params[ ipnt ][ 2 ] = ""
 			elseif ( strlen( pstr ) > 0 )
 				params[ ipnt ][ 2 ] = pstr
@@ -6668,21 +6680,39 @@ End // NMPulseLB2Update
 //****************************************************************
 //****************************************************************
 
-Function NMPulseLB2Event( row, col, event, lb [ TTL ] )
+Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code // 2-mouse up, 7-end edit
+	String pdf
+	Variable numWaves
 	STRUCT NMPulseLBWaves &lb
 	Variable TTL
 	
-	Variable configNum, value, dscgValue, dscgValue2, icnt, numRows
-	Variable fixPolarity, fix2positive
+	Variable configNum, value, icnt, numRows, savePulse
+	Variable fix2positive
 	Variable Fratio, KF, F1, deltaF
-	String varName, valueStr, dscg, dscgList, paramList, pstr
+	String varName, valueStr, paramList, pstr
+	
+	if ( paramIsDefault( pdf ) )
+		pdf = NMPulseDF
+	endif
+	
+	if ( ParamIsDefault( numWaves ) )
+		numWaves = 1
+	endif
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return -1
+	endif
+	
+	if ( !WaveExists( $lb.lb2wName ) )
+		return -1
+	endif
 	
 	configNum = NumVarOrDefault( lb.pcvName, 0 )
 	
-	if ( !WaveExists( $lb.lb2wName ) )
+	if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $lb.pcwName ) ) )
 		return -1
 	endif
 	
@@ -6701,6 +6731,11 @@ Function NMPulseLB2Event( row, col, event, lb [ TTL ] )
 	value = str2num( valueStr )
 	
 	strswitch( varName )
+		case "off":
+		case "config":
+		case "train":
+		case "pulse":
+			return 0 // no edit
 		case "width":
 		case "stdv":
 		case "tau":
@@ -6715,161 +6750,71 @@ Function NMPulseLB2Event( row, col, event, lb [ TTL ] )
 			break
 	endswitch
 	
-	if ( ( event == 2 ) && ( row > 0 ) && ( col == 2 ) && ( configNum >= 0 ) && ( configNum < numpnts( $lb.pcwName ) ) )
+	if ( ( event == 2 ) && ( row > 0 ) && ( col == 1 ) )
 	
-		if ( StringMatch( varName, "config" ) || StringMatch( varName, "off" ) || StringMatch( varName, "pulse" ) )
-			return 0
-		endif
+		pstr = params[ row ][ 1 ]
 		
-		if ( StringMatch( varName, "train" ) || StringMatch( varName, "tbgn" ) || StringMatch( varName, "tend" ) )
-			return 0
-		endif
+		if ( StringMatch( varName, "wave" ) )
 		
-		if ( StringMatch( varName, "interval" ) || StringMatch( varName, "refrac" ) )
+			Variable pulseType = 1
+			
+			paramList = "wave=" + params[ row ][ 1 ] + ";"
+		
+			pstr = NMPulsePromptWaveSeq( pdf, numWaves, paramList, "Edit Pulse Config", pulseType, noDelta=1 )
+			
+			if ( ItemsInList( pstr ) == 1 )
+			
+				pstr = StringFromList( 0, pstr )
+				pstr = ReplaceString( "wave=", pstr, "" )
+				
+				if ( strlen( pstr ) > 0 )
+					params[ row ][ 1 ] = pstr
+					savePulse = 1
+				endif
+				
+			endif
+			
+		else
+		
+			Prompt value, "enter new " + varName + " value:"
+			DoPrompt "Edit Pulse Config : " + varName, value
+	
+			if ( V_flag == 0 )
+			
+				if ( fix2positive )
+					value = abs( value )
+				endif
+				
+				params[ row ][ 1 ] = num2str( value )
+				
+				savePulse = 1
+				
+			endif
+			
+		endif
+	
+	elseif ( ( event == 2 ) && ( row > 0 ) && ( col == 2 ) )
+	
+		if ( WhichListItem( varName, noDSCGList ) >= 0 )
 			return 0
 		endif
 		
 		if ( TTL && StringMatch( varName, "amp" ) )
 			return 0
 		endif
-		
+	
 		paramList = params[ row ][ 2 ]
 		
-		strswitch( paramList[ 0, 1 ] )
-			case "de":
-				dscg = "delta"
-				dscgValue = NumberByKey( "delta", paramList, "=", "," )
-				break
-			case "st":
-				dscg = "stdv"
-				dscgValue = NumberByKey( "stdv", paramList, "=", "," )
-				break
-			case "cv":
-				dscg = "cv"
-				dscgValue = NumberByKey( "cv", paramList, "=", "," )
-				break
-			case "ga":
-				dscg = "gamma"
-				dscgValue = NumberByKey( "gammaA", paramList, "=", "," )
-				dscgValue2 = NumberByKey( "gammaB", paramList, "=", "," )
-				break
-			default:
-				dscg = "none"
-				dscgValue = 1
-		endswitch
+		pstr = NMPulsePromptDSCG( configNum, varName, paramList, fix2positive=fix2positive )
 		
-		if ( StringMatch( varName, "wave" ) )
-			dscgList = "none;delta;"
-		else
-			dscgList = "none;delta;stdv;cv;gamma;"
-		endif
-		
-		if ( strsearch( paramList, "FP", 0 ) > 0 )
-			fixPolarity = 2
-		else
-			fixPolarity = 1
-		endif
-	
-		Prompt dscg, "increment type:", popup dscgList
-		Prompt fixPolarity, "fix polarity of " + varName + " parameter?", popup "no;yes;"
-		
-		DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscg
-		
-		if ( V_flag == 0 )
-		
-			strswitch( dscg )
-			
-				case "none":
-					params[ row ][ 2 ] = ""
-					break
-					
-				case "delta":
-				case "stdv":
-				case "cv":
-				
-					Prompt dscgValue, dscg + " value"
-				
-					if ( fix2positive )
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
-						fixPolarity = 2
-					else
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue, fixPolarity
-					endif
-					
-					if ( V_flag == 0 )
-					
-						pstr = dscg + "=" + num2str( dscgValue )
-						
-						if ( fixPolarity == 2 )
-							pstr += ",FP"
-						endif
-						
-						params[ row ][ 2 ] = pstr
-						
-					endif
-					
-					break
-					
-				case "gamma":
-				
-					Prompt dscgValue, "gamma A"
-					
-					pstr = ""
-					
-					if ( fix2positive )
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
-					else
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
-					endif
-					
-					if ( V_flag == 0 )
-					
-						pstr = "gammaA=" + num2str( dscgValue )
-						
-						if ( dscgValue2 == 0 )
-							dscgValue2 = 1
-						endif
-						
-						Prompt dscgValue2, "gamma B"
-						
-						if ( fix2positive )
-							DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2
-							fixPolarity = 2
-						else
-							DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2, fixPolarity
-						endif
-						
-						if ( V_flag == 0 )
-						
-							pstr += ",gammaB=" + num2str( dscgValue2 )
-							
-							if ( fixPolarity == 2 )
-								pstr += ",FP"
-							endif
-						
-							params[ row ][ 2 ] = pstr
-							
-						else
-						
-							pstr = ""
-							
-						endif
-						
-					endif
-					
-					if ( strlen( pstr ) > 0 )
-						params[ row ][ 2 ] = pstr
-					endif
-					
-					break
-					
-			endswitch
-			
-			return NMPulseLB2Save( lb )
-			
+		if ( !StringMatch( pstr, "CANCEL" ) )
+			params[ row ][ 2 ] = pstr
+			savePulse = 1
 		endif
 		
 	elseif ( StringMatch( varName, "Fratio" ) && ( event == 7 ) )
+	
+		// NMPulseTrainDittman
 	
 		numRows = DimSize( params, 0 )
 		
@@ -6913,11 +6858,151 @@ Function NMPulseLB2Event( row, col, event, lb [ TTL ] )
 		
 	endif
 	
-	if ( event == 7 )
-		return NMPulseLB2Save( lb )
+	if ( savePulse || ( event == 7 ) )
+		NMPulseLB2Save( lb )
+		return 1
 	endif
 	
+	return 0
+	
 End // NMPulseLB2Event
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive ] )
+	Variable configNum
+	String varName
+	String paramList
+	Variable fix2positive
+	
+	Variable dscgValue, dscgValue2, fixPolarity
+	String dscg, dscgList, pstr
+	
+	strswitch( paramList[ 0, 1 ] )
+		case "de":
+			dscg = "delta"
+			dscgValue = NumberByKey( "delta", paramList, "=", "," )
+			break
+		case "st":
+			dscg = "stdv"
+			dscgValue = NumberByKey( "stdv", paramList, "=", "," )
+			break
+		case "cv":
+			dscg = "cv"
+			dscgValue = NumberByKey( "cv", paramList, "=", "," )
+			break
+		case "ga":
+			dscg = "gamma"
+			dscgValue = NumberByKey( "gammaA", paramList, "=", "," )
+			dscgValue2 = NumberByKey( "gammaB", paramList, "=", "," )
+			break
+		default:
+			dscg = "none"
+			dscgValue = 1
+	endswitch
+	
+	if ( StringMatch( varName, "wave" ) )
+		dscgList = "none;delta;"
+	else
+		dscgList = "none;delta;stdv;cv;gamma;"
+	endif
+	
+	if ( strsearch( paramList, "FP", 0 ) > 0 )
+		fixPolarity = 2
+	else
+		fixPolarity = 1
+	endif
+
+	Prompt dscg, "increment type:", popup dscgList
+	Prompt fixPolarity, "fix polarity of " + varName + " parameter?", popup "no;yes;"
+	
+	DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscg
+	
+	if ( V_flag == 1 )
+		return "CANCEL"
+	endif
+	
+	strswitch( dscg )
+	
+		case "none":
+			//params[ row ][ 2 ] = ""
+			//break
+			return ""
+			
+		case "delta":
+		case "stdv":
+		case "cv":
+		
+			Prompt dscgValue, dscg + " value"
+		
+			if ( fix2positive )
+				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
+				fixPolarity = 2
+			else
+				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue, fixPolarity
+			endif
+			
+			if ( V_flag == 1 )
+				return "CANCEL"
+			endif
+			
+			pstr = dscg + "=" + num2str( dscgValue )
+			
+			if ( fixPolarity == 2 )
+				pstr += ",FP"
+			endif
+			
+			return pstr
+			
+		case "gamma":
+		
+			Prompt dscgValue, "gamma A"
+			
+			pstr = ""
+			
+			if ( fix2positive )
+				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
+			else
+				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
+			endif
+			
+			if ( V_flag == 1 )
+				return "CANCEL"
+			endif
+			
+			pstr = "gammaA=" + num2str( dscgValue )
+			
+			if ( dscgValue2 == 0 )
+				dscgValue2 = 1
+			endif
+			
+			Prompt dscgValue2, "gamma B"
+			
+			if ( fix2positive )
+				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2
+				fixPolarity = 2
+			else
+				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2, fixPolarity
+			endif
+			
+			if ( V_flag == 1 )
+				return "CANCEL"
+			endif
+			
+			pstr += ",gammaB=" + num2str( dscgValue2 )
+			
+			if ( fixPolarity == 2 )
+				pstr += ",FP"
+			endif
+		
+			return pstr
+			
+		endswitch
+
+	return ""
+		
+End // NMPulsePromptDSCG
 
 //****************************************************************
 //****************************************************************

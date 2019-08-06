@@ -559,7 +559,7 @@ End // CheckNM
 //****************************************************************
 
 Function UpdateNM( forceMakeNewPanel )
-	Variable forceMakeNewPanel
+	Variable forceMakeNewPanel // NOT USED
 	
 	Variable isNMfolder
 	
@@ -571,15 +571,15 @@ Function UpdateNM( forceMakeNewPanel )
 	
 	if ( WinType( NMPanelName ) == 7 )
 	
-		if ( forceMakeNewPanel )
-			MakeNMPanel()
-		else
+		//if ( forceMakeNewPanel )
+			//MakeNMPanel() // REMOVED 6 Aug 2019 // cannot remember why this was necessary
+		//else
 			UpdateNMPanel( 1 )
-		endif
+		//endif
 	
 	else
 	
-		//MakeNMPanel() causes bug
+		// MakeNMPanel() // causes bug
 	
 	endif
 	
