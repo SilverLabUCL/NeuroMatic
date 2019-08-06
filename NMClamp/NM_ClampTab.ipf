@@ -554,6 +554,7 @@ Function ClampTabMake()
 	
 	Listbox CT4_NotesHeader, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.header, selWave=$lbn.headerSel, win=$NMPanelName
 	Listbox CT4_NotesHeader, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,60,100}, win=$NMPanelName
+	Listbox CT4_NotesHeader, titleWave=$lbn.header+"ColNames", win=$NMPanelName
 	
 	y0 += 100
 	
@@ -3247,6 +3248,10 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 			typeHFP = "P"
 			break
 	endswitch
+	
+	if ( ( row >= DimSize( wtemp, 0 ) ) || ( col >= DimSize( wtemp, 1 ) ) )
+		return -1
+	endif
 	
 	if ( StringMatch( wtemp[ row ][ 0 ], "+" ) )
 			
