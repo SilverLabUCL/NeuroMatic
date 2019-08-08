@@ -50,10 +50,10 @@
 
 StrConstant NMPackage = "NeuroMatic"
 StrConstant NMVersionStr = "3.0h"
-StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
-StrConstant NMRights = "Copyright (c) 2019 Jason Rothman"
-StrConstant NMEmail = "Jason@ThinkRandom.com"
-StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
+Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
+Static StrConstant NMRights = "Copyright (c) 2019 Jason Rothman"
+Static StrConstant NMEmail = "Jason@ThinkRandom.com"
+Static StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
 
 StrConstant NMDF = "root:Packages:NeuroMatic:"
 StrConstant NMClampDF = "root:Packages:NeuroMatic:Clamp:"
@@ -74,6 +74,10 @@ StrConstant NMWinColor2 = "47360,40960,40704" // highlight color of panel and gr
 Static Constant NMAutoStart = 1 // auto start NM ( 0 ) no ( 1 ) yes
 
 Static Constant NMHideProcedureFiles = 1
+
+Static Constant MakeNewPanelWhenChangingFolderOrWavePrefix = 0
+// JSR: this parameter is for a bug fix, when set to 1. cannot remember what bug is. however this fix causes annoying flashing of NM panel.
+// 7 Aug 2019, setting to 0. perhaps with latest Igor version this is not necessary.
 
 Static Constant NMPanelResolution = 72 // for Windows OS // NM Panel was designed for 72 panel resolution
 // NM uses this parameter to execute the following Igor command: SetIgorOption PanelResolution = <resolution>
@@ -559,7 +563,7 @@ End // CheckNM
 //****************************************************************
 
 Function UpdateNM( forceMakeNewPanel )
-	Variable forceMakeNewPanel // NOT USED
+	Variable forceMakeNewPanel
 	
 	Variable isNMfolder
 	
@@ -571,11 +575,11 @@ Function UpdateNM( forceMakeNewPanel )
 	
 	if ( WinType( NMPanelName ) == 7 )
 	
-		//if ( forceMakeNewPanel )
-			//MakeNMPanel() // REMOVED 6 Aug 2019 // cannot remember why this was necessary
-		//else
+		if ( forceMakeNewPanel && MakeNewPanelWhenChangingFolderOrWavePrefix )
+			MakeNMPanel()
+		else
 			UpdateNMPanel( 1 )
-		//endif
+		endif
 	
 	else
 	

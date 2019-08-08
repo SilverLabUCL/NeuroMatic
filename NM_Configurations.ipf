@@ -63,13 +63,15 @@ End // NMConfig
 //****************************************************************
 //****************************************************************
 
-Function CheckNMConfigsAll()
+Function CheckNMConfigsAll( [ cleanUp ] )
+	Variable cleanUp // remove configs for deprecated variables and strings
 
 	Variable icnt
 	String fname, flist = NMConfigList()
 	
 	for ( icnt = 0; icnt < ItemsInList( flist ); icnt += 1 )
-		CheckNMConfig( StringFromList( icnt, flist ) )
+		fname = StringFromList( icnt, flist )
+		CheckNMConfig( fname, cleanUp = cleanUp )
 	endfor
 
 End // CheckNMConfigsAll
@@ -77,12 +79,20 @@ End // CheckNMConfigsAll
 //****************************************************************
 //****************************************************************
 
-Function CheckNMConfig( fname )
+Function CheckNMConfig( fname [ cleanUp ] )
 	String fname // config folder name ( "NeuroMatic", "Chan", "Stats"... )
+	Variable cleanUp // remove configs for deprecated variables and strings
+	
+	String cdf = ConfigDF( fname )
+	Variable noCleanUp = NumVarOrDefault( cdf + "C_NoCleanUp", 0 ) // set this parameter to prevent cleanup action (e.g. Clamp Notes)
 	
 	CheckNMConfigDF( fname )
 	
-	NMConfigListReset( fname )
+	if ( cleanUp && !noCleanUp )
+		// null lists, which will then be recreated by the following Execute using current version of NM
+		SetNMstr( cdf + "C_VarList", "" )
+		SetNMstr( cdf + "C_WaveList", "" )
+	endif
 	
 	Execute /Z "NM" + fname + "Configs()" // run particular configs function if it exists
 	
@@ -90,11 +100,121 @@ Function CheckNMConfig( fname )
 		Execute /Z fname + "Configs()" // try another name
 	endif
 	
-	NMConfigCleanUp( fname )
+	if ( cleanUp && !noCleanUp )
+		// compare new C_VarList to variables that exist in config folder
+		// remove variables that are no longer used by NM
+		NMConfigCleanUp( fname )
+	endif
 	
 	//UpdateNMConfigMenu()
 	
 End // CheckNMConfig
+
+//****************************************************************
+//****************************************************************
+
+Static Function NMConfigCleanUp( fname ) // remove configs for deprecated variables and strings
+	String fname // config folder name
+	
+	Variable icnt, changeDF
+	String vList, vName
+	
+	String cdf = ConfigDF( fname )
+	String pdf = NMPackageDF( fname )
+	String saveDF = GetDataFolder( 1 )
+	
+	if ( DataFolderExists( cdf ) == 0 )
+		return -1
+	endif
+	
+	String varList = StrVarOrDefault( cdf + "C_VarList", "" )
+	String wList = StrVarOrDefault( cdf + "C_WaveList", "" )
+	
+	SetDataFolder $cdf
+	
+	vList = VariableList( "*", ";", 4 )
+	vList = RemoveFromList( varList, vList )
+	
+	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
+	
+		vName = StringFromList( icnt, vList )
+		
+		if ( StringMatch( vName[ 0, 1 ], "C_" ) == 1 )
+			continue
+		endif
+		
+		KillVariables /Z $cdf + vName
+		KillStrings /Z $cdf + "D_" + vName
+		KillStrings /Z $cdf + "T_" + vName
+		
+		if ( DataFolderExists( pdf ) == 1 )
+			KillVariables /Z $pdf + vName
+			KillStrings /Z $pdf + "D_" + vName
+			KillStrings /Z $pdf + "T_" + vName
+			//Print "NMConfigCleanUp: killed variable " + pdf + vName
+		endif
+		
+	endfor
+	
+	vList = StringList( "*", ";" )
+	vList = RemoveFromList( varList, vList )
+	vList = RemoveFromList( "FileType", vList )
+	
+	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
+	
+		vName = StringFromList( icnt, vList )
+		
+		if ( StringMatch( vName[ 0, 1 ], "C_" ) == 1 )
+			continue
+		endif
+		
+		if ( StringMatch( vName[ 0, 1 ], "D_" ) == 1 )
+			continue
+		endif
+		
+		if ( StringMatch( vName[ 0, 1 ], "T_" ) == 1 )
+			continue
+		endif
+		
+		KillStrings /Z $cdf + vName
+		KillStrings /Z $cdf + "D_" + vName
+		KillStrings /Z $cdf + "T_" + vName
+		
+		if ( DataFolderExists( pdf ) == 1 )
+			KillStrings /Z $pdf + vName
+			KillStrings /Z $pdf + "D_" + vName
+			KillStrings /Z $pdf + "T_" + vName
+			//Print "NMConfigCleanUp: killed variable " + pdf + vName
+		endif
+		
+	endfor
+	
+	vList = WaveList( "*", ";", "" )
+	vList = RemoveFromList( wList, vList )
+	
+	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
+	
+		vName = StringFromList( icnt, vList )
+		
+		if ( StringMatch( vName[ 0, 1 ], "C_" ) == 1 )
+			continue
+		endif
+		
+		KillWaves /Z $cdf + vName
+		
+		if ( DataFolderExists( pdf ) == 1 )
+			KillWaves /Z $pdf + vName
+		endif
+		
+		//Print "Killed wave " + cdf + vName
+		
+	endfor
+
+	SetDataFolder $saveDf
+
+	return 0
+	
+End // NMConfigCleanUp
 
 //****************************************************************
 //****************************************************************
@@ -492,7 +612,7 @@ Function NMConfigOpen( file [ history, quiet ] )
 		
 		error = 0
 		
-		CheckNMConfigsAll()
+		CheckNMConfigsAll( cleanUp = 1 )
 		CheckNMPaths()
 		
 	else
@@ -550,7 +670,7 @@ Function NMConfigOpenAuto()
 	
 	//UpdateNMConfigMenu()
 	
-	CheckNMConfigsAll()
+	CheckNMConfigsAll( cleanUp = 1 )
 	
 	KillNMPath()
 	
@@ -748,13 +868,47 @@ Function NMConfigReset( flist [ history ] ) // reset config folder
 	
 		NMConfigKill2( fname )
 		
-		CheckNMConfig( fname )
+		CheckNMConfig( fname, cleanUp = 1 )
 	
 	endfor
 	
 	UpdateNM( 1 )
 	
 End // NMConfigReset
+
+//****************************************************************
+//****************************************************************
+
+Function NMConfigVarListAdd( fname, varName )
+	String fname // config folder name
+	String varName
+	
+	String df = ConfigDF( fname )
+	
+	String vList = StrVarOrDefault( df + "C_VarList", "" )
+	
+	vList = AddListItem( varName, vList, ";", inf )
+	
+	SetNMstr( df + "C_VarList", vList )
+	
+End // NMConfigVarListAdd
+
+//****************************************************************
+//****************************************************************
+
+Function NMConfigWaveListAdd( fname, wName )
+	String fname // config folder name
+	String wName // wave name
+	
+	String df = ConfigDF( fname )
+	
+	String vList = StrVarOrDefault( df + "C_WaveList", "" )
+	
+	vList = AddListItem( wName, vList, ";", inf )
+	
+	SetNMstr( df + "C_WaveList", vList )
+	
+End // NMConfigWaveListAdd
 
 //****************************************************************
 //****************************************************************
@@ -1414,149 +1568,6 @@ Function NMConfigEdit2Vars( fname ) // save table values to config vars
 	endfor
 	
 End // NMConfigEdit2Vars
-
-//****************************************************************
-//****************************************************************
-
-Function NMConfigListReset( fname )
-	String fname // config folder name
-
-	String df = ConfigDF( fname )
-	
-	SetNMstr( df + "C_VarList", "" )
-	SetNMstr( df + "C_WaveList", "" )
-
-End // NMConfigListReset
-
-//****************************************************************
-//****************************************************************
-
-Function NMConfigVarListAdd( fname, varName )
-	String fname // config folder name
-	String varName
-	
-	String df = ConfigDF( fname )
-	
-	String vList = StrVarOrDefault( df + "C_VarList", "" )
-	
-	vList = AddListItem( varName, vList, ";", inf )
-	
-	SetNMstr( df + "C_VarList", vList )
-	
-End // NMConfigVarListAdd
-
-//****************************************************************
-//****************************************************************
-
-Function NMConfigWaveListAdd( fname, wName )
-	String fname // config folder name
-	String wName // wave name
-	
-	String df = ConfigDF( fname )
-	
-	String vList = StrVarOrDefault( df + "C_WaveList", "" )
-	
-	vList = AddListItem( wName, vList, ";", inf )
-	
-	SetNMstr( df + "C_WaveList", vList )
-	
-End // NMConfigWaveListAdd
-
-//****************************************************************
-//****************************************************************
-
-Function NMConfigCleanUp( fname )
-	String fname // config folder name
-	
-	Variable icnt, changeDF
-	String vList, vName
-	
-	String cdf = ConfigDF( fname )
-	String pdf = NMPackageDF( fname )
-	String saveDF = GetDataFolder( 1 )
-	
-	if ( DataFolderExists( cdf ) == 0 )
-		return -1
-	endif
-	
-	String varList = StrVarOrDefault( cdf + "C_VarList", "" )
-	String wList = StrVarOrDefault( cdf + "C_WaveList", "" )
-	
-	SetDataFolder $cdf
-	
-	vList = VariableList( "*", ";", 4 )
-	vList = RemoveFromList( varList, vList )
-	
-	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
-	
-		vName = StringFromList( icnt, vList )
-		
-		KillVariables /Z $cdf + vName
-		
-		KillVariables /Z $cdf + "D_" + vName
-		KillVariables /Z $cdf + "T_" + vName
-		
-		if ( DataFolderExists( pdf ) == 1 )
-			KillVariables /Z $pdf + vName
-			//Print "Killed variable " + pdf + vName
-		endif
-		
-	endfor
-	
-	vList = StringList( "*", ";" )
-	vList = RemoveFromList( varList, vList )
-	vList = RemoveFromList( "FileType", vList )
-	
-	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
-	
-		vName = StringFromList( icnt, vList )
-		
-		if ( StringMatch( vName[ 0, 1 ], "C_" ) == 1 )
-			continue
-		endif
-		
-		if ( StringMatch( vName[ 0, 1 ], "D_" ) == 1 )
-			continue
-		endif
-		
-		if ( StringMatch( vName[ 0, 1 ], "T_" ) == 1 )
-			continue
-		endif
-		
-		KillStrings /Z $cdf + vName
-		
-		KillVariables /Z $cdf + "D_" + vName
-		KillVariables /Z $cdf + "T_" + vName
-		
-		if ( DataFolderExists( pdf ) == 1 )
-			KillStrings /Z $pdf + vName
-			//Print "Killed string " + pdf + vName
-		endif
-		
-	endfor
-	
-	vList = WaveList( "*", ";", "" )
-	vList = RemoveFromList( wList, vList )
-	
-	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
-	
-		vName = StringFromList( icnt, vList )
-		
-		KillWaves /Z $cdf + vName
-		
-		if ( DataFolderExists( pdf ) == 1 )
-			KillWaves /Z $pdf + vName
-		endif
-		
-		//Print "Killed wave " + cdf + vName
-		
-	endfor
-
-	SetDataFolder $saveDf
-
-	return 0
-	
-End // NMConfigCleanUp
 
 //****************************************************************
 //****************************************************************

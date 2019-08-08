@@ -146,6 +146,10 @@ End // NMClampNotesCheck
 //****************************************************************
 
 Function NMClampNotesConfigs() // auto run via NM Package function
+
+	String cdf = ConfigDF( "ClampNotes" )
+
+	SetNMvar( cdf + "C_NoCleanUp", 1 )
 	
 	NMClampNotesCheck()
 
