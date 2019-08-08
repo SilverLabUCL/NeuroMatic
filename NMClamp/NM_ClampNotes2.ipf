@@ -192,7 +192,7 @@ Function NMNotesAddPrompt( df, typeHFP )
 	String typeHFP // "H" for Header, "F" for File, "P" for Progress button
 	
 	String title, varName = "", varName2, typeNS = "numeric", units = "", description = ""
-	Variable askValue = 1, numValue = NaN
+	Variable numValue = NaN
 	String strValue = "", typeExists, psList
 	
 	if ( !DataFolderExists( df ) )
@@ -214,7 +214,6 @@ Function NMNotesAddPrompt( df, typeHFP )
 		case "F": // file
 			title = "NM Clamp Notes : Add File Parameter"
 			typeNS = "numeric"
-			askValue = 0 // file values are set manually
 			break
 		case "P": // Progress button
 			title = "NM Clamp Notes : Add Progress Button Note"
@@ -249,14 +248,10 @@ Function NMNotesAddPrompt( df, typeHFP )
 			return -1
 	endswitch
 	
-	if ( askValue )
-		if ( StringMatch( typeNS, "numeric" ) )
-			DoPrompt title, numValue, units, description
-		else
-			DoPrompt title, strValue, units, description
-		endif
+	if ( StringMatch( typeNS, "numeric" ) )
+		DoPrompt title, numValue, units, description
 	else
-		DoPrompt title, units, description
+		DoPrompt title, strValue, description // string values do not have units
 	endif
 	
 	if ( V_flag == 1 )
@@ -398,7 +393,7 @@ Function NMNotesEditPrompt( df, varName )
 	String varName
 	
 	Variable numValue
-	String strValue, units, description
+	String strValue, units, description, title
 	
 	if ( strlen( varName ) == 0 )
 		return -1
@@ -410,18 +405,26 @@ Function NMNotesEditPrompt( df, varName )
 	
 	String varName2 = "T_" + varName // units
 	String varName3 = "D_" + varName // description
-	String title = "NM Clamp Notes Edit : " + varName[ 2, inf ]
 	String typeNS = NMClampNotesTypeNS( df, varName )
 	String typeHFP = varName[ 0, 1 ] // prefix
 	
+	title = "NM Clamp "
+	
 	strswitch( typeHFP )
-		case "H_": // header
-		case "F_": // file
-		case "P_": // Progress button
+		case "H_":
+			title += "Header Notes : "
+			break
+		case "F_":
+			title += "File Notes : "
+			break
+		case "P_":
+			title += "Progress Notes : "
 			break
 		default:
 			return -1
 	endswitch
+	
+	title += varName[ 2, inf ]
 	
 	Prompt numValue "enter value of " + varName[ 2, inf ] + ":"
 	Prompt strValue "enter value of " + varName[ 2, inf ] + ":"
@@ -447,7 +450,7 @@ Function NMNotesEditPrompt( df, varName )
 	
 		strValue = StrVarOrDefault( df + varName, "" )
 		
-		DoPrompt title, strValue, description
+		DoPrompt title, strValue, description // string values do not have units
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
