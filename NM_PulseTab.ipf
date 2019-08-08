@@ -745,12 +745,14 @@ Function NMPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	Variable numWaves = NMPulseVar( "NumWaves" )
 	Variable TTL = NMPulseVar( "TTL" )
 	String sf = NMPulseSubfolder()
+	String timeUnits = NMPulseStr( "Xunits" )
+	String ampUnits = NMPulseStr( "Yunits" )
 	
 	STRUCT NMPulseLBWaves lb
 	
 	NMPulseTabLBWavesDefault( lb )
 	
-	NMPulseLB2Event( row, col, event, lb, numWaves = numWaves, TTL = TTL )
+	NMPulseLB2Event( row, col, event, lb, numWaves=numWaves, TTL=TTL, timeUnits=timeUnits, ampUnits=ampUnits )
 	
 	NMPulseUpdate()
 	

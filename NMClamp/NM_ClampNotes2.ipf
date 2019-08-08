@@ -474,6 +474,37 @@ End // NMNotesEditPrompt
 //****************************************************************
 //****************************************************************
 
+Function /S NMNotesProgressButtonList( [ removePrefix ] )
+	Variable removePrefix
+
+	Variable icnt
+	String varName, buttonText, psList2 = ""
+	
+	String df = NMNotesDF
+	String psList = NMNotesVarList( df, "P_", "string" )
+	
+	for ( icnt = 0 ; icnt < ItemsInList( psList ) ; icnt += 1 )
+	
+		varName = StringFromList( icnt, psList )
+		buttonText = StrVarOrDefault( df + varName, "" )
+		
+		if ( strlen( buttonText ) > 0 )
+			psList2 += varName + ";"
+		endif
+		
+	endfor
+	
+	if ( removePrefix )
+		return ReplaceString( "P_", psList2, "" )
+	else
+		return psList2
+	endif
+
+End // NMNotesProgressButtonList
+
+//****************************************************************
+//****************************************************************
+
 Function NMNotesProgressPopup( ctrlName ) : ButtonControl
 	String ctrlName
 	

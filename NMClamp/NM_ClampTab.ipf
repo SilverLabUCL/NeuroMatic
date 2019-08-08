@@ -762,8 +762,9 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	NMClampPulseLBWavesDefault( lb )
 	
 	String sdf = StimDF()
-	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
 	Variable numWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
+	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
+	String ampUnits = StimConfigStr( sdf, pPrefix, "units" )
 	
 	if ( strlen( lb.pcwName ) == 0 )
 	
@@ -781,7 +782,7 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	
 	configNum = NumVarOrDefault( lb.pcvName, 0 )
 	
-	pvar = NMPulseLB2Event( row, col, event, lb, pdf=NMClampTabDF, numWaves = numWaves, TTL = TTL )
+	pvar = NMPulseLB2Event( row, col, event, lb, pdf=NMClampTabDF, numWaves=numWaves, TTL=TTL, timeUnits=NMXunits, ampUnits=ampUnits )
 	
 	if ( pvar > 0 )
 		NMPulseLB1Update( lb )

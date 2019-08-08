@@ -6680,7 +6680,7 @@ End // NMPulseLB2Update
 //****************************************************************
 //****************************************************************
 
-Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
+Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL, ampUnits, timeUnits ] )
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code // 2-mouse up, 7-end edit
@@ -6688,11 +6688,12 @@ Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
 	Variable numWaves
 	STRUCT NMPulseLBWaves &lb
 	Variable TTL
+	String ampUnits, timeUnits
 	
 	Variable configNum, value, icnt, numRows, savePulse
 	Variable fix2positive
 	Variable Fratio, KF, F1, deltaF
-	String varName, valueStr, paramList, pstr
+	String varName, valueStr, paramList, pstr, units, title
 	
 	if ( paramIsDefault( pdf ) )
 		pdf = NMPulseDF
@@ -6700,6 +6701,14 @@ Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
 	
 	if ( ParamIsDefault( numWaves ) )
 		numWaves = 1
+	endif
+	
+	if ( paramIsDefault( ampUnits ) )
+		ampUnits = ""
+	endif
+	
+	if ( paramIsDefault( timeUnits ) )
+		timeUnits = ""
 	endif
 	
 	if ( !WaveExists( $lb.pcwName ) )
@@ -6750,6 +6759,18 @@ Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
 			break
 	endswitch
 	
+	units = zAmpOrTime( varName )
+	
+	if ( StringMatch( units, "amp" ) )
+		units = ampUnits
+	elseif ( StringMatch( units, "time" ) )
+		units = timeUnits
+	else
+		units = ""
+	endif
+	
+	title = "Edit Pulse Config #" + num2istr( configNum ) + " : " + varName
+	
 	if ( ( event == 2 ) && ( row > 0 ) && ( col == 1 ) )
 	
 		pstr = params[ row ][ 1 ]
@@ -6776,8 +6797,13 @@ Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
 			
 		else
 		
-			Prompt value, "enter new " + varName + " value:"
-			DoPrompt "Edit Pulse Config : " + varName, value
+			if ( strlen( units ) > 0 )
+				Prompt value, "enter " + varName + " value (" + units + "):"
+			else
+				Prompt value, "enter " + varName + " value:"
+			endif
+			
+			DoPrompt title, value
 	
 			if ( V_flag == 0 )
 			
@@ -6805,7 +6831,7 @@ Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL ] )
 	
 		paramList = params[ row ][ 2 ]
 		
-		pstr = NMPulsePromptDSCG( configNum, varName, paramList, fix2positive=fix2positive )
+		pstr = NMPulsePromptDSCG( configNum, varName, paramList, fix2positive=fix2positive, units=units )
 		
 		if ( !StringMatch( pstr, "CANCEL" ) )
 			params[ row ][ 2 ] = pstr
@@ -6870,14 +6896,19 @@ End // NMPulseLB2Event
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive ] )
+Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive, units ] )
 	Variable configNum
 	String varName
 	String paramList
 	Variable fix2positive
+	String units
 	
 	Variable dscgValue, dscgValue2, fixPolarity
-	String dscg, dscgList, pstr
+	String dscg, dscgList, pstr, title
+	
+	if ( paramIsDefault( units ) )
+		units = ""
+	endif
 	
 	strswitch( paramList[ 0, 1 ] )
 		case "de":
@@ -6913,14 +6944,20 @@ Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive ] )
 	else
 		fixPolarity = 1
 	endif
+	
+	title = "Edit Pulse Config #" + num2istr( configNum ) + " : " + varName
 
 	Prompt dscg, "increment type:", popup dscgList
 	Prompt fixPolarity, "fix polarity of " + varName + " parameter?", popup "no;yes;"
 	
-	DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscg
+	DoPrompt title, dscg
 	
 	if ( V_flag == 1 )
 		return "CANCEL"
+	endif
+	
+	if ( strlen( units ) > 0 )
+		units = " (" + units + ")"
 	endif
 	
 	strswitch( dscg )
@@ -6934,13 +6971,13 @@ Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive ] )
 		case "stdv":
 		case "cv":
 		
-			Prompt dscgValue, dscg + " value"
+			Prompt dscgValue, "enter " + dscg + " value" + units + ":"
 		
 			if ( fix2positive )
-				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
+				DoPrompt title, dscgValue
 				fixPolarity = 2
 			else
-				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue, fixPolarity
+				DoPrompt title, dscgValue, fixPolarity
 			endif
 			
 			if ( V_flag == 1 )
@@ -6957,14 +6994,14 @@ Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive ] )
 			
 		case "gamma":
 		
-			Prompt dscgValue, "gamma A"
+			Prompt dscgValue, "enter gamma A value:"
 			
 			pstr = ""
 			
 			if ( fix2positive )
-				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
+				DoPrompt title, dscgValue
 			else
-				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
+				DoPrompt title, dscgValue
 			endif
 			
 			if ( V_flag == 1 )
@@ -6977,13 +7014,13 @@ Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive ] )
 				dscgValue2 = 1
 			endif
 			
-			Prompt dscgValue2, "gamma B"
+			Prompt dscgValue2, "enter gamma B value" + units + ":"
 			
 			if ( fix2positive )
-				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2
+				DoPrompt title, dscgValue2
 				fixPolarity = 2
 			else
-				DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2, fixPolarity
+				DoPrompt title, dscgValue2, fixPolarity
 			endif
 			
 			if ( V_flag == 1 )
@@ -8922,6 +8959,44 @@ Static Function zSaveToWave1Dp( s, varName, value )
 	endif
 	
 End // zSaveToWave1Dp
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S zAmpOrTime( varName )
+	String varName
+	
+	strswitch( varName )
+		case "amp":
+		case "amp1":
+		case "amp2":
+		case "amp3":
+		case "amp4":
+			return "amp"
+
+		case "onset":
+		case "width":
+		case "tau":
+		case "tau1":
+		case "tau2":
+		case "tau3":
+		case "tau4":
+		case "tauRise":
+		case "period":
+		case "periodBgn":
+		case "periodEnd":
+		case "interval":
+		case "refrac":
+		case "tbgn":
+		case "tend":
+		case "gammaB":
+			return "time"
+
+	endswitch
+	
+	return ""
+	
+End // zAmpOrTime
 
 //****************************************************************
 //****************************************************************
