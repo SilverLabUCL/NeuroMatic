@@ -49,7 +49,7 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0h"
+StrConstant NMVersionStr = "3.0i"
 Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
 Static StrConstant NMRights = "Copyright (c) 2019 Jason Rothman"
 Static StrConstant NMEmail = "Jason@ThinkRandom.com"
@@ -75,7 +75,7 @@ Static Constant NMAutoStart = 1 // auto start NM ( 0 ) no ( 1 ) yes
 
 Static Constant NMHideProcedureFiles = 1
 
-Static Constant MakeNewPanelWhenChangingFolderOrWavePrefix = 0
+Static Constant MakeNMPanelOnFolderChange = 0
 // JSR: this parameter is for a bug fix, when set to 1. cannot remember what bug is. however this fix causes annoying flashing of NM panel.
 // 7 Aug 2019, setting to 0. perhaps with latest Igor version this is not necessary.
 
@@ -575,7 +575,7 @@ Function UpdateNM( forceMakeNewPanel )
 	
 	if ( WinType( NMPanelName ) == 7 )
 	
-		if ( forceMakeNewPanel && MakeNewPanelWhenChangingFolderOrWavePrefix )
+		if ( forceMakeNewPanel && MakeNMPanelOnFolderChange )
 			MakeNMPanel()
 		else
 			UpdateNMPanel( 1 )
