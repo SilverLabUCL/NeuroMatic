@@ -411,22 +411,26 @@ Function /S ClampConfigBoard()
 	
 	Variable driver = NumVarOrDefault( cdf+"BoardDriver", 0 )
 	
-	Execute /Z "NidaqBoardList()"
+	if ( exists( "NidaqBoardList" ) == 6 )
 	
-	if ( V_flag == 0 )
+		Execute /Z "NidaqBoardList()"
 	
-		blist = StrVarOrDefault( cdf+"BoardList", "" )
+		if ( V_flag == 0 )
 		
-		if ( ItemsInList( blist ) > 0 )
-			demoMode = 0
-			board = "NIDAQ"
-			driver = ClampBoardDriverPrompt()
-			Print "NeuroMatic configured for NIDAQ acquisition"
+			blist = StrVarOrDefault( cdf+"BoardList", "" )
+			
+			if ( ItemsInList( blist ) > 0 )
+				demoMode = 0
+				board = "NIDAQ"
+				driver = ClampBoardDriverPrompt()
+				Print "NeuroMatic configured for NIDAQ acquisition"
+			endif
+			
 		endif
 		
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "ITC16stopacq" ) == 4 ) )
 	
 		Execute /Z "ITC16stopacq"
 		
@@ -440,7 +444,7 @@ Function /S ClampConfigBoard()
 		
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "ITC18stopacq" ) == 4 ) )
 		
 		Execute /Z "ITC18stopacq"
 
@@ -454,7 +458,33 @@ Function /S ClampConfigBoard()
 	
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "NM_LIH_InitInterfaceName" ) == 6 ) )
+		
+		Execute /Z "NM_LIH_InitInterfaceName()"
+		
+		if ( V_flag == 0 )
+		
+			blist = StrVarOrDefault( cdf+"BoardList", "" )
+			
+			if ( ItemsInList( blist ) > 0 )
+				demoMode = 0
+				board = blist
+				Print "NeuroMatic configured for " + board + " acquisition"
+			endif
+			
+		endif
+
+		if ( V_flag == 0 )
+			demoMode = 0
+			blist = "ITC18"
+			board = "ITC18"
+			driver = 0
+			Print "NeuroMatic configured for ITC18 acquisition"
+		endif
+	
+	endif
+	
+	if ( ( strlen( blist ) == 0 ) && ( exists( "NMAlembicBoardList" ) == 6 ) )
 	
 		Execute /Z "NMAlembicBoardList()"
 		
@@ -473,7 +503,7 @@ Function /S ClampConfigBoard()
 	
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "NMClampDemoBoardList" ) == 6 ) )
 	
 		Execute /Z "NMClampDemoBoardList()"
 		

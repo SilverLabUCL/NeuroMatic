@@ -221,20 +221,21 @@ Function ClampTabMake()
 	
 	DoWindow /F $NMPanelName
 	
-	x0 = 20
+	x0 = 15
 	y0 = NMPanelTabY + 40
 	yinc = 30
 	
 	NMColorList2RGB( NMWinColor, c )
 	NMColorList2RGB( NMWinColor2, c2 )
 	
-	GroupBox CT0_StimGrp, title = "", pos={x0,y0-10}, size={260,70}, labelBack=(c2.r,c2.g,c2.b), fsize=fs, win=$NMPanelName
+	GroupBox CT0_StimGrp, title = "", pos={x0,y0-10}, size={265,70}, labelBack=(c2.r,c2.g,c2.b), fsize=fs, win=$NMPanelName
 	
-	PopupMenu CT0_StimList, pos={x0+240,y0}, size={0,0}, bodyWidth=220, mode=1, value=" ", proc=StimListPopup, fsize=fs, win=$NMPanelName
+	PopupMenu CT0_StimList, pos={x0+235,y0}, size={0,0}, bodyWidth=205, mode=1, value=" ", proc=StimListPopup, fsize=fs, win=$NMPanelName
 	
-	Button CT0_StartPreview, title="Preview", pos={x0+35,y0+yinc}, size={60,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
-	Button CT0_StartRecord, title="Record", pos={x0+110,y0+yinc}, size={60,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
-	Button CT0_Note, title="Note", pos={x0+185,y0+yinc}, size={40,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
+	Button CT0_StartPreview, title="Preview", pos={x0+15,y0+yinc}, size={60,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
+	Button CT0_StartRecord, title="Record", pos={x0+85,y0+yinc}, size={60,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
+	Button CT0_Note, title="Note", pos={x0+155,y0+yinc}, size={40,20}, proc=ClampButton, fsize=fs, win=$NMPanelName
+	Button CT0_FileNewCell, title="Cell+", pos={x0+205,y0+yinc}, size={45,20}, proc=FileTabButton, fsize=fs, win=$NMPanelName
 	
 	//SetVariable CT0_ErrorMssg, title=" ", pos={x0,587}, size={260,50}, value=$cdf+ "ClampErrorStr", fsize=fs, win=$NMPanelName
 	
