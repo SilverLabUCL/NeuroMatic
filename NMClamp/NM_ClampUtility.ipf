@@ -70,7 +70,7 @@ End // ClampUtilityList
 
 Function /S ClampUtilityPreList()
 
-	return "ReadTemp;TModeCheck;TcapRead;TfreqRead;"
+	return "ReadTemp;TModeCheck;MultiClampCmRs;" // TcapRead;TfreqRead;
 	
 End // ClampUtilityPreList
 
@@ -246,7 +246,6 @@ End // OnlineAvgConfig
 //	ReadTemp()
 //	read temperature from ADC input (read once)
 //
-//
 //****************************************************************
 
 Function ReadTemp(mode)
@@ -284,7 +283,7 @@ Function ReadTemp(mode)
 	
 	telValue = telValue * slope + offset
 	
-	NMHistory(NMCR + "Temperature: " + num2str(telValue))
+	NMHistory("Temperature: " + num2str(telValue))
 	
 	NMNotesFileVar("F_Temp", telValue)
 	
@@ -321,7 +320,6 @@ End // ReadTempConfig
 //
 //	TempRead()
 //	read temperature from ADC input (saves to a wave)
-//
 //
 //****************************************************************
 
@@ -394,6 +392,73 @@ Function TempRead(mode)
 	NMNotesFileVar("F_Temp", V_avg)
 	
 End // TempRead
+
+//****************************************************************
+//
+//	MultiClampCmRs()
+//	read MultiClamp Cm and Rs
+//
+//****************************************************************
+
+Function MultiClampCmRs( mode )
+	Variable mode // see definition at top
+	
+	Variable cm, rs
+	
+	switch( mode )
+	
+		case 0:
+			break
+	
+		case 1:
+			MultiClampCmRsConfig()
+			break
+	
+		case 2:
+		case -1:
+		default:
+			return 0
+			
+	endswitch
+	
+	Variable chan = NumVarOrDefault( NMClampDF + "MultiClampCmRs", 0 )
+	
+	if ( ( chan <= 0 ) || ( chan > 2 ) )
+		return -1
+	endif
+	
+	cm = NMMultiClampValue( chan, "MembraneCap" ) // F
+	rs = NMMultiClampValue( chan, "SeriesResistance" ) // Ohms
+	
+	cm *= 1e12 // pF
+	rs *= 1e-6 // MOhms
+	
+	NMHistory( "Cm: " + num2str( cm ) + " pF" )
+	NMHistory( "Rs: " + num2str( rs ) + " MOhms" )
+	
+	NMNotesFileVar( "F_Cm", cm )
+	NMNotesFileVar( "F_Rs", rs )
+	
+End // MultiClampCmRs
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function MultiClampCmRsConfig()
+	
+	Variable chan = NumVarOrDefault( NMClampDF + "MultiClampCmRs", 0 )
+	
+	Prompt chan, "select MultiClamp channel:", popup "1;2;"
+	DoPrompt "Read MultiClamp Cm and Rs", chan
+	
+	if (V_flag == 1)
+		return 0 // cancel
+	endif
+	
+	SetNMvar( NMClampDF + "MultiClampCmRs", chan )
+
+End // MultiClampCmRs
 
 //****************************************************************
 //
