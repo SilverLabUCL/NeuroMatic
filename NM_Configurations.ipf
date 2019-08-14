@@ -565,7 +565,7 @@ Function NMConfigOpen( file [ history, quiet ] )
 	Variable quiet
 	
 	Variable icnt, dialogue = 0, error = -1
-	String flist, fname, folder, odf, cdf, vlist = "", df = ConfigDF( "" )
+	String flist, fname, folder, odf, ndf, cdf, vlist = "", df = ConfigDF( "" )
 	
 	Variable nmPrefix = 0 // leave folder name as is
 	
@@ -595,6 +595,18 @@ Function NMConfigOpen( file [ history, quiet ] )
 		for ( icnt = 0; icnt < ItemsInList( flist ); icnt += 1 )
 		
 			fname = StringFromList( icnt, flist )
+			
+			if ( StringMatch( fname, "Notes" ) )
+				
+				odf = folder + ":Notes"
+				ndf = folder + ":ClampNotes"
+				
+				if ( !DataFolderExists( folder + ":ClampNotes" ) )
+					fname = "ClampNotes"
+					RenameDataFolder $odf, $fname
+				endif
+				
+			endif
 			
 			odf = folder + ":" + fname
 			cdf = df + fname

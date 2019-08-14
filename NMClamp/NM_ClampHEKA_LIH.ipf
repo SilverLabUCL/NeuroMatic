@@ -19,7 +19,7 @@ End
 
 Function NM_LIH_InitInterface()
 
-	Variable icnt, error, boardNum
+	Variable icnt, error = -1, boardNum
 	String boardName, errMsg = ""
 	
 	String boardNumList = NM_LIH_InterfaceNumList()
@@ -28,7 +28,7 @@ Function NM_LIH_InitInterface()
 		
 		boardNum = str2num( StringFromList( icnt, boardNumList ) )
 		
-		error = LIH_InitInterface( errMsg, boardNum )
+		//error = LIH_InitInterface( errMsg, boardNum )
 		
 		if ( error == 0 )
 			return boardNum
