@@ -202,8 +202,8 @@ Function NMNotesAddPrompt( df, typeHFP )
 	Prompt varName "enter parameter name:"
 	Prompt typeNS "select parameter type:", popup "numeric;text;"
 	Prompt numValue "enter parameter value:"
-	Prompt units "optional units:"
-	Prompt description "optional description:"
+	Prompt units "units:"
+	Prompt description "description:"
 	Prompt strValue "enter parameter text:"
 	
 	strswitch( typeHFP )
@@ -428,8 +428,8 @@ Function NMNotesEditPrompt( df, varName )
 	
 	Prompt numValue "enter value of " + varName[ 2, inf ] + ":"
 	Prompt strValue "enter value of " + varName[ 2, inf ] + ":"
-	Prompt units "optional units:"
-	Prompt description "optional description:"
+	Prompt units "units:"
+	Prompt description "description:"
 	
 	units = StrVarOrDefault( df + varName2, "" )
 	description = StrVarOrDefault( df + varName3, "" )

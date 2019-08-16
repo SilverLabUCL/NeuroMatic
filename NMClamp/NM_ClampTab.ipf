@@ -42,8 +42,8 @@
 StrConstant NMClampTabDF = "root:Packages:NeuroMatic:Clamp:TabObjects:"
 
 Static Constant NumInsOuts = 7
-Static Constant PulseEditByPrompt = 1 // Stim Pulse listbox2 edit by prompt
-Static Constant NotesEditByPrompt = 1 // Notes tab listbox edit by prompt
+Static Constant PulseEditByPrompt = 1 // Stim Pulse listbox2 edit ( 0 ) via listbox ( 1 ) via user prompts
+Static Constant NotesEditByPrompt = 1 // Notes tab listbox edit ( 0 ) via listbox ( 1 ) via user prompts
 
 //****************************************************************
 //****************************************************************
@@ -659,6 +659,13 @@ Function NMClampPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable TTL
 	String trainStr, titleStr, pstr = ""
@@ -755,6 +762,13 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable TTL, configNum, pvar
 	
@@ -3305,6 +3319,13 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable icnt
 	String killAlert, varName, varName2, typeHFP = "", typeNS = ""
