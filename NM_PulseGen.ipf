@@ -6683,7 +6683,14 @@ End // NMPulseLB2Update
 Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL, ampUnits, timeUnits ] )
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
-	Variable event // event code // 2-mouse up, 7-end edit
+	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	String pdf
 	Variable numWaves
 	STRUCT NMPulseLBWaves &lb
