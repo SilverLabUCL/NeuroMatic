@@ -28,7 +28,7 @@ Function NM_LIH_InitInterface()
 		
 		boardNum = str2num( StringFromList( icnt, boardNumList ) )
 		
-		error = LIH_InitInterface( errMsg, boardNum )
+		//error = LIH_InitInterface( errMsg, boardNum )
 		
 		if ( error == 0 )
 			return boardNum
