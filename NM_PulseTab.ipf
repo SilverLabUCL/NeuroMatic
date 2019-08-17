@@ -31,7 +31,7 @@ Static Constant DeltaxDefault = 0.1
 Static Constant WaveLengthDefault = 100
 Static StrConstant WavePrefixDefault = "Pulse"
 Static StrConstant ConfigWaveName = "PulseParamLists"
-Static Constant EditByPrompt = 1 // Listbox2 edit by prompt
+Static Constant EditByPrompt = 1 // edit Listbox2 ( 0 ) via listbox ( 1 ) via user prompts
 
 //****************************************************************
 //****************************************************************
@@ -702,6 +702,13 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	String paramList, ood, titleStr, trainStr
 	String sf = NMPulseSubfolder()
@@ -741,6 +748,13 @@ Function NMPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable numWaves = NMPulseVar( "NumWaves" )
 	Variable TTL = NMPulseVar( "TTL" )

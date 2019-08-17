@@ -110,9 +110,11 @@ End // NMTabPrefix_Clamp
 
 Function NMClampTab( enable )
 	Variable enable // ( 0 ) disable ( 1 ) enable
+	
+	Variable clampExists = DataFolderExists( NMStimsDF )
 
 	if ( enable == 1 )
-	
+
 		CheckNMPackage( "Stats", 1 ) // necessary for auto-stats
 		CheckNMPackage( "Spike", 1 ) // necessary for auto-spike
 		CheckNMPackage( "Clamp", 1 ) // create clamp global variables
@@ -131,6 +133,10 @@ Function NMClampTab( enable )
 		ClampAutoBackupNM_Start()
 		
 		NMGroupsSet( on = 1 )
+		
+		if ( !clampExists )
+			NMNotesClearFileVars() // clear file note vars at start
+		endif
 		
 	else
 	
@@ -469,17 +475,10 @@ Function /S ClampConfigBoard()
 			if ( ItemsInList( blist ) > 0 )
 				demoMode = 0
 				board = blist
+				driver = 0
 				Print "NeuroMatic configured for " + board + " acquisition"
 			endif
 			
-		endif
-
-		if ( V_flag == 0 )
-			demoMode = 0
-			blist = "ITC18"
-			board = "ITC18"
-			driver = 0
-			Print "NeuroMatic configured for ITC18 acquisition"
 		endif
 	
 	endif

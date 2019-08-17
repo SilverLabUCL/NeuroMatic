@@ -1770,7 +1770,14 @@ Function NMModelListbox( ctrlName, row, col, event ) : ListboxControl
 	String ctrlName // name of this control
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
-	Variable event // event code ( 4 - cell selection, 6 - begin cell edit, 7 - finish cell edit )
+	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable value
 	String varName, valueStr, wName, df = NMModelDF()

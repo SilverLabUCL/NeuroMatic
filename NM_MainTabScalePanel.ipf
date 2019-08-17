@@ -842,6 +842,13 @@ Function NMScalePanelListBoxInput( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable value
 	String scaleMode, dimLabel, op, opList, valueStr, wName
