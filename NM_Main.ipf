@@ -107,6 +107,8 @@ Static Constant NMKillWinNoDialog = 1 // kill window ( 0 ) with dialog ( 1 ) wit
 
 Static Constant NMHistogramPaddingBins = 4 // extra bins on each side of histogram ( auto bin sizing )
 
+Static Constant ConfigsEditByPrompt = 0 // edit configs ( 0 ) directly via listbox ( 1 ) by user prompts
+
 Static StrConstant NMDeprecationIPF = "NM_Deprecated.ipf"
 
 //****************************************************************
@@ -1170,6 +1172,10 @@ Function NMVarGet( varName )
 			defaultVal = NMHistogramPaddingBins
 			break
 			
+		case "ConfigsEditByPrompt":
+			defaultVal = ConfigsEditByPrompt
+			break
+			
 		default:
 			NMDoAlert( thisfxn + " Error: no variable called " + NMQuotes( varName ) )
 			return Nan
@@ -1332,6 +1338,8 @@ Function NeuroMaticConfigs()
 	NeuroMaticConfigVar( "ChanGraphTraceLineSize", "default channel graph trace line size", "" )
 	
 	NeuroMaticConfigVar( "HistogramPaddingBins", "extra bins on each side of histogram (auto bin sizing)", "" )
+	
+	NeuroMaticConfigVar( "ConfigsEditByPrompt", "edit configs via prompts", "boolean" )
 	
 	NeuroMaticConfigStr( "D3D_UnpackWavePrefix", "wave prefix of unpacked D3D data file", "" )
 			

@@ -31,7 +31,6 @@ Static Constant DeltaxDefault = 0.1
 Static Constant WaveLengthDefault = 100
 Static StrConstant WavePrefixDefault = "Pulse"
 Static StrConstant ConfigWaveName = "PulseParamLists"
-Static Constant EditByPrompt = 1 // edit Listbox2 ( 0 ) via listbox ( 1 ) via user prompts
 
 //****************************************************************
 //****************************************************************
@@ -345,7 +344,6 @@ Function NMPulseCheck() // declare global variables
 	
 	CheckNMvar( df + "AutoExecute", 0 )
 	CheckNMvar( df + "OverwriteMode", 1 )
-	//CheckNMvar( df + "EditByPrompt", 1 ) // NOT USED
 	CheckNMvar( df + "PromptBinomial", 1 )
 	CheckNMstr( df + "PromptTypeDSCG", "stdv" )
 	CheckNMvar( df + "PromptPlasticity", 1 )
@@ -420,9 +418,6 @@ Function NMPulseVar( varName )
 		case "OverwriteMode":
 			return NumVarOrDefault( df + varName, 1 )
 			
-		//case "EditByPrompt":
-			//return NumVarOrDefault( df + varName, 1 )
-			
 		case "PromptBinomial":
 			return NumVarOrDefault( df + varName, 1 )
 			
@@ -484,7 +479,6 @@ Function NMPulseConfigs()
 
 	NMConfigVar( "Pulse", "AutoExecute", 1, "auto compute waves after adding/editing pulses", "boolean" )
 	NMConfigVar( "Pulse", "OverwriteMode", 1, "overwrite existing waves, tables and graphs if their is a name conflict", "boolean" )
-	//NMConfigVar( "Pulse", "EditByPrompt", 1, "edit pulse listbox configs via user prompts", "boolean" )
 	NMConfigVar( "Pulse", "PromptBinomial", 1, "prompt for binomial pulses", "boolean" )
 	NMConfigVar( "Pulse", "PromptPlasticity", 1, "prompt for plasticity of pulse trains", "boolean" )
 	NMConfigStr( "Pulse", "PromptTypeDSCG", "stdv", "prompt for \"delta\" or \"stdv\" or \"cv\" or \"gamma\" of pulse parameters", "delta;stdv;cv;gamma;" )
@@ -578,6 +572,7 @@ Function NMPulseUpdate( [ stopAutoExecute ] )
 	String sf, wavePrefix
 	
 	Variable auto = NMPulseVar( "AutoExecute" )
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
 	
 	STRUCT NMPulseLBWaves lb
 
@@ -607,7 +602,7 @@ Function NMPulseUpdate( [ stopAutoExecute ] )
 	ListBox PU_params, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, selRow=-1, win=$NMPanelName
 	
 	NMPulseLB1Update( lb )
-	NMPulseLB2Update( lb, editByPrompt=EditByPrompt )
+	NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 	
 	if ( !stopAutoExecute && auto )
 		NMPulseExecute()
@@ -713,6 +708,8 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 	String paramList, ood, titleStr, trainStr
 	String sf = NMPulseSubfolder()
 	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
 	STRUCT NMPulseLBWaves lb
 	
 	NMPulseTabLBWavesDefault( lb )
@@ -734,7 +731,7 @@ Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 		
 	else
 		
-		NMPulseLB2Update( lb, editByPrompt=EditByPrompt )
+		NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 		
 	endif
 	

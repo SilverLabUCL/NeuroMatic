@@ -42,8 +42,6 @@
 StrConstant NMClampTabDF = "root:Packages:NeuroMatic:Clamp:TabObjects:"
 
 Static Constant NumInsOuts = 7
-Static Constant PulseEditByPrompt = 1 // Stim Pulse listbox2 edit ( 0 ) via listbox ( 1 ) via user prompts
-Static Constant NotesEditByPrompt = 1 // Notes tab listbox edit ( 0 ) via listbox ( 1 ) via user prompts
 
 //****************************************************************
 //****************************************************************
@@ -676,6 +674,8 @@ Function NMClampPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 	
 	Variable numWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
 	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
 	STRUCT NMPulseLBWaves lb
 	
 	NMClampPulseLBWavesDefault( lb )
@@ -706,12 +706,12 @@ Function NMClampPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
 		pstr = NMPulseLB1PromptOODE( lb, sdf )
 		NMPulseLB1OODE( lb, sdf, pstr )
 	else
-		NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
+		NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 		return 0
 	endif
 	
 	NMPulseLB1Update( lb )
-	NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
+	NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 	
 	if ( strlen( pstr ) > 0 )
 		StimWavesCheck( sdf, 1 )
@@ -781,6 +781,8 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
 	String ampUnits = StimConfigStr( sdf, pPrefix, "units" )
 	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
 	if ( strlen( lb.pcwName ) == 0 )
 	
 		if ( event == 2 )
@@ -801,7 +803,7 @@ Function NMClampPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
 	
 	if ( pvar > 0 )
 		NMPulseLB1Update( lb )
-		NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
+		NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 		StimWavesCheck( sdf, 1 )
 		PulseGraph( 0 )
 	endif
@@ -1689,6 +1691,8 @@ Function StimTabPulse( enable )
 	
 	String pPrefix = StrVarOrDefault( NMClampTabDF + "PulsePrefix", "" )
 	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
 	STRUCT NMPulseLBWaves lb
 	
 	wlist = StimPrefixListAll( sdf )
@@ -1722,7 +1726,7 @@ Function StimTabPulse( enable )
 	NMClampPulseLBWavesDefault( lb )
 	
 	NMPulseLB1Update( lb )
-	NMPulseLB2Update( lb, editByPrompt=PulseEditByPrompt )
+	NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 
 	Checkbox CT2_UseMyWaves, win=$NMPanelName, value=NumVarOrDefault( sdf + "PulseGenOff", 0 ), disable=!enable
 	
@@ -3105,6 +3109,8 @@ Function NMClampNotesWavesUpdate()
 	String varName, varName2, strValue, units, description
 	String df = NMNotesDF
 	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
 	String hnlist = NMNotesVarList( df, "H_", "numeric" )
 	String hslist = NMNotesVarList( df, "H_", "string" )
 	String fnlist = NMNotesVarList( df, "F_", "numeric" )
@@ -3124,7 +3130,7 @@ Function NMClampNotesWavesUpdate()
 	
 	NMClampNotesLBWavesDefault( lb )
 	
-	if ( NotesEditByPrompt )
+	if ( editByPrompt )
 		canedit = 0
 	else
 		canedit = 3
@@ -3332,11 +3338,13 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 	String selectStr
 	String df = NMNotesDF
 	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
 	switch( event )
 		case 2: // unclick
 			break
 		case 7: // enter
-			if ( NotesEditByPrompt )
+			if ( editByPrompt )
 				return 0 // only event = 2 allowed
 			else
 				break
@@ -3441,7 +3449,7 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 					
 			endswitch
 			
-		elseif ( NotesEditByPrompt )
+		elseif ( editByPrompt )
 		
 			if ( col > 0 )
 				NMNotesEditPrompt( df, varName )
@@ -4234,8 +4242,6 @@ Function NMClampListboxUpdate_DEPRECATED()
 	String ename = wName + "Editable"
 	
 	String pcwName = PulseConfigWaveName()
-	
-	//Variable editByPrompt = NumVarOrDefault( NMClampDF + "PulseEditByPrompt", 1 )
 	
 	if ( WaveExists( $pcwName ) )
 	

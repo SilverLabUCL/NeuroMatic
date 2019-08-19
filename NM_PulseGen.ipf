@@ -6565,7 +6565,7 @@ End // NMPulseLB1OODE
 
 Function NMPulseLB2Update( lb [ editByPrompt ] )
 	STRUCT NMPulseLBWaves &lb
-	Variable editByPrompt // ( 0 ) edit directly via listbox ( 1 ) edit by user prompts
+	Variable editByPrompt // edit configs ( 0 ) directly via listbox ( 1 ) by user prompts
 
 	Variable configNum, icnt, ipnt, jcnt, kcnt
 	Variable numParams, slen, canedit, items
