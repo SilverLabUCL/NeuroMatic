@@ -1,7 +1,7 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 #pragma version = 3.0
 #pragma hide = 1
-#pragma IgorVersion = 6.2
+#pragma IgorVersion = 6.3
 
 //****************************************************************
 //****************************************************************
