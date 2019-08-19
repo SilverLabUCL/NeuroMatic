@@ -107,7 +107,7 @@ Static Constant NMKillWinNoDialog = 1 // kill window ( 0 ) with dialog ( 1 ) wit
 
 Static Constant NMHistogramPaddingBins = 4 // extra bins on each side of histogram ( auto bin sizing )
 
-Static Constant ConfigsEditByPrompt = 0 // edit configs ( 0 ) directly via listbox ( 1 ) by user prompts
+Static Constant ConfigsEditByPrompt = 1 // edit configs ( 0 ) directly via listbox ( 1 ) by user prompts
 
 Static StrConstant NMDeprecationIPF = "NM_Deprecated.ipf"
 

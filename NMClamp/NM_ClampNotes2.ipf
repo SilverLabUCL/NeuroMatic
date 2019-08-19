@@ -39,12 +39,9 @@
 //****************************************************************
 //****************************************************************
 
-Function NMNotesEditHeader( [ df ] )
-	String df
+Function NMNotesEditHeader()
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -73,12 +70,9 @@ End // NMNotesEditHeader
 //****************************************************************
 //****************************************************************
 
-Function NMNotesBasicUpdate( [ df ] )
-	String df
+Function NMNotesBasicUpdate()
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -96,12 +90,9 @@ End // NMNotesBasicUpdate
 //****************************************************************
 //****************************************************************
 
-Function NMClampNotesCheck( [ df ] ) // auto run via NM Package function
-	String df
+Function NMClampNotesCheck() // auto run via NM Package function
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -112,30 +103,30 @@ Function NMClampNotesCheck( [ df ] ) // auto run via NM Package function
 	// Header string/numeric parameters begin with "H_"
 	
 	// NMNotesHeaderStrList = "H_Name;H_Lab;H_Title;"
-	NMNotesStrCheck( df, "H_Name", strValue="Your Name", description="Your name" )
-	NMNotesStrCheck( df, "H_Lab", strValue="Your Lab/Address", description="Your lab/address" )
-	NMNotesStrCheck( df, "H_Title", strValue="Your Experiment Title", description="Your experiment title" )
+	NMNotesStrCheck( "H_Name", strValue="Your Name", description="Your name" )
+	NMNotesStrCheck( "H_Lab", strValue="Your Lab/Address", description="Your lab/address" )
+	NMNotesStrCheck( "H_Title", strValue="Your Experiment Title", description="Your experiment title" )
 	
-	//NMNotesVarCheck( df, "H_Age", numValue=Nan, units="days", description="Age" )
+	//NMNotesVarCheck( "H_Age", numValue=Nan, units="days", description="Age" )
 	
 	// File string/numeric parameters begin with "F_"
 	
 	// NMNotesFileStrList = "F_Folder;F_Stim;F_Tbgn;F_Tend;"
-	NMNotesStrCheck( df, "F_Folder", strValue="", description="NM data folder" )
-	NMNotesStrCheck( df, "F_Stim", strValue="", description="NM stim" )
-	NMNotesStrCheck( df, "F_Tbgn", strValue="", description="Acquisition start time" )
-	NMNotesStrCheck( df, "F_Tend", strValue="", description="Acquisition end time" )
+	NMNotesStrCheck( "F_Folder", strValue="", description="NM data folder" )
+	NMNotesStrCheck( "F_Stim", strValue="", description="NM stim" )
+	NMNotesStrCheck( "F_Tbgn", strValue="", description="Acquisition start time" )
+	NMNotesStrCheck( "F_Tend", strValue="", description="Acquisition end time" )
 	
-	//NMNotesStrCheck( df, "F_Drug", strValue="", description="Experimental drug" )
+	//NMNotesStrCheck( "F_Drug", strValue="", description="Experimental drug" )
 	
-	NMNotesVarCheck( df, "F_Temp", numValue=Nan, units="°C", description="temperature" )
-	NMNotesVarCheck( df, "F_Relectrode", numValue=Nan, units="MOhms", description="electrode resistance, computed via Rstep()" )
-	NMNotesVarCheck( df, "F_Rs", numValue=Nan, units="MOhms", description="electrode series resistance" )
-	NMNotesVarCheck( df, "F_Cm", numValue=Nan, units="pF", description="cell capacitance" )
+	NMNotesVarCheck( "F_Temp", numValue=Nan, units="°C", description="temperature" )
+	NMNotesVarCheck( "F_Relectrode", numValue=Nan, units="MOhms", description="electrode resistance, computed via Rstep()" )
+	NMNotesVarCheck( "F_Rs", numValue=Nan, units="MOhms", description="electrode series resistance" )
+	NMNotesVarCheck( "F_Cm", numValue=Nan, units="pF", description="cell capacitance" )
 	
 	// Progress Button string parameters begin with "P_"
 	
-	//NMNotesStrCheck( df, "P_TTX", strValue="Added 100 nM TTX" )
+	//NMNotesStrCheck( "P_TTX", strValue="Added 100 nM TTX" )
 	
 	return 0
 
@@ -147,9 +138,9 @@ End // NMClampNotesCheck
 
 Function NMClampNotesConfigs() // auto run via NM Package function
 
-	String cdf = ConfigDF( "ClampNotes" )
+	String df = ConfigDF( "ClampNotes" )
 
-	SetNMvar( cdf + "C_NoCleanUp", 1 )
+	SetNMvar( df + "C_NoCleanUp", 1 )
 	
 	NMClampNotesCheck()
 
@@ -159,41 +150,14 @@ End // NMClampNotesConfigs
 //****************************************************************
 //****************************************************************
 
-Function /S NMClampNotesTypeNS( df, varName )
-	String df
-	String varName
-	
-	if ( !DataFolderExists( df ) )
-		return ""
-	endif
-				
-	NVAR /Z varH = $df + varName
-	
-	if ( NVAR_Exists( varH ) )
-		return "N"
-	endif
-	
-	SVAR /Z strH = $df + varName
-		
-	if ( SVAR_Exists( strH ) )
-		return "S"
-	endif
-	
-	return ""
-
-End // NMClampNotesTypeNS
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesAddPrompt( df, typeHFP )
-	String df
+Function NMNotesAddPrompt( typeHFP )
 	String typeHFP // "H" for Header, "F" for File, "P" for Progress button
 	
 	String title, varName = "", varName2, typeNS = "numeric", units = "", description = ""
 	Variable numValue = NaN
 	String strValue = "", typeExists, psList
+	
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -237,7 +201,7 @@ Function NMNotesAddPrompt( df, typeHFP )
 	varName2 = typeHFP + "_" + varName
 	varName2 = NMNotesCheckVarName( varName2 )
 	
-	typeExists = NMClampNotesTypeNS( df, varName2 )
+	typeExists = NMConfigTypeNS( "ClampNotes", varName2 )
 	
 	strswitch( typeExists )
 		case "N":
@@ -261,11 +225,11 @@ Function NMNotesAddPrompt( df, typeHFP )
 	varName = typeHFP + "_" + varName
 	
 	if ( StringMatch( typeNS, "numeric" ) )
-		return NMNotesVarCheck( df, varName, numValue = numValue, units = units, description = description, setValue = 1 )
+		return NMNotesVarCheck( varName, numValue = numValue, units = units, description = description, setValue = 1 )
 	endif
 	
 	if ( StringMatch( typeNS, "text" ) )
-		return NMNotesStrCheck( df, varName, strValue = strValue, units = units, description = description, setValue = 1 )
+		return NMNotesStrCheck( varName, strValue = strValue, units = units, description = description, setValue = 1 )
 	endif
 	
 End // NMNotesAddPrompt
@@ -274,8 +238,7 @@ End // NMNotesAddPrompt
 //****************************************************************
 //****************************************************************
 
-Function NMNotesVarCheck( df, varName [ numValue, units, description, setValue ] )
-	String df
+Function NMNotesVarCheck( varName [ numValue, units, description, setValue ] )
 	String varName
 	Variable numValue
 	String units
@@ -283,7 +246,8 @@ Function NMNotesVarCheck( df, varName [ numValue, units, description, setValue ]
 	Variable setValue
 	
 	String typeNS, varName2, varName3
-	String cf = "ClampNotes"
+	
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( ParamIsDefault( numValue ) )
 		numValue = NaN
@@ -305,7 +269,7 @@ Function NMNotesVarCheck( df, varName [ numValue, units, description, setValue ]
 	varName2 = "T_" + varName
 	varName3 = "D_" + varName
 	
-	typeNS = NMClampNotesTypeNS( df, varName )
+	typeNS = NMConfigTypeNS( "ClampNotes", varName )
 	
 	if ( StringMatch( typeNS, "S" ) == 1 )
 		return -1 // aleady exists as string variable
@@ -321,7 +285,7 @@ Function NMNotesVarCheck( df, varName [ numValue, units, description, setValue ]
 		CheckNMstr( df + varName3, description )
 	endif
 	
-	NMConfigVar( cf, varName, numValue, description, units )
+	NMConfigVar( "ClampNotes", varName, numValue, description, units )
 	
 	return 0
 	
@@ -331,8 +295,7 @@ End // NMNotesVarCheck
 //****************************************************************
 //****************************************************************
 
-Function NMNotesStrCheck( df, varName [ strValue, units, description, setValue ] )
-	String df
+Function NMNotesStrCheck( varName [ strValue, units, description, setValue ] )
 	String varName
 	String strValue
 	String units
@@ -340,7 +303,8 @@ Function NMNotesStrCheck( df, varName [ strValue, units, description, setValue ]
 	Variable setValue
 	
 	String typeNS, varName2, varName3
-	String cf = "ClampNotes"
+	
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( ParamIsDefault( strValue ) )
 		strValue = ""
@@ -362,7 +326,7 @@ Function NMNotesStrCheck( df, varName [ strValue, units, description, setValue ]
 	varName2 = "T_" + varName
 	varName3 = "D_" + varName
 	
-	typeNS = NMClampNotesTypeNS( df, varName )
+	typeNS = NMConfigTypeNS( "ClampNotes", varName )
 	
 	if ( StringMatch( typeNS, "N" ) )
 		return -1 // aleady exists as numeric variable
@@ -378,98 +342,11 @@ Function NMNotesStrCheck( df, varName [ strValue, units, description, setValue ]
 		CheckNMstr( df + varName3, description )
 	endif
 	
-	NMConfigStr( cf, varName, strValue, description, units )
+	NMConfigStr( "ClampNotes", varName, strValue, description, units )
 	
 	return 0
 	
 End // NMNotesStrCheck
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMNotesEditPrompt( df, varName )
-	String df
-	String varName
-	
-	Variable numValue
-	String strValue, units, description, title
-	
-	if ( strlen( varName ) == 0 )
-		return -1
-	endif
-	
-	if ( exists( df + varName ) != 2 )
-		return -1
-	endif
-	
-	String varName2 = "T_" + varName // units
-	String varName3 = "D_" + varName // description
-	String typeNS = NMClampNotesTypeNS( df, varName )
-	String typeHFP = varName[ 0, 1 ] // prefix
-	
-	title = "NM Clamp "
-	
-	strswitch( typeHFP )
-		case "H_":
-			title += "Header Notes : "
-			break
-		case "F_":
-			title += "File Notes : "
-			break
-		case "P_":
-			title += "Progress Notes : "
-			break
-		default:
-			return -1
-	endswitch
-	
-	title += varName[ 2, inf ]
-	
-	Prompt numValue "enter value of " + varName[ 2, inf ] + ":"
-	Prompt strValue "enter value of " + varName[ 2, inf ] + ":"
-	Prompt units "units:"
-	Prompt description "description:"
-	
-	units = StrVarOrDefault( df + varName2, "" )
-	description = StrVarOrDefault( df + varName3, "" )
-	
-	if ( StringMatch( typeNS, "N" ) )
-	
-		numValue = NumVarOrDefault( df + varName, NaN )
-		
-		DoPrompt title, numValue, units, description
-		
-		if ( V_flag == 1 )
-			return 0 // cancel
-		endif
-		
-		SetNMvar( df + varName, numValue )
-		
-	elseif ( StringMatch( typeNS, "S" ) )
-	
-		strValue = StrVarOrDefault( df + varName, "" )
-		
-		DoPrompt title, strValue, description // string values do not have units
-		
-		if ( V_flag == 1 )
-			return 0 // cancel
-		endif
-		
-		SetNMstr( df + varName, strValue )
-		
-	else
-	
-		return -1
-		
-	endif
-	
-	SetNMstr( df + varName2, units )
-	SetNMstr( df + varName3, description )
-	
-	return 0
-	
-End // NMNotesEditPrompt
 
 //****************************************************************
 //****************************************************************
@@ -480,7 +357,7 @@ Function /S NMNotesProgressButtonList( [ removePrefix ] )
 	Variable icnt
 	String varName, buttonText, psList2 = ""
 	
-	String df = NMNotesDF
+	String df = ConfigDF( "ClampNotes" )
 	String psList = NMNotesVarList( df, "P_", "string" )
 	
 	for ( icnt = 0 ; icnt < ItemsInList( psList ) ; icnt += 1 )
@@ -511,7 +388,7 @@ Function NMNotesProgressPopup( ctrlName ) : ButtonControl
 	Variable buttonNum
 	String varName, buttonText
 	
-	String df = NMNotesDF
+	String df = ConfigDF( "ClampNotes" )
 	
 	String psList = NMNotesVarList( df, "P_", "string" )
 	
@@ -537,15 +414,12 @@ End // NMNotesProgressPopup
 //****************************************************************
 //****************************************************************
 
-Function NMNotesClearFileVars( [ df ] )
-	String df
-	
+Function NMNotesClearFileVars()
+
 	Variable ocnt
 	String objName
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -588,7 +462,7 @@ Function NMNotesCopyVars( df, prefix )
 	Variable icnt, numValue
 	String objName, strValue, slist, nlist
 	
-	String ndf = NMNotesDF
+	String ndf = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) || !DataFolderExists( ndf ) )
 		return -1
@@ -618,7 +492,7 @@ End // NMNotesCopyVars
 Function NMNotesCopyToFolder( df ) // save note variables to appropriate data folders
 	String df // folder where to save Notes
 
-	String ndf = NMNotesDF
+	String ndf = ConfigDF( "ClampNotes" )
 	String path = NMParent( df )
 	
 	df = RemoveEnding( df, ":" )
@@ -643,17 +517,14 @@ End // NMNotesCopyToFolder
 //****************************************************************
 //****************************************************************
 
-Function NMNotesAddNote( usernote [ df, history ] ) // add user note
+Function NMNotesAddNote( usernote [ history ] ) // add user note
 	String usernote // string note or ( "" ) to call prompt
-	String df
 	Variable history
 	
 	Variable icnt
 	String txt, varName, strValue, t = time()
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( ParamIsDefault( history ) )
 		history = 1
@@ -711,14 +582,11 @@ End // NMNotesAddNote
 //****************************************************************
 //****************************************************************
 
-Function NMNotesFileVar( varName, value [ df ] )
+Function NMNotesFileVar( varName, value )
 	String varName
 	Variable value
-	String df
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -740,14 +608,11 @@ End // NMNotesFileVar
 //****************************************************************
 //****************************************************************
 
-Function NMNotesFileStr( varName, strValue [ df ] )
+Function NMNotesFileStr( varName, strValue )
 	String varName
 	String strValue
-	String df
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -769,17 +634,13 @@ End // NMNotesFileStr
 //****************************************************************
 //****************************************************************
 
-Function NMNotesTable2Vars_DEPRECATED( [ df ] )
-	String df
+Function NMNotesTable2Vars_DEPRECATED()
 
 	Variable icnt, objNum, type, nitem, sitem
 	String objName, objStr
 	
 	String cdf = NMClampDF
-	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -1001,14 +862,11 @@ End // NMNotesKillStr
 //****************************************************************
 //****************************************************************
 
-Function NMNotesHeaderVar_DEPRECATED( varName, value [ df ] )
+Function NMNotesHeaderVar_DEPRECATED( varName, value )
 	String varName
 	Variable value
-	String df
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1
@@ -1030,14 +888,11 @@ End // NMNotesHeaderVar
 //****************************************************************
 //****************************************************************
 
-Function NMNotesHeaderStr_DEPRECATED( varName, strValue [ df ] )
+Function NMNotesHeaderStr_DEPRECATED( varName, strValue )
 	String varName
 	String strValue
-	String df
 	
-	if ( ParamIsDefault( df ) )
-		df = NMNotesDF
-	endif
+	String df = ConfigDF( "ClampNotes" )
 	
 	if ( !DataFolderExists( df ) )
 		return -1

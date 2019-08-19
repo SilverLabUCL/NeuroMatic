@@ -3380,13 +3380,13 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 	
 	if ( StringMatch( wtemp[ row ][ 0 ], "+" ) )
 			
-		NMNotesAddPrompt( df, typeHFP )
+		NMNotesAddPrompt( typeHFP )
 	
 	elseif ( StringMatch( wtemp[ row ][ 0 ], "-" ) )
 	
 		varName = typeHFP + "_" + wtemp[ row ][ 1 ]
 		varName2 = wtemp[ row ][ 1 ]
-		typeNS = NMClampNotesTypeNS( df, varName )
+		typeNS = NMConfigTypeNS( "ClampNotes", varName )
 		
 		if ( strlen( varName2 ) == 0 )
 			return -1
@@ -3435,7 +3435,7 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 					for ( icnt = 0 ; icnt < DimSize( wtemp, 0 ) ; icnt += 1 )
 						
 						varName = typeHFP + "_" + wtemp[ icnt ][ 1 ]
-						typeNS = NMClampNotesTypeNS( df, varName )
+						typeNS = NMConfigTypeNS( "ClampNotes", varName )
 						
 						if ( StringMatch( typeNS, "N" ) )
 							SetNMvar( df + varName, NaN )
@@ -3452,7 +3452,7 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 		elseif ( editByPrompt )
 		
 			if ( col > 0 )
-				NMNotesEditPrompt( df, varName )
+				NMConfigEditPrompt( "ClampNotes", varName, editType = 1, editDefinition = 1 )
 			endif
 			
 		elseif ( ( col > 0 ) && ( event == 7 ) ) 

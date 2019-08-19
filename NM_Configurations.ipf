@@ -1245,6 +1245,136 @@ End // NMConfigStrSet
 
 //****************************************************************
 //****************************************************************
+
+Function /S NMConfigTypeNS( tabName, varName )
+	String tabName
+	String varName
+	
+	String cdf = ConfigDF( tabName )
+	
+	if ( exists( cdf + varName ) != 2 )
+		return ""
+	endif
+	
+	NVAR /Z varH = $cdf + varName
+	
+	if ( NVAR_Exists( varH ) )
+		return "N" // numeric
+	endif
+	
+	SVAR /Z strH = $cdf + varName
+		
+	if ( SVAR_Exists( strH ) )
+		return "S" // string
+	endif
+	
+	return ""
+	
+End // NMConfigTypeNS
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMConfigEditPrompt( tabName, varName [ title, editType, editDefinition ] )
+	String tabName
+	String varName
+	String title
+	Variable editType, editDefinition
+	
+	Variable numValue
+	String strValue, type, definition
+	
+	String cdf = ConfigDF( tabName )
+	String pdf = NMPackageDF( tabName )
+	
+	if ( ParamIsDefault( title ) )
+		title = "Edit NM Config : " + varName
+	endif
+	
+	if ( strlen( varName ) == 0 )
+		return ""
+	endif
+	
+	if ( exists( cdf + varName ) != 2 )
+		return ""
+	endif
+	
+	String varName2 = "T_" + varName // type
+	String varName3 = "D_" + varName // definition
+	String typeNS = NMConfigTypeNS( tabName, varName )
+	
+	Prompt numValue "value:"
+	Prompt strValue "value:"
+	Prompt type "type:"
+	Prompt definition "definition:"
+	
+	type = StrVarOrDefault( cdf + varName2, "" )
+	definition = StrVarOrDefault( cdf + varName3, "" )
+	
+	if ( StringMatch( typeNS, "N" ) )
+	
+		numValue = NumVarOrDefault( cdf + varName, NaN )
+		
+		if ( editType && editDefinition )
+			DoPrompt title, numValue, type, definition
+		elseif ( editType )
+			DoPrompt title, numValue, type
+		elseif ( editDefinition )
+			DoPrompt title, numValue, definition
+		else
+			DoPrompt title, numValue
+		endif
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		SetNMvar( cdf + varName, numValue )
+		SetNMvar( pdf + varName, numValue )
+		
+		strValue = num2str( numValue )
+		
+	elseif ( StringMatch( typeNS, "S" ) )
+	
+		strValue = StrVarOrDefault( cdf + varName, "" )
+		
+		if ( editType && editDefinition )
+			DoPrompt title, strValue, type, definition
+		elseif ( editType )
+			DoPrompt title, strValue, type
+		elseif ( editDefinition )
+			DoPrompt title, strValue, definition
+		else
+			DoPrompt title, strValue
+		endif
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		SetNMstr( cdf + varName, strValue )
+		SetNMstr( pdf + varName, strValue )
+		
+	else
+	
+		return ""
+		
+	endif
+	
+	if ( editType )
+		SetNMstr( cdf + varName2, type )
+	endif
+	
+	if ( editDefinition )
+		SetNMstr( cdf + varName3, definition )
+	endif
+	
+	return strValue + ";" + type + ";" + definition + ";"
+	
+End // NMConfigEditPrompt
+
+//****************************************************************
+//****************************************************************
 //
 //	Configuration Edit/Table Functions
 //
