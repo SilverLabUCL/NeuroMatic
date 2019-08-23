@@ -874,9 +874,15 @@ Function List2Wave( strList, wName [ numeric, overwrite ] ) // convert list item
 		return 0 // nothing to do
 	endif
 	
+	if ( strlen( wName ) == 0 )
+		return NM2Error( 21, "wName", "" )
+	endif
+	
 	if ( WaveExists( $wName ) && !overwrite )
 		return NM2Error( 2, "wName", wName )
 	endif
+	
+	wName = NMCheckStringName( wName )
 	
 	if ( numeric )
 	
@@ -1304,13 +1310,15 @@ Function /S NMEventsToWaves( waveOfWaveNums, waveOfEvents, xwinBefore, xwinAfter
 	chanNum = ChanNumCheck( chanNum )
 	
 	if ( strlen( outputWavePrefix ) == 0 )
-		return NM2ErrorStr( 21, "outputWavePrefix", outputWavePrefix )
+		return NM2ErrorStr( 21, "outputWavePrefix", "" )
 	endif
 	
 	Wave recordNum = $waveOfWaveNums
 	Wave eventTimes = $waveOfEvents
 	
 	npnts = numpnts( recordNum )
+	
+	outputWavePrefix = NMCheckStringName( outputWavePrefix )
 	
 	wName3 = outputWavePrefix + "Times"
 	
@@ -1484,6 +1492,10 @@ Function NMWaveOfPeriodicTimes( wName, interval, xbgn, xend )
 	
 	Variable npnts
 	
+	if ( strlen( wName ) == 0 )
+		return NM2Error( 21, "wName", "" )
+	endif
+	
 	if ( ( numtype( interval ) > 0 ) || ( interval <= 0 ) )
 		return NM2Error( 10, "interval", num2str( interval ) )
 	endif
@@ -1495,6 +1507,8 @@ Function NMWaveOfPeriodicTimes( wName, interval, xbgn, xend )
 	if ( numtype( xend ) > 0 )
 		return NM2Error( 10, "xend", num2str( xend ) )
 	endif
+	
+	wName = NMCheckStringName( wName )
 	
 	npnts = 1 + ( xend - xbgn ) / interval
 	
@@ -1579,6 +1593,12 @@ End // RenameWaves
 Function /S NMMatrixArithmeticMake( matrixName, numRows )
 	String matrixName
 	Variable numRows
+	
+	if ( strlen( matrixName ) == 0 )
+		return ""
+	endif
+	
+	matrixName = NMCheckStringName( matrixName )
 
 	Make /O/T/N=( numRows, 4 ) $matrixName = ""
 	
@@ -1963,6 +1983,10 @@ Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
 		return NM2Error( 1, "matrixName", matrixName )
 	endif
 	
+	if ( strlen( outputWaveName ) == 0 )
+		return NM2Error( 21, "outputWaveName", "" )
+	endif
+	
 	if ( WaveExists( $outputWaveName ) )
 		return NM2Error( 2, "outputWaveName", outputWaveName )
 	endif
@@ -1974,6 +1998,8 @@ Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
 	endif
 	
 	Wave m2D = $matrixName
+	
+	outputWaveName = NMCheckStringName( outputWaveName )
 	
 	MatrixOp /O $outputWaveName = row( m2D, rowNum )
 	
@@ -1990,12 +2016,13 @@ End // NMMatrixRow2Wave
 //
 //****************************************************************
 
-Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix )
+Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix [ chanNum ] )
 	String matrixName // 2D matrix wave name
 	String outputWavePrefix // output wave prefix name
+	Variable chanNum // for wave name
 	
 	Variable rcnt, rows, startx, dx
-	String wName, wList = ""
+	String chanStr, wName, wList = ""
 	String thisFxn = GetRTStackInfo( 1 )
 	
 	if ( !WaveExists( $matrixName ) )
@@ -2003,14 +2030,18 @@ Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix )
 	endif
 	
 	if ( strlen( outputWavePrefix ) == 0 )
-		return NM2ErrorStr( 2, "outputWaveName", outputWavePrefix )
+		return NM2ErrorStr( 21, "outputWavePrefix", "" )
 	endif
+	
+	chanStr = ChanNum2Char( chanNum )
 
 	rows = DimSize( $matrixName, 0 )
 	
+	outputWavePrefix = NMCheckStringName( outputWavePrefix )
+	
 	for ( rcnt = 0 ; rcnt < rows ; rcnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( rcnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( rcnt )
 		
 		if ( WaveExists( $wName ) )
 			NMDoAlert( "Abort " + thisFxn + " : a wave with prefix " + NMQuotes( outputWavePrefix ) + " exists already : " + wName )
@@ -2026,7 +2057,7 @@ Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix )
 	
 	for ( rcnt = 0 ; rcnt < rows ; rcnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( rcnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( rcnt )
 		
 		MatrixOp /O $wName = col( m2D, rcnt )
 	
@@ -2058,6 +2089,10 @@ Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum )
 		return NM2Error( 1, "matrixName", matrixName )
 	endif
 	
+	if ( strlen( outputWaveName ) == 0 )
+		return NM2Error( 21, "outputWaveName", "" )
+	endif
+	
 	if ( WaveExists( $outputWaveName ) )
 		return NM2Error( 2, "outputWaveName", outputWaveName )
 	endif
@@ -2069,6 +2104,8 @@ Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum )
 	endif
 	
 	Wave m2D = $matrixName
+	
+	outputWaveName = NMCheckStringName( outputWaveName )
 	
 	MatrixOp /O $outputWaveName = col( m2D, columnNum )
 	
@@ -2085,12 +2122,13 @@ End // NMMatrixColumn2Wave
 //
 //****************************************************************
 
-Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix )
+Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix [ chanNum ] )
 	String matrixName // 2D matrix wave name
 	String outputWavePrefix // output wave prefix name
+	Variable chanNum // for wave name
 	
 	Variable ccnt, columns, startx, dx
-	String wName, wList = ""
+	String chanStr, wName, wList = ""
 	String thisFxn = GetRTStackInfo( 1 )
 	
 	if ( !WaveExists( $matrixName ) )
@@ -2098,14 +2136,19 @@ Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix )
 	endif
 	
 	if ( strlen( outputWavePrefix ) == 0 )
-		return NM2ErrorStr( 2, "outputWaveName", outputWavePrefix )
+		return NM2ErrorStr( 21, "outputWavePrefix", "" )
 	endif
+	
+	chanStr = ChanNum2Char( chanNum )
 
 	columns = DimSize( $matrixName, 1 )
 	
+	outputWavePrefix = NMCheckStringName( outputWavePrefix )
+	
 	for ( ccnt = 0 ; ccnt < columns ; ccnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( ccnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( ccnt )
+		wName = ReplaceString( "__", wName, "_" )
 		
 		if ( WaveExists( $wName ) )
 			NMDoAlert( "Abort " + thisFxn + " : a wave with prefix " + NMQuotes( outputWavePrefix ) + " exists already : " + wName )
@@ -2121,7 +2164,7 @@ Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix )
 	
 	for ( ccnt = 0 ; ccnt < columns ; ccnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( ccnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( ccnt )
 		
 		MatrixOp /O $wName = col( m2D, ccnt )
 	
@@ -2610,11 +2653,16 @@ End //  NMReplaceStringList
 Function /S NMCheckStringName( strName )
 	String strName
 	
+	Variable beLiberal = 0
+	Variable maxChar = 31 // 31 or 255
+	
 	if ( strlen( strName ) == 0 )
 		return ""
 	endif
 	
-	strName = CleanupName( strName, 0 )
+	if ( IgorVersion() >= 8 )
+		maxChar = 255
+	endif
 	
 	strName = ReplaceString( "__", strName, "_" )
 	strName = ReplaceString( "__", strName, "_" )
@@ -2622,7 +2670,9 @@ Function /S NMCheckStringName( strName )
 	
 	strName = RemoveEnding( strName , "_" )
 	
-	return strName[ 0, 30 ] // max 31 characters
+	strName = CleanupName( strName, beLiberal )
+	
+	return strName[ 0, maxChar - 1 ]
 
 End // NMCheckStringName
 
@@ -4143,6 +4193,8 @@ Function NMCrossCorrelation( wName1, wName2, outHistoName, binSize ) // NOT USED
 		kcnt += 1
 	
 	endfor
+	
+	outHistoName = NMCheckStringName( outHistoName )
 	
 	Make /O/N=1 $outHistoName
 	
