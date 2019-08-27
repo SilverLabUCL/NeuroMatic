@@ -1972,12 +1972,13 @@ End // NMMatrixSumRows
 //
 //****************************************************************
 
-Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
+Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum [ overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWaveName // output wave name
 	Variable rowNum // row number
+	Variable overwrite
 	
-	Variable rows
+	Variable rows, cols
 	
 	if ( !WaveExists( $matrixName ) )
 		return NM2Error( 1, "matrixName", matrixName )
@@ -1992,8 +1993,13 @@ Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
 	endif
 
 	rows = DimSize( $matrixName, 0 )
+	cols = DimSize( $matrixName, 1 )
 	
 	if ( ( rowNum < 0 ) || ( rowNum >= rows ) )
+		return -1
+	endif
+	
+	if ( cols == 0 )
 		return -1
 	endif
 	
@@ -2001,8 +2007,12 @@ Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
 	
 	outputWaveName = NMCheckStringName( outputWaveName )
 	
-	MatrixOp /O $outputWaveName = row( m2D, rowNum )
+	if ( !overwrite && WaveExists( $outputWaveName ) )
+		return NM2Error( 2, "outputWaveName", outputWaveName )
+	endif
 	
+	MatrixOp /O $outputWaveName = row( m2D, rowNum )
+	Redimension /N=( cols ) $outputWaveName
 	Setscale /P x DimOffset( $matrixName, 1 ), DimDelta( $matrixName, 1 ), $outputWaveName
 	
 	return 0
@@ -2016,12 +2026,13 @@ End // NMMatrixRow2Wave
 //
 //****************************************************************
 
-Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix [ chanNum ] )
+Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix [ chanNum, overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWavePrefix // output wave prefix name
 	Variable chanNum // for wave name
+	Variable overwrite
 	
-	Variable rcnt, rows, startx, dx
+	Variable rcnt, rows, cols, startx, dx
 	String chanStr, wName, wList = ""
 	String thisFxn = GetRTStackInfo( 1 )
 	
@@ -2036,6 +2047,11 @@ Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix [ chanNum ] )
 	chanStr = ChanNum2Char( chanNum )
 
 	rows = DimSize( $matrixName, 0 )
+	cols = DimSize( $matrixName, 1 )
+	
+	if ( cols == 0 )
+		return ""
+	endif
 	
 	outputWavePrefix = NMCheckStringName( outputWavePrefix )
 	
@@ -2059,8 +2075,12 @@ Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix [ chanNum ] )
 	
 		wName = outputWavePrefix + "_" + chanStr + num2istr( rcnt )
 		
-		MatrixOp /O $wName = col( m2D, rcnt )
-	
+		if ( !overwrite && WaveExists( $wName ) )
+			continue
+		endif
+		
+		MatrixOp /O $wName = row( m2D, rcnt )
+		Redimension /N=( cols ) $wName
 		Setscale /P x startx, dx, $wName
 		
 		wList = AddListItem( wName, wList, ";", inf )
@@ -2078,10 +2098,11 @@ End // NMMatrixRows2Waves
 //
 //****************************************************************
 
-Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum )
+Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum [ overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWaveName // output wave name
 	Variable columnNum // column number
+	Variable overwrite
 	
 	Variable columns
 	
@@ -2107,6 +2128,10 @@ Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum )
 	
 	outputWaveName = NMCheckStringName( outputWaveName )
 	
+	if ( !overwrite && WaveExists( $outputWaveName ) )
+		return NM2Error( 2, "outputWaveName", outputWaveName )
+	endif
+	
 	MatrixOp /O $outputWaveName = col( m2D, columnNum )
 	
 	Setscale /P x DimOffset( $matrixName, 0), DimDelta( $matrixName, 0), $outputWaveName
@@ -2122,10 +2147,11 @@ End // NMMatrixColumn2Wave
 //
 //****************************************************************
 
-Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix [ chanNum ] )
+Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix [ chanNum, overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWavePrefix // output wave prefix name
 	Variable chanNum // for wave name
+	Variable overwrite
 	
 	Variable ccnt, columns, startx, dx
 	String chanStr, wName, wList = ""
@@ -2165,6 +2191,10 @@ Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix [ chanNum ] )
 	for ( ccnt = 0 ; ccnt < columns ; ccnt += 1 )
 	
 		wName = outputWavePrefix + "_" + chanStr + num2istr( ccnt )
+		
+		if ( !overwrite && WaveExists( $wName ) )
+			continue
+		endif
 		
 		MatrixOp /O $wName = col( m2D, ccnt )
 	

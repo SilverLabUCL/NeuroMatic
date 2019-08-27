@@ -1060,6 +1060,80 @@ End // NMSplitWave
 //****************************************************************
 //****************************************************************
 
+Function /S NMSplit2D( nm, columnsOrRows, newPrefix [ overwrite, history ] )
+	STRUCT NMParams &nm // uses nm.folder, nm.wList
+	String columnsOrRows // "columns" or "rows"
+	String newPrefix // prefix name of output wave
+	Variable overwrite, history
+	
+	Variable wcnt, numWaves, npnts
+	String wName, newPrefix2, splitList = ""
+	
+	if ( NMParamsError( nm ) != 0 )
+		return ""
+	endif
+	
+	SetNMstr( NMDF + "OutputWaveList", "" )
+	
+	numWaves = ItemsInList( nm.wList )
+	
+	if ( strlen( newPrefix ) == 0 )
+		return NM2ErrorStr( 21, "newPrefix", "" )
+	endif
+	
+	NMParamStrAdd( "prefix", newPrefix, nm )
+	
+	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
+	
+		if ( NMProgressTimer( wcnt, numWaves, "Splitting Waves..." ) == 1 )
+			break // cancel
+		endif
+	
+		wName = StringFromList( wcnt, nm.wList )
+		
+		Wave wtemp = $nm.folder + wName
+		
+		newPrefix2 = newPrefix + wName + "_"
+		
+		if ( DimSize( $nm.folder + wName, 1 ) == 0 )
+			continue // not a 2D wave
+		endif
+		
+		strswitch( columnsOrRows )
+			case "column":
+			case "columns":
+				splitList = NMMatrixColumns2Waves( nm.folder + wName, newPrefix2, chanNum = nm.chanNum, overwrite = overwrite )
+				break
+			case "row":
+			case "rows":
+				splitList = NMMatrixRows2Waves( nm.folder + wName, newPrefix2, chanNum = nm.chanNum, overwrite = overwrite )
+				break
+			default:
+				return NM2ErrorStr( 20, "columnsOrRows", columnsOrRows )
+		endswitch
+		
+		if ( ItemsInList( splitList ) > 0 )
+			nm.successList += wName + ";"
+			nm.newList += splitList
+		endif
+		
+	endfor
+	
+	NMParamsComputeFailures( nm )
+	
+	if ( history )
+		NMLoopHistory( nm )
+	endif
+	
+	SetNMstr( NMDF + "OutputWaveList", nm.newList )
+	
+	return nm.newList
+	
+End // NMSplit2D
+
+//****************************************************************
+//****************************************************************
+
 Function /S NMRenameWavesSafely( find, replacement, wList [ folder, updateSets, deprecation ] )
 	String find // search string
 	String replacement // replace string

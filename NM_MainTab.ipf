@@ -2244,6 +2244,10 @@ Static Function /S zCall_NMMainSplit()
 	String dName = ChanDisplayWave( -1 )
 	String currentWavePrefix = CurrentNMWavePrefix()
 	
+	if ( DimSize( $dName, 1 ) > 0 )
+		return zCall_NMMainSplit2D()
+	endif
+	
 	Variable xbgn = NumVarOrDefault( NMMainDF + "SplitXbgn", -inf )
 	Variable xend = NumVarOrDefault( NMMainDF + "SplitXend", inf )
 	
@@ -2437,6 +2441,203 @@ Function /S NMMainSplit2( [ folder, wavePrefix, chanNum, waveSelect, xbgn, xend,
 	return NMSplit2( nm, outputWaveLength, newPrefix, xbgn = xbgn, xend = xend, overwrite = overwrite, history = 1 )
 	
 End // NMMainSplit2
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S zCall_NMMainSplit2D()
+
+	Variable overwrite
+	String wList, returnList, promptStr = NMPromptStr( "NM Split 2D Waves" )
+	String columnsOrRows
+	
+	String dName = ChanDisplayWave( -1 )
+	String currentWavePrefix = CurrentNMWavePrefix()
+	
+	if ( DimSize( $dName, 1 ) == 0 )
+		return "" // not a 2D wave
+	endif
+	
+	if ( DimSize( $dName, 1 ) < DimSize( $dName, 0 ) )
+		columnsOrRows = "columns"
+	else
+		columnsOrRows = "rows"
+	endif
+	
+	columnsOrRows = StrVarOrDefault( NMMainDF + "SplitColumnsOrRows", columnsOrRows )
+	Variable selectNewPrefix = 1 + NumVarOrDefault( NMMainDF + "SplitSelectPrefix", 1 )
+	String newPrefix = StrVarOrDefault( NMMainDF + "SplitPrefix", NMNewPrefix )
+	
+	Prompt columnsOrRows, "split 2D wave along:", popup "columns;rows;"
+	Prompt newPrefix, "prefix name for output split waves:"
+	Prompt selectNewPrefix, "select split waves?", popup "no;yes;"
+	
+	DoPrompt promptStr, columnsOrRows, newPrefix, selectNewPrefix
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	selectNewPrefix -= 1
+	
+	SetNMstr( NMMainDF + "SplitColumnsOrRows", columnsOrRows )
+	SetNMstr( NMMainDF + "SplitPrefix", newPrefix )
+	SetNMvar( NMMainDF + "SplitSelectPrefix", selectNewPrefix )
+	
+	wList = WaveList( newPrefix + currentWavePrefix + "*", ";", "" )
+	
+	if ( ItemsInList( wList ) > 0 )
+		
+		DoAlert /T= ( promptStr ) 1, "Alert: waves with prefix " + NMQuotes( newPrefix + currentWavePrefix ) + " already exist and may be overwritten. Do you want to continue?"
+		
+		if ( V_flag == 1 )
+			overwrite = 1
+		else
+			return "" // cancel
+		endif
+	
+	endif
+	
+	returnList = NMMainSplit2D( columnsOrRows = columnsOrRows, newPrefix = newPrefix, overwrite = overwrite, history = 1 )
+	
+	if ( ItemsInList( returnList ) == 0 )
+		return ""
+	endif
+	
+	if ( selectNewPrefix )
+		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts = 1 )
+	else
+		NMPrefixAdd( newPrefix + currentWavePrefix )
+	endif
+	
+	return returnList
+
+End // zCall_NMMainSplit2D
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMMainSplit2D( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, columnsOrRows, newPrefix, overwrite ] )
+	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
+	Variable history, deprecation
+	
+	String columnsOrRows // default is "columns"
+	String newPrefix // prefix name of output wave ( must specify )
+	Variable overwrite // overwrite output waves if they already exist ( 0 ) no ( 1 ) yes
+	
+	STRUCT NMLoopExecStruct nm
+	NMLoopExecStructNull( nm )
+	
+	if ( ParamIsDefault( columnsOrRows ) )
+		columnsOrRows = "columns"
+	endif
+	
+	strswitch( columnsOrRows )
+		case "column":
+		case "columns":
+		case "row":
+		case "rows":
+			break
+		default:
+			return NM2ErrorStr( 20, "columnsOrRows", columnsOrRows )
+	endswitch
+	
+	if ( ParamIsDefault( newPrefix ) || ( strlen( newPrefix ) == 0 ) )
+		return NM2ErrorStr( 21, "newPrefix", "" )
+	endif
+	
+	NMLoopExecStrAdd( "columnsOrRows", columnsOrRows, nm )
+	NMLoopExecStrAdd( "newPrefix", newPrefix, nm )
+	
+	if ( overwrite )
+		NMLoopExecVarAdd( "overwrite", overwrite, nm, integer = 1 )
+	endif
+	
+	if ( ParamIsDefault( folderList ) )
+		folderList = ""
+	endif
+	
+	if ( ParamIsDefault( wavePrefixList ) )
+		wavePrefixList = ""
+	endif
+	
+	if ( ParamIsDefault( chanSelectList ) )
+		chanSelectList = ""
+	endif
+	
+	if ( ParamIsDefault( waveSelectList ) )
+		waveSelectList = ""	
+	endif
+	
+	if ( NMLoopExecStructInit( folderList, wavePrefixList, chanSelectList, waveSelectList, nm ) != 0 )
+		return ""
+	endif
+	
+	//nm.updateWaveLists = 1
+	//nm.updateGraphs = 1
+	//nm.updatePanel = 1
+	//nm.ignorePrefixFolder = 1
+	
+	return NMLoopExecute( nm, history, deprecation )
+
+End // NMMainSplit2D
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMMainSplit2D2( [ folder, wavePrefix, chanNum, waveSelect, columnsOrRows, newPrefix, overwrite ] )
+	String folder, wavePrefix, waveSelect // see description at top
+	Variable chanNum
+	
+	String columnsOrRows // "columns" is default
+	String newPrefix // prefix name of output wave
+	Variable overwrite // overwrite output waves if they already exist ( 0 ) no ( 1 ) yes
+	
+	String fxn = "NMSplit2D"
+	
+	STRUCT NMParams nm
+	
+	if ( ParamIsDefault( columnsOrRows ) )
+		columnsOrRows = "columns"
+	endif
+	
+	strswitch( columnsOrRows )
+		case "column":
+		case "columns":
+		case "row":
+		case "rows":
+			break
+		default:
+			return NM2ErrorStr( 20, "columnsOrRows", columnsOrRows )
+	endswitch
+	
+	if ( ParamIsDefault( newPrefix ) || ( strlen( newPrefix ) == 0 ) )
+		return NM2ErrorStr( 21, "newPrefix", "" )
+	endif
+	
+	if ( ParamIsDefault( folder ) )
+		folder = ""
+	endif
+	
+	if ( ParamIsDefault( wavePrefix ) )
+		wavePrefix = ""
+	endif
+	
+	if ( ParamIsDefault( chanNum ) )
+		chanNum = -1
+	endif
+	
+	if ( ParamIsDefault( waveSelect ) )
+		waveSelect = ""
+	endif
+	
+	if ( NMLoopStructInit( fxn, folder, wavePrefix, chanNum, waveSelect, nm ) != 0 )
+		return ""
+	endif
+	
+	return NMSplit2D( nm, columnsOrRows, newPrefix, overwrite = overwrite, history = 1 )
+	
+End // NMMainSplit2D2
 
 //****************************************************************
 //****************************************************************
