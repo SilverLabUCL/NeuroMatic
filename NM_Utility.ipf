@@ -2686,6 +2686,8 @@ Function /S NMCheckStringName( strName )
 	Variable beLiberal = 0
 	Variable maxChar = 31 // 31 or 255
 	
+	String path, strName2
+	
 	if ( strlen( strName ) == 0 )
 		return ""
 	endif
@@ -2694,15 +2696,18 @@ Function /S NMCheckStringName( strName )
 		maxChar = 255
 	endif
 	
-	strName = ReplaceString( "__", strName, "_" )
-	strName = ReplaceString( "__", strName, "_" )
-	strName = ReplaceString( "__", strName, "_" )
+	path = NMParent( strName )
+	strName2 = NMChild( strName )
 	
-	strName = RemoveEnding( strName , "_" )
+	strName2 = ReplaceString( "__", strName2, "_" )
+	strName2 = ReplaceString( "__", strName2, "_" )
+	strName2 = ReplaceString( "__", strName2, "_" )
 	
-	strName = CleanupName( strName, beLiberal )
+	strName2 = RemoveEnding( strName2 , "_" )
 	
-	return strName[ 0, maxChar - 1 ]
+	strName2 = CleanupName( strName2, beLiberal )
+	
+	return path + strName2[ 0, maxChar - 1 ]
 
 End // NMCheckStringName
 

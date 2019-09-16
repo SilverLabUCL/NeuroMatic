@@ -11784,7 +11784,7 @@ Static Function /S zCall_NMMainHistogram()
 	Variable xend = NumVarOrDefault( NMMainDF + "HistoXend", inf )
 	Variable binCentered = 1 + NumVarOrDefault( NMMainDF + "HistoBinCentered", 0 )
 	Variable cumulative = 1 + NumVarOrDefault( NMMainDF + "HistoCumulative", 0 )
-	Variable normalize = 1 + NumVarOrDefault( NMMainDF + "HistoNormalize", 0 )
+	Variable normalize = 1 + NumVarOrDefault( NMMainDF + "HistoNormalize", 0 ) // 0 - count, 1 - probability density, 2 - frequency distribution
 	
 	Prompt transforms, "Use channel Filter/Transforms on your data?", popup "no;yes;"
 	Prompt autoBinsStr, "bin dimensions:", popup "manual;automatic;"
@@ -11903,23 +11903,39 @@ Static Function /S zCall_NMMainHistogram()
 	
 	endif
 	
-	Prompt binCentered, "bin-centered x values:", popup "no;yes;"
+	Prompt normalize, "normalize:", popup "no;yes, probability density;yes, frequency distribution;"
 	Prompt cumulative, "cumulative histogram:", popup "no;yes;"
-	Prompt normalize, "normalize results to probability density:", popup "no;yes;"
+	Prompt binCentered, "bin-centered x values:", popup "no, x-values located at left edge of bins;yes, x-values located at center of bins;"
 	
-	DoPrompt promptStr, binCentered, cumulative, normalize
+	DoPrompt promptStr, normalize, cumulative
 
 	if ( V_flag == 1 )
 		return "" // cancel
 	endif
 	
-	binCentered -= 1
-	cumulative -= 1
 	normalize -= 1
+	cumulative -= 1
 	
-	SetNMvar( NMMainDF + "HistoBinCentered", binCentered )
-	SetNMvar( NMMainDF + "HistoCumulative", cumulative )
 	SetNMvar( NMMainDF + "HistoNormalize", normalize )
+	SetNMvar( NMMainDF + "HistoCumulative", cumulative )
+	
+	if ( normalize == 0 )
+	
+		DoPrompt promptStr, binCentered
+	
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		binCentered -= 1
+		
+		SetNMvar( NMMainDF + "HistoBinCentered", binCentered )
+		
+	else
+	
+		binCentered = 1 // for /P, x-values are bin centered
+		
+	endif
 	
 	if ( binCentered )
 		optionStr += "/C"
@@ -11929,8 +11945,10 @@ Static Function /S zCall_NMMainHistogram()
 		optionStr += "/Cum"
 	endif
 	
-	if ( normalize )
+	if ( normalize == 1 )
 		optionStr += "/P"
+	elseif ( normalize == 2 )
+		optionStr += "/F"
 	endif
 	
 	if ( numtype( numBins * binWidth * binStart ) > 0 )
@@ -11972,7 +11990,7 @@ Function /S NMMainHistogram( [ folderList, wavePrefixList, chanSelectList, waveS
 	Variable binStart
 	Variable binWidth
 	Variable numBins
-	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help )
+	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help ), or "/F" for frequency
 	String newPrefix // wave prefix for output histograms ( must specify )
 	Variable overwrite
 	
@@ -12063,7 +12081,7 @@ Function /S NMMainHistogram2( [ folder, wavePrefix, chanNum, waveSelect, transfo
 	Variable binStart // see Igor Histogram
 	Variable binWidth
 	Variable numBins
-	String optionStr // e.g. "/C/P/Cum" // see Igor Histogram
+	String optionStr // e.g. "/C/P/Cum" // see Igor Histogram, or "/F" for frequency
 	String newPrefix // wave prefix for output histograms ( must specify )
 	Variable overwrite
 	

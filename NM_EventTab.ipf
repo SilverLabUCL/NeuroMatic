@@ -2769,6 +2769,7 @@ Function EventSearchTime( searchTime ) // set current search time
 	
 	NMEventDisplayClearBTS()
 	EventCursors( 1 )
+	SetNMvar( NMEventDF+"DsplyWinSlider2", searchTime )
 	
 	return searchTime
 	

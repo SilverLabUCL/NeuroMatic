@@ -9153,12 +9153,13 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 	
 	Variable binStart, binWidth, numBins // pass nothing for auto bin computation
 	Variable xbgn, xend
-	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help )
+	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help ), or "/F" for frequency
 	String newPrefix // wave prefix for output histograms
 	Variable overwrite, history
 	
-	Variable wcnt, numWaves, numChannels, normalize, cumulative, incomplete, returnVal
-	String wName, fxn, fxn2
+	Variable wcnt, numWaves, numChannels
+	Variable cumulative, incomplete, returnVal, normalize, dx
+	String wName, optionStr2, fxn, fxn2
 	String xLabel, yLabel, histoName, tName, tName2
 	String thisFxn = GetRTStackInfo( 1 )
 	
@@ -9213,8 +9214,12 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 	if ( strsearch( optionStr, "/P", 0 ) >= 0 )
 		yLabel = "Probability"
 		normalize = 1
+	elseif ( strsearch( optionStr, "/F", 0 ) >= 0 )
+		yLabel = "Frequency"
+		normalize = 2
 	else
 		yLabel = "Count"
+		normalize = 0
 	endif
 	
 	if ( strsearch( optionStr, "/Cum", 0 ) >= 0 )
@@ -9271,6 +9276,9 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 		optionStr += "/R=(" + num2str( xbgn ) + "," + num2str( xend ) + ")"
 	endif
 	
+	optionStr2 = optionStr
+	optionStr2 = ReplaceString( "/F", optionStr2, "/P" ) // for frequency, compute probability and multiply by binwidth
+	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
 		if ( NMProgressTimer( wcnt, numWaves, "Computing Wave Histograms..." ) == 1 )
@@ -9317,7 +9325,7 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 			
 		endif
 		
-		fxn = "Histogram " + optionStr + " " + tName + ", " + histoName
+		fxn = "Histogram " + optionStr2 + " " + tName + ", " + histoName
 		fxn2 = "Histogram " + optionStr + " " + wName + ", " + NMChild( histoName ) // short notation for notes
 		
 		Execute /Q/Z fxn
@@ -9352,6 +9360,18 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 		
 			if ( ( V_min < leftx( $histoName ) ) || ( V_max < rightx( $histoName ) ) )
 				incomplete = 1
+			endif
+		
+		elseif ( normalize == 2 )
+		
+			// convert probability to frequency
+		
+			Wave htemp = $histoName
+			
+			dx = deltax( htemp )
+			
+			if ( dx != 1 )
+				htemp *= dx
 			endif
 		
 		endif
