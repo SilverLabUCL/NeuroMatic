@@ -25,6 +25,7 @@
 //****************************************************************
 //****************************************************************
 
+
 Static Constant NM_NIDAQCounter = 0 // default counter number
 Static Constant NM_NidaqDIOPort = 0 // port with buffered DIO
 Static Constant NM_NidaqDACMinVoltage = -10 // DAC voltage range ( some users may need to change this to -5 volts )
@@ -2252,6 +2253,8 @@ End // NIDAQ_DIO_TEST
 //****************************************************************
 //****************************************************************
 //****************************************************************
+
+#endif
 
 
 
