@@ -25,6 +25,7 @@
 //****************************************************************
 //****************************************************************
 
+#if exists("DAQmx_WaveformGen")
 
 Static Constant NM_NIDAQCounter = 0 // default counter number
 Static Constant NM_NidaqDIOPort = 0 // port with buffered DIO
