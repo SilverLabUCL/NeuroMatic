@@ -1856,16 +1856,7 @@ Function NMChannelGraphDisable( [ channel, filter, transform, autoscale, popMenu
 		return 0 // nothing to do
 	endif
 	
-	if ( !ParamIsDefault( all ) )
-	
-		all = BinaryCheck( all )
-		
-		z_filter = all
-		z_transform = all
-		z_autoscale = all
-		z_popMenu = all
-		
-	else
+	if ( ParamIsDefault( all ) )
 	
 		if ( !ParamIsDefault( filter ) )
 			z_filter = binarycheck( filter )
@@ -1882,6 +1873,16 @@ Function NMChannelGraphDisable( [ channel, filter, transform, autoscale, popMenu
 		if ( !ParamIsDefault( popMenu ) )
 			z_popMenu = binarycheck( popMenu )
 		endif
+	
+	
+	else
+	
+		all = BinaryCheck( all )
+		
+		z_filter = all
+		z_transform = all
+		z_autoscale = all
+		z_popMenu = all
 		
 	endif
 	
