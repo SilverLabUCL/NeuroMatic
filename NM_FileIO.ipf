@@ -1211,7 +1211,7 @@ Function /S NMFileBinOpen( dialogue, extStr, parentFolder, path, fileList, chang
 				break
 				
 			case 4: // HDF5
-				folder = NMHDF5OpenFile( folderPath, file, changeFolder, nmPrefix = nmPrefix, history = history, quiet = quiet, convert2NM = 1 )
+				folder = NMHDF5OpenFile( folderPath, file, changeFolder, nmPrefix = nmPrefix, convert2NM = 1, history = history, quiet = quiet )
 				break
 		
 		endswitch
@@ -1935,13 +1935,15 @@ Function /S NMHDF5OpenFile( folder, extFile, changeFolder [ nmPrefix, history, q
 	Variable history
 	Variable convert2NM // ( 0 ) no ( 1 ) yes, create NM variables if they are missing
 	
-	Variable error = 0
+	Variable save_HDF5_fileID, killNewFolder = 0
 	String vlist = ""
 	
 	if ( !NMHDF5OK() )
 		NMHDF5Allert()
 		return ""
 	endif
+	
+	#if exists("HDF5CreateFile") // compile only if HDF5 XOP installed
 	
 	vList = NMCmdStr( folder, vList )
 	vList = NMCmdStr( extFile, vList )
@@ -1979,36 +1981,45 @@ Function /S NMHDF5OpenFile( folder, extFile, changeFolder [ nmPrefix, history, q
 	
 	NewDataFolder /O/S $RemoveEnding( folder, ":" )
 	
-	Variable /G HDF5_fileID
+	Variable /G HDF5_fileID = 0 // must create this global variable
 	
-	Execute /Z "HDF5OpenFile /R/Z HDF5_fileID as " + NMQuotes( extFile )
+	HDF5OpenFile /R/Z HDF5_fileID as extFile
 	
-	if ( V_flag != 0 )
-		error = 1
+	//print "opened", HDF5_fileID, V_flag
+	
+	if ( HDF5_fileID == 0 )
+	
 		NMErr( "failed to open HDF5 file : " + extFile )
-	endif
 	
-	if ( !error )
+	else
 	
-		Execute /Z "HDF5LoadGroup /IGOR=-1 /O/R/Z :, HDF5_fileID, " + NMQuotes( "." )
+		save_HDF5_fileID = HDF5_fileID
+	
+		HDF5LoadGroup /IGOR=-1 /O/R/Z :, HDF5_fileID, "." // load root group
 		
-		if ( V_flag != 0 )
-			error = 1
+		//print "loaded", HDF5_fileID, V_flag
+		
+		HDF5_fileID = save_HDF5_fileID // bug fix: HDF5LoadGroup changes value of HDF5_fileID
+		
+		if ( V_flag != 0 ) 
+			killNewFolder = 1
 			NMErr( "failed to load data from HDF5 file : " + extFile )
+		endif
+		
+		HDF5CloseFile /Z HDF5_fileID
+		//HDF5CloseFile /A/Z 0 // close all HDF5 files
+		
+		//print "closed", HDF5_fileID, V_flag
+	
+		if ( V_flag != 0 )
+			NMErr( "failed to close HDF5 file : " + extFile )
 		endif
 	
 	endif
 	
-	//Execute /Z "HDF5CloseFile /Z HDF5_fileID" // THIS CAUSES ERROR
-	Execute /Z "HDF5CloseFile /A"
-	
-	if ( !error && ( V_flag != 0 ) )
-		NMErr( "failed to close HDF5 file : " + extFile )
-	endif
-	
 	KillVariables /Z HDF5_fileID
 	
-	if ( error )
+	if ( killNewFolder )
 		KillDataFolder $RemoveEnding( folder, ":" )
 		SetDataFolder $saveDF // back to original data folder
 		return ""
@@ -2042,6 +2053,8 @@ Function /S NMHDF5OpenFile( folder, extFile, changeFolder [ nmPrefix, history, q
 	
 	return folder
 	
+	#endif
+	
 End // NMHDF5OpenFile
 
 //****************************************************************
@@ -2054,12 +2067,14 @@ Static Function /S zHDF5_SaveFolder( folder, extFile ) // save folder in HDF5 fo
 	
 	// use NMFolderSaveToDisk to call this functions ( fileType = 3 )
 	
-	Variable error = 0
+	Variable savedData = 0
 	
 	if ( !NMHDF5OK() )
 		NMHDF5Allert()
 		return ""
 	endif
+	
+	#if exists("HDF5CreateFile") // compile only if HDF5 XOP installed
 	
 	if ( !DataFolderExists( folder ) )
 		return ""
@@ -2068,42 +2083,50 @@ Static Function /S zHDF5_SaveFolder( folder, extFile ) // save folder in HDF5 fo
 	String extFolderPath = NMParent( extFile )
 	String fileName = NMChild( extFile )
 	
-	Variable /G HDF5_fileID
+	Variable /G HDF5_fileID = 0 // must create this global variable
 
-	Execute /Z "HDF5CreateFile /O/Z HDF5_fileID as " + NMQuotes( extFile )
+	HDF5CreateFile /O/Z HDF5_fileID as extFile
 	
-	if ( V_flag != 0 )
-		error = 1
+	//print "created", HDF5_fileID, V_flag
+	
+	if ( HDF5_fileID == 0 )
+	
 		NMErr( "failed to create HDF5 file : " + extFile )
-	endif
 	
-	if ( !error )
+	else
 	
-		Execute /Z "HDF5SaveGroup /IGOR=-1 /O/R/Z " + folder + ", HDF5_fileID, " + NMQuotes( "." )
+		HDF5SaveGroup /IGOR=-1 /O/R/Z $folder, HDF5_fileID, "."
+		
+		//print "saved", HDF5_fileID, V_flag
+		
+		if ( V_flag == 0 )
+			savedData = 1
+		else
+			NMErr( "failed to save data to HDF5 file : " + extFile )
+		endif
+		
+		HDF5CloseFile /Z HDF5_fileID
+		//HDF5CloseFile /A/Z 0 // close all HDF5 files
+		
+		//print "closed", HDF5_fileID, V_flag
 		
 		if ( V_flag != 0 )
-			error = 1
-			NMErr( "failed to create HDF5 file : " + extFile )
+			NMErr( "failed to close HDF5 file : " + extFile )
 		endif
-	
-	endif
-	
-	//Execute /Z "HDF5CloseFile /Z HDF5_fileID" // THIS CAUSES ERROR
-	Execute /Z "HDF5CloseFile /A"
-	
-	if ( !error && ( V_flag != 0 ) )
-		NMErr( "failed to close HDF5 file : " + extFile )
+		
 	endif
 	
 	KillVariables /Z HDF5_fileID
 	
-	if ( error )
+	if ( !savedData )
 		return ""
 	endif
 	
 	NMHistory( "Saved folder " + NMQuotes( folder ) + " to HDF5 file " + NMQuotes( extFile ) )
 	
 	return extFile
+	
+	#endif
 
 End // zHDF5_SaveFolder
 
