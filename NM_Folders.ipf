@@ -1901,9 +1901,14 @@ Function /S NMFolderSaveCall()
 	Variable saveWaveNotes = 1 + NumVarOrDefault( NMDF + "SaveFolderWaveNotes", 1 )
 	Variable saveSubfolders = 1 + NumVarOrDefault( NMDF + "SaveFolderSubfolders", 1 )
 	
-	if ( fileTypeSelect != 2 )
-		fileTypeSelect = 1
-	endif
+	switch( fileTypeSelect )
+		case 1:
+		case 2:
+		case 3:
+			break
+		default:
+			fileTypeSelect = 1
+	endswitch
 	
 	Prompt fileTypeSelect, "save folder as:", popup "Igor binary file (pxp);unpacked folder;HDF5;"
 	
@@ -1926,6 +1931,8 @@ Function /S NMFolderSaveCall()
 		return NMFolderSaveToDisk( fileType = "HDF5" )
 	endif
 	
+	// saved as unpacked folder...
+	
 	Prompt waveFileType, "save waves as:", popup "Igor Binary;Igor Text;General Text;Delimited Text;"
 	Prompt saveWaveNotes, "save waves notes?", popup "no;yes;"
 	Prompt saveSubfolders, "save subfolders?", popup "no;yes;"
@@ -1938,7 +1945,6 @@ Function /S NMFolderSaveCall()
 	saveWaveNotes -= 1
 	saveSubfolders -= 1
 	
-	SetNMvar( NMDF + "SaveFolderFileType", fileTypeSelect )
 	SetNMstr( NMDF + "SaveFolderWaveFileType", waveFileType )
 	SetNMvar( NMDF + "SaveFolderWaveNotes", saveWaveNotes )
 	SetNMvar( NMDF + "SaveFolderSubfolders", saveSubfolders )
