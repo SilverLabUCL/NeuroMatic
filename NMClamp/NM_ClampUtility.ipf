@@ -1041,7 +1041,7 @@ Static Function RstepCompute( winNum )
 		return -1
 	endif
 	
-	if ( StringMatch( board, "NIDAQ" ) == 1 )
+	if ( StringMatch( board, "NIDAQ" ) )
 		tscale = 0.001 // convert to seconds for NIDAQ boards
 	endif
 	
@@ -1140,6 +1140,7 @@ Static Function RstepConfig2( userInput, winNum )
 	Variable icnt, onset, width
 	String ADCstr, DACstr, ADCunit, DACunit, winStr, wName
 	String sdf = StimDF(), bdf = NMStimBoardDF( sdf )
+	String ptitle = "Compute Resistance Window #" + num2str( winNum )
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1167,9 +1168,9 @@ Static Function RstepConfig2( userInput, winNum )
 
 		Prompt ADCstr, "ADC input configuration to measure:", popup ADClist
 		Prompt DACstr, "DAC output configuration to measure:", popup DAClist
-		Prompt tbgn, "measure time begin (ms):"
-		Prompt tend, "measure time end (ms):"
-		DoPrompt "Compute Resistance Window #" + num2str( winNum ), ADCstr, DACstr
+		Prompt tbgn, "measurment window begin (ms):"
+		Prompt tend, "measurment window end (ms):"
+		DoPrompt ptitle, ADCstr, DACstr
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1203,7 +1204,7 @@ Static Function RstepConfig2( userInput, winNum )
 		
 		endif
 		
-		DoPrompt "Compute Resistance Window #" + num2str( winNum ), tbgn, tend
+		DoPrompt ptitle, tbgn, tend
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1248,9 +1249,9 @@ Static Function RstepConfig2( userInput, winNum )
 	ADCunit = ADCstr[ icnt, icnt ]
 	DACunit = DACstr[ icnt, icnt ]
 	
-	if ( ( StringMatch( ADCunit,"A" ) == 1 ) && ( StringMatch( DACunit,"V" ) == 1 ) )
+	if ( StringMatch( ADCunit,"A" ) && StringMatch( DACunit,"V" ) )
 		scale = -1
-	elseif ( ( StringMatch( ADCunit,"V" ) == 1 ) && ( StringMatch( DACunit,"A" ) == 1 ) )
+	elseif ( StringMatch( ADCunit,"V" ) && StringMatch( DACunit,"A" ) )
 		scale = 1
 	else
 		Print "Rstep Error: win #" + num2str( winNum ) + ": cannot compute resistance from ADC units (" + ADCunit + ") and DAC units (" + DACunit + ")"
@@ -1366,7 +1367,7 @@ Static Function RCstepCompute( winNum )
 		return 0 // bad parameters
 	endif
 	
-	if ( StringMatch( board, "NIDAQ" ) == 1 )
+	if ( StringMatch( board, "NIDAQ" ) )
 		tscale = 0.001 // convert to seconds for NIDAQ boards
 	endif
 	
@@ -1413,7 +1414,7 @@ Static Function RCstepCompute( winNum )
 	
 	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $inName
 	
-	//if ( negstep == 1 )
+	//if ( negstep )
 	//	fbgn = V_minloc + toffset
 	//else
 	//	fbgn = V_maxloc + toffset
@@ -1451,7 +1452,7 @@ Static Function RCstepCompute( winNum )
 	RCparams[ 1 ] = V_avg
 	RCparams[ 3 ] = ( fend - fbgn ) / 4
 	
-	if ( negstep == 1 )
+	if ( negstep )
 		RCparams[ 2 ] = V_min // probably a negative transient
 	else
 		RCparams[ 2 ] = V_max // probably a positive transient
@@ -1674,6 +1675,7 @@ Static Function RCstepConfig2( userInput, winNum )
 	Variable icnt, onset, width, scale = 1
 	String ADCstr, DACstr, ADCunit, DACunit, winStr, wName
 	String cdf = NMClampDF, sdf = StimDF(), bdf = NMStimBoardDF( sdf )
+	String ptitle = "Compute Rm and Cm Window #" + num2str( winNum )
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1705,7 +1707,7 @@ Static Function RCstepConfig2( userInput, winNum )
 		Prompt tbgn, "exponential fit time begin (ms):"
 		Prompt tend, "exponential fit time end (ms):"
 		Prompt dsply, "display results in:", popup "Igor history;graph;"
-		DoPrompt "Compute Rm and Cm Window #" + num2str( winNum ), ADCstr, DACstr, dsply
+		DoPrompt ptitle, ADCstr, DACstr, dsply
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1736,7 +1738,7 @@ Static Function RCstepConfig2( userInput, winNum )
 		
 		endif
 		
-		DoPrompt "Compute Rm and Cm Window #" + num2str( winNum ), tbgn, tend
+		DoPrompt ptitle, tbgn, tend
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1779,7 +1781,7 @@ Static Function RCstepConfig2( userInput, winNum )
 	ADCunit = ADCstr[ icnt, icnt ]
 	DACunit = DACstr[ icnt, icnt ]
 	
-	if ( ( StringMatch( ADCunit,"A" ) == 1 ) && ( StringMatch( DACunit,"V" ) == 1 ) )
+	if ( StringMatch( ADCunit,"A" ) && StringMatch( DACunit,"V" ) )
 	
 		ADCunit = ""
 		DACunit = ""
@@ -2077,18 +2079,18 @@ Function RandomOrder(mode)
 					return -1
 				endif
 				
-				if ( WaveExists( $sdf+wNameTemp ) == 1 )
+				if ( WaveExists( $sdf+wNameTemp ) )
 					KillWaves /Z $sdf+wNameTemp
 				endif
 				
-				if ( WaveExists( $sdf+wNameTemp ) == 1 )
+				if ( WaveExists( $sdf+wNameTemp ) )
 					Print "RandomOrder Error: wave cannot be deleted: " + wNameTemp
 					return -1
 				endif
 				
 				Rename $sdf+wName1, $wNameTemp
 				
-				if ( WaveExists( $sdf+wName1 ) == 1 )
+				if ( WaveExists( $sdf+wName1 ) )
 					Print "RandomOrder Error: failed to rename " + wName1 + " to " + wNameTemp
 					return -1
 				endif
@@ -2143,18 +2145,18 @@ Function RandomOrder(mode)
 					return -1
 				endif
 				
-				if ( WaveExists( $sdf+wName2 ) == 1 )
+				if ( WaveExists( $sdf+wName2 ) )
 					KillWaves /Z $sdf+wName2
 				endif
 				
-				if ( WaveExists( $sdf+wName2 ) == 1 )
+				if ( WaveExists( $sdf+wName2 ) )
 					Print "RandomOrder Error: wave cannot be deleted: " + wName2
 					return -1
 				endif
 				
 				Rename $sdf+wName1, $wName2
 				
-				if ( WaveExists( $sdf+wName1 ) == 1 )
+				if ( WaveExists( $sdf+wName1 ) )
 					Print "RandomOrder Error: failed to rename " + wName1 + " to " + wName2
 					return -1
 				endif
