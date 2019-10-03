@@ -14,11 +14,11 @@
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //    GNU General Public License for more details.
 //
 //    You should have received a copy of the GNU General Public License
-//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//    along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 //	Contact Jason@ThinkRandom.com
 //	www.NeuroMatic.ThinkRandom.com
@@ -624,7 +624,7 @@ Static Function ModelCellConfig( userInput )
 		
 	endif
 	
-	if ( strlen( clampMode )  == 0 )
+	if ( strlen( clampMode ) == 0 )
 	
 		NMDoAlert( "To run NM ModelCell function, voltage units need to be mV and current units need to be pA" )
 	
@@ -1002,7 +1002,7 @@ End // Rstep
 Static Function RstepCompute( winNum )
 	Variable winNum // 1, 2, 3...
 	
-	Variable chan, base, output, input, tscale = 1
+	Variable chan, base, output, input
 	Variable /G CT_R_Electrode
 	
 	String outName, inName, gname, winStr, tagName
@@ -1028,32 +1028,27 @@ Static Function RstepCompute( winNum )
 	
 	String ADClist = NMStimBoardOnList( "", "ADC" )
 	
-	Variable grp =  NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
+	Variable grp = NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
 	
-	outName = sdf + "DAC_" + num2istr( DACconfig ) + "_" + num2istr( grp )
+	outName = sdf + "uDAC_" + num2istr( DACconfig ) + "_" + num2istr( grp ) // unscaled DAC output
 	
 	chan = WhichListItem( num2istr( ADCconfig ), ADClist, ";" )
 	
-	//inName = GetWaveName( "default", chan, 0 )
 	inName = ChanDisplayWave( chan )
 	
 	if ( ( WaveExists( $outName ) == 0 ) || ( WaveExists( $inName ) == 0 ) )
 		return -1
 	endif
 	
-	if ( StringMatch( board, "NIDAQ" ) )
-		tscale = 0.001 // convert to seconds for NIDAQ boards
-	endif
-	
-	WaveStats /Q/R=( 0*tscale,2*tscale ) $outName
+	WaveStats /Q/R=( 0, 2 ) $outName
 	
 	base = V_avg
 	
-	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $outName
+	WaveStats /Q/R=( tbgn, tend ) $outName
 	
 	output = abs( V_avg - base )
 	
-	WaveStats /Q/R=( 0,1 ) $inName
+	WaveStats /Q/R=( 0, 2 ) $inName
 	
 	base = V_avg
 	
@@ -1138,9 +1133,12 @@ Static Function RstepConfig2( userInput, winNum )
 	Variable winNum // 1, 2, 3...
 	
 	Variable icnt, onset, width
-	String ADCstr, DACstr, ADCunit, DACunit, winStr, wName
+	String ADCstr, DACstr, ADCunit, DACunit
+	String winStr, wName, pList, shape
 	String sdf = StimDF(), bdf = NMStimBoardDF( sdf )
 	String ptitle = "Compute Resistance Window #" + num2str( winNum )
+	
+	Variable defaultMeasureWindow = 10
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1182,25 +1180,54 @@ Static Function RstepConfig2( userInput, winNum )
 		SetNMvar( sdf+"RstepADC" + winStr, ADCconfig )
 		SetNMvar( sdf+"RstepDAC" + winStr, DACconfig )
 		
-		if ( numtype( tbgn * tend ) > 0 )
+		wName = PulseWaveName( sdf, "DAC_" + DACstr )
+			
+		if ( WaveExists( $wName ) )
 		
-			wName = PulseWaveName( sdf, "DAC_" + DACstr )
+			Wave /T wtemp = $wName
 			
-			if ( WaveExists( $wName ) && ( numpnts( $wName ) > 8 ) )
+			onset = NaN
+			width = NaN
 			
-				Wave wtemp = $wName
+			for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+			
+				pList = wtemp[ icnt ]
+				shape = StringByKey( "pulse", pList, "=" )
 				
-				onset = wtemp[ 4 ]
-				width = wtemp[ 8 ]
+				if ( StringMatch( shape, "square" ) )
+					onset = str2num( StringByKey( "onset", pList, "=" ) )
+					width = str2num( StringByKey( "width", pList, "=" ) )
+					break
+				endif
 				
-				tend = onset + width
-				tbgn = tend - 10
+			endfor
+			
+			if ( numtype( onset * width ) == 0 )
+			
+				if ( ( numtype( tbgn * tend ) == 0 ) && ( tbgn > onset ) && ( tend <= onset + width ) )
+					// tbgn and tend or OK
+				else
 				
-				if ( tbgn < onset )
-					tbgn = ( onset + tend ) / 2
+					tend = onset + width
+					tbgn = tend - defaultMeasureWindow
+					
+					if ( tbgn < onset )
+						tbgn = ( onset + tend ) / 2
+					endif
+				
 				endif
 			
+			else
+			
+				tbgn = NaN
+				tend = NaN
+				
 			endif
+			
+		else
+		
+			tbgn = NaN
+			tend = NaN
 		
 		endif
 		
@@ -1216,8 +1243,6 @@ Static Function RstepConfig2( userInput, winNum )
 	endif
 	
 	SetNMvar( sdf+"RstepScale", NaN )
-	
-	Wave DACscale = $( bdf+"DACscale" )
 	
 	Wave /T ADCunits = $( bdf+"ADCunits" )
 	Wave /T DACunits = $( bdf+"DACunits" )
@@ -1270,9 +1295,9 @@ Static Function RstepConfig2( userInput, winNum )
 	endif
 	
 	if ( scale == 1 ) // compute appropriate scale to get Mohms
-		scale *= 1e-6 * MetricValue( ADCunit ) / ( MetricValue( DACunit ) * DACscale[ DACconfig ] )
+		scale *= 1e-6 * MetricValue( ADCunit ) / MetricValue( DACunit )
 	else
-		scale *= 1e-6 * MetricValue( DACunit ) * DACscale[ DACconfig ] / MetricValue( ADCunit )
+		scale *= 1e-6 * MetricValue( DACunit ) / MetricValue( ADCunit )
 	endif
 	
 	SetNMvar( sdf+"RstepScale" + winStr, scale )
@@ -1333,18 +1358,16 @@ End // RCstep
 Static Function RCstepCompute( winNum )
 	Variable winNum // 1, 2, 3...
 	
-	//Variable toffset = 0.02 // time after step to start curve fit
-	
 	Variable icnt, fbgn, fend, nwaves, numStimWaves, numStimReps
-	Variable chan, base, vstep, input, tbase, tscale = 1, negstep = 0
-	Variable Ipeak, Iss, tau, Rp, Rm, Cm
+	Variable chan, base, input, tbase, negstep = 0
+	Variable Vstep, Ipeak, Iss, tau, Rp, Rm, Cm
 	
 	String outName, inName, inName2, gname, winStr
 	String wName, wList
 	String cdf = NMClampDF, sdf = StimDF()
 	
 	Variable currentWave = NMVarGet( "CurrentWave" )
-	Variable grp =  NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
+	Variable grp = NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1367,10 +1390,6 @@ Static Function RCstepCompute( winNum )
 		return 0 // bad parameters
 	endif
 	
-	if ( StringMatch( board, "NIDAQ" ) )
-		tscale = 0.001 // convert to seconds for NIDAQ boards
-	endif
-	
 	if ( currentWave == 0 )
 	
 		numStimWaves = NumVarOrDefault( sdf+"NumStimWaves", 1 )
@@ -1388,7 +1407,7 @@ Static Function RCstepCompute( winNum )
 		
 	endif
 	
-	outName = sdf + "DAC_" + num2istr( DACconfig ) + "_" + num2istr( grp )
+	outName = sdf + "uDAC_" + num2istr( DACconfig ) + "_" + num2istr( grp ) // unscaled DAC output
 	
 	chan = WhichListItem( num2istr( ADCconfig ), ADClist, ";" )
 	
@@ -1398,43 +1417,27 @@ Static Function RCstepCompute( winNum )
 		return -1
 	endif
 	
-	tbase = tbgn - 0.5
+	tbase = min( 5, tbgn )
 	
-	WaveStats /Q/R=( 0, tbase*tscale ) $outName // baseline
+	WaveStats /Q/R=( 0, tbase ) $outName // baseline command
 	
-	base = V_avg // should be zero
+	base = V_avg
 	
-	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $outName
+	WaveStats /Q/R=( tbgn + 0.5, tend - 0.5 ) $outName
 	
-	vstep = abs( V_avg - base )
+	Vstep = abs( V_avg - base )
 	
 	if ( V_avg < base )
 		negstep = 1
 	endif
 	
-	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $inName
-	
-	//if ( negstep )
-	//	fbgn = V_minloc + toffset
-	//else
-	//	fbgn = V_maxloc + toffset
-	//endif
-	
-	fbgn = tbgn //+ toffset
+	fbgn = tbgn
 	fend = tend
 	
 	gName = ChanGraphName( chan )
 	inName2 = GetWaveName( "Display", chan, 0 )
 	
-	// prepare graph and do curve fit
-	
 	DoWindow /F $gName
-	
-	//if ( currentWave == 0 )
-		//ShowInfo /W=$gName
-		//Cursor /W=$gName A, $inName2, fbgn
-		//Cursor /W=$gName B, $inName2, fend
-	//endif
 	
 	Wave wtemp = $ChanDisplayWave( chan )
 	
@@ -1442,53 +1445,60 @@ Static Function RCstepCompute( winNum )
 	
 	base = V_avg
 	
+	WaveStats /Q/R=( tbgn, tbgn + 2 ) wtemp // onset transient, Rp
+	
+	if ( negstep )
+		Ipeak = V_min - base
+		fbgn = V_minloc
+	else
+		Ipeak = V_max - base
+		fbgn = V_maxloc
+	endif
+	
+	Rp = abs( Vstep / Ipeak )
+	
+	WaveStats /Q/R=( tend - 2, tend ) wtemp // steady state, Rp + Rm
+	
+	Iss = V_avg
+	Rm = abs( ( Vstep / Iss ) - Rp )
+	tau = ( tend - tbgn ) / 5 // assuming decay tau is reasonable sub-fraction of fit window
+	Cm = tau / Rp
+	
 	if ( WaveExists( $"RCparams" ) == 0 )
-		Make /N=4 RCparams
+		Make /N=6 RCparams = NaN
 	endif
 	
 	Wave RCparams
 	
-	RCparams[ 0 ] = tbgn
-	RCparams[ 1 ] = V_avg
-	RCparams[ 3 ] = ( fend - fbgn ) / 4
-	
-	if ( negstep )
-		RCparams[ 2 ] = V_min // probably a negative transient
-	else
-		RCparams[ 2 ] = V_max // probably a positive transient
-	endif
+	RCparams[ 0 ] = Vstep // hold
+	RCparams[ 1 ] = tbgn // hold
+	RCparams[ 2 ] = base // hold
+	RCparams[ 3 ] = Rp
+	RCparams[ 4 ] = Rm
+	RCparams[ 5 ] = Cm
 	
 	Variable /G V_fitOptions = 4 // suppress fit display
 	Variable /G V_FitError = 0 // prevents procedure aborts from error
 	String /G S_Info = ""
 	
-	FuncFit /Q/W=0/H="1000"/N RCfit RCparams wtemp( fbgn, fend ) /D
+	FuncFit /L=2000/Q/W=0/H="111000"/N NM_RCvstep RCparams wtemp( fbgn, fend ) /D
 	
 	if ( ( V_FitError == 0 ) && ( strlen( S_Info ) > 0 ) )
 	
-		Ipeak = abs( RCparams[ 1 ] + RCparams[ 2 ] - base )
-		Iss = abs( RCparams[ 1 ] - base )
-		tau = 1 / RCparams[ 3 ]
-		
-		Rp = Vstep * scale / Ipeak // recording pipette
-		Rm = ( Vstep * scale / Iss ) - Rp // membrane resistance
-		Cm = ( tau / 0.001 ) * ( 1 / Rp + 1 / Rm ) // membrane cap
+		Rp = RCparams[ 3 ]
+		Rm = RCparams[ 4 ]
+		Cm = RCparams[ 5 ]
 	
 	else
 	
 		wList = WaveList( "fit_Display*", ";", "" )
 		
 		for ( icnt = 0 ; icnt < ItemsInList( wList ) ; icnt += 1 )
-		
 			wName = StringFromList( icnt, wList )
 			Wave wtemp = $wName
 			wtemp = NaN
-			
 		endfor
 	
-		Ipeak = NaN
-		Iss = NaN
-		tau = NaN
 		Rp = NaN
 		Rm = NaN
 		Cm = NaN
@@ -1575,50 +1585,6 @@ End // RCstepDisplay
 //****************************************************************
 //****************************************************************
 
-Function RCfit( w, x ) : FitFunc
-	Wave w
-	Variable x
-	
-	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
-	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
-	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f( x ) = Yss + Y0 * exp( -( x - X0 ) * invTau )
-	//CurveFitDialog/ End of Equation
-	//CurveFitDialog/ Independent Variables 1
-	//CurveFitDialog/ x
-	//CurveFitDialog/ Coefficients 4
-	//CurveFitDialog/ w[ 0 ] = X0
-	//CurveFitDialog/ w[ 1 ] = Yss
-	//CurveFitDialog/ w[ 2 ] = Y0
-	//CurveFitDialog/ w[ 3 ] = invTau
-	
-	Variable y
-	
-	//if ( numpnts( w ) !=4 )
-	//	return Nan
-	//endif
-	
-	// w[ 0 ] = X0
-	// w[ 1 ] = Yss
-	// w[ 2 ] = Y0
-	// w[ 3 ] = invTau
-	
-	y = w[ 1 ] + w[ 2 ] * exp( -( x - w[ 0 ] ) * w[ 3 ] )
-	
-	return y
-	
-	//if ( ( x < w[ 0 ] ) || ( numtype( y ) > 0 ) )
-	//	return 0
-	//else
-		return y
-	//endif
-	
-End // RCfit
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Static Function RCstepConfig( userInput )
 	Variable userInput // ( 0 ) no ( 1 ) yes
 	
@@ -1673,7 +1639,8 @@ Static Function RCstepConfig2( userInput, winNum )
 	Variable winNum // 1, 2, 3...
 	
 	Variable icnt, onset, width, scale = 1
-	String ADCstr, DACstr, ADCunit, DACunit, winStr, wName
+	String ADCstr, DACstr, ADCunit, DACunit
+	String winStr, wName, pList, shape
 	String cdf = NMClampDF, sdf = StimDF(), bdf = NMStimBoardDF( sdf )
 	String ptitle = "Compute Rm and Cm Window #" + num2str( winNum )
 	
@@ -1704,8 +1671,8 @@ Static Function RCstepConfig2( userInput, winNum )
 	
 		Prompt ADCstr, "ADC input configuration to measure:", popup ADClist
 		Prompt DACstr, "DAC output configuration to measure:", popup DAClist
-		Prompt tbgn, "exponential fit time begin (ms):"
-		Prompt tend, "exponential fit time end (ms):"
+		Prompt tbgn, "step time begin (ms):"
+		Prompt tend, "step time end (ms):"
 		Prompt dsply, "display results in:", popup "Igor history;graph;"
 		DoPrompt ptitle, ADCstr, DACstr, dsply
 		
@@ -1720,21 +1687,48 @@ Static Function RCstepConfig2( userInput, winNum )
 		SetNMvar( sdf+"RCstepDAC" + winStr, DACconfig )
 		SetNMvar( sdf+"RCstepDisplay" + winStr, dsply )
 		
-		if ( numtype( tbgn * tend ) > 0 )
+		wName = PulseWaveName( sdf, "DAC_" + DACstr )
 		
-			wName = PulseWaveName( sdf, "DAC_" + DACstr )
+		if ( WaveExists( $wName ) )
+		
+			Wave /T wtemp = $wName
 			
-			if ( WaveExists( $wName ) && ( numpnts( $wName ) > 8 ) )
+			onset = NaN
+			width = NaN
 			
-				Wave wtemp = $wName
+			for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+			
+				pList = wtemp[ icnt ]
+				shape = StringByKey( "pulse", pList, "=" )
 				
-				onset = wtemp[ 4 ]
-				width = wtemp[ 8 ]
+				if ( StringMatch( shape, "square" ) )
+					onset = str2num( StringByKey( "onset", pList, "=" ) )
+					width = str2num( StringByKey( "width", pList, "=" ) )
+					break
+				endif
 				
-				tbgn = onset
-				tend = onset + width
+			endfor
 			
+			if ( numtype( onset * width ) == 0 )
+			
+				if ( ( numtype( tbgn * tend ) == 0 ) && ( tbgn > onset ) && ( tend <= onset + width ) )
+					// tbgn and tend or OK
+				else
+					tbgn = onset
+					tend = onset + width					
+				endif
+			
+			else
+			
+				tbgn = NaN
+				tend = NaN
+				
 			endif
+			
+		else
+		
+			tbgn = NaN
+			tend = NaN
 		
 		endif
 		
@@ -1748,8 +1742,6 @@ Static Function RCstepConfig2( userInput, winNum )
 		SetNMvar( sdf+"RCstepTend" + winStr, tend )
 		
 	endif
-	
-	Wave DACscale = $( bdf+"DACscale" )
 	
 	Wave /T ADCunits = $( bdf+"ADCunits" )
 	Wave /T DACunits = $( bdf+"DACunits" )
@@ -1794,7 +1786,7 @@ Static Function RCstepConfig2( userInput, winNum )
 			DACunit = DACstr[ 0, 0 ]
 		endif
 		
-		scale = 1e-6 * MetricValue( DACunit ) * DACscale[ DACconfig ] / MetricValue( ADCunit )
+		scale = 1e-6 * MetricValue( DACunit ) / MetricValue( ADCunit )
 		
 	else
 	
@@ -2237,7 +2229,7 @@ Function RandomOrderSave( grpList ) // for testing randomness. Use lots of reps.
 	
 	for ( icnt = 0 ; icnt < numStimWaves ; icnt += 1 )
 		
-		wName = "CT_RO_" +  num2istr( icnt )
+		wName = "CT_RO_" + num2istr( icnt )
 		
 		if ( !WaveExists( $cdf + wName ) )
 			Make /N=0 $cdf + wName = NaN
