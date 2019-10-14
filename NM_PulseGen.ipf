@@ -1872,7 +1872,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, udf, clear, DSCG, notes, w
 		else
 			KillWaves /Z $df + pName
 			KillWaves /Z $df + wNameTemp
-			return ""
+			return "" // abort
 		endif
 	
 	endif
@@ -3559,8 +3559,8 @@ Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off, deleteTrain ] )
 	Variable off // ( 0 ) turn on config ( 1 ) turn off config
 	Variable deleteTrain // delete wave of random pulse times ( 0 ) no ( 1 ) yes ( 2 ) user prompt
 	
-	Variable icnt, ibgn, iend, xpnts
-	String paramList, pdf, trainStr
+	Variable icnt, ibgn, iend, numPulses
+	String paramList, trainStr
 	
 	if ( !WaveExists( $pcwName ) || ( WaveType( $pcwName, 1 ) != 2 ) )
 		return NM2Error( 1, "pcwName", pcwName )
@@ -3588,15 +3588,15 @@ Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off, deleteTrain ] )
 	
 	Wave /T pulses = $pcwName
 	
-	xpnts = numpnts( pulses )
+	numPulses = numpnts( pulses )
 	
-	if ( xpnts == 0 )
+	if ( numPulses == 0 )
 		return 0
 	endif
 	
 	if ( all )
 		ibgn = 0
-		iend = xpnts - 1
+		iend = numPulses - 1
 	else
 		ibgn = configNum
 		iend = configNum
@@ -3604,19 +3604,19 @@ Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off, deleteTrain ] )
 	
 	if ( off == 1 ) // turn off
 	
-		for ( icnt = ibgn ; icnt <=  iend ; icnt += 1 )
+		for ( icnt = ibgn ; icnt <= iend ; icnt += 1 )
 			pulses[ icnt ] = "off=1;" + pulses[ icnt ]
 		endfor
 		
 	elseif ( off == 0 ) // turn on
 		
-		for ( icnt = ibgn ; icnt <=  iend ; icnt += 1 )
+		for ( icnt = ibgn ; icnt <= iend ; icnt += 1 )
 			pulses[ icnt ] = ReplaceString( "off=1;", pulses[ icnt ], "" )
 		endfor
 		
 	else // delete
 		
-		for ( icnt = ibgn ; icnt <=  iend ; icnt += 1 )
+		for ( icnt = iend ; icnt >= ibgn ; icnt -= 1 )
 		
 			paramList = pulses[ icnt ]
 			
@@ -3627,10 +3627,8 @@ Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off, deleteTrain ] )
 				DeletePoints icnt, 1, pulses
 				
 				if ( ( deleteTrain > 0 ) && ( strlen( trainStr ) > 0 ) )
-				
-					pdf = NMParent( pcwName )
 					
-					if ( WaveExists( $pdf + trainStr ) )
+					if ( WaveExists( $trainStr ) )
 						
 						if ( deleteTrain == 2 )
 						
@@ -3642,7 +3640,7 @@ Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off, deleteTrain ] )
 						
 						endif
 						
-						KillWaves /Z $pdf + trainStr
+						KillWaves /Z $trainStr
 						
 					endif
 				
@@ -6428,7 +6426,7 @@ Function /S NMPulseLB1PromptOODE( lb, udf ) // on / off / delete / edit
 	String udf // data folder where user waves are located 
 	
 	Variable icnt, configNum, editExisting, off, numConfigs
-	String pList, paramList = "", titleEnding = "", trainStr = "", selectStr
+	String pList = "", paramList = "", titleEnding = "", trainStr = "", selectStr
 	
 	configNum = NumVarOrDefault( lb.pcvName, 0 )
 	
@@ -6468,6 +6466,10 @@ Function /S NMPulseLB1PromptOODE( lb, udf ) // on / off / delete / edit
 			plist += "---;edit " + trainStr + ";"
 		endif
 	
+	endif
+	
+	if ( strlen( plist ) == 0 )
+		return ""
 	endif
 	
 	selectStr = StringFromList( 0, pList )
