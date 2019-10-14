@@ -2130,11 +2130,14 @@ Function /S NMPulseGCTrain( [ numWaves, dx, waveLength, type, AMPAmodel, NMDAmod
 		
 				wName = "PU_Ran" + num2istr( round( freq * 1000 ) ) + "Hz_w" + num2istr( wcnt ) + "i" + num2istr( icnt )
 				
-				if ( !WaveExists( $wName ) || !useExistingRanTrains )
-					NMPulseTrainRandomTimes( "", wName, trainList, timeLimit )
+				if ( !WaveExists( $sf + wName ) || !useExistingRanTrains )
+					// wave of pulse times are saved where pulse config waves are located
+					// however, this may be problematic for using pulse-time waves to create other waveforms
+					// e.g. for creating both gAMPA and gNMDA waveforms using same pulse times
+					NMPulseTrainRandomTimes( sf, wName, trainList, timeLimit )
 				endif
 				
-				if ( !WaveExists( $ wName ) )
+				if ( !WaveExists( $sf + wName ) )
 					continue
 				endif
 				
