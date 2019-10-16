@@ -192,6 +192,23 @@ End // NMStimSampleInterval
 //****************************************************************
 //****************************************************************
 
+Function NMStimDACUpSamplingOK()
+
+	String acqBoard = StrVarOrDefault( NMClampDF + "AcqBoard", "" )
+
+	if ( StringMatch( acqBoard, "NIDAQ" ) )
+		return 1 // only OK with NIDAQ boards
+	else
+		return 0
+		//return 1 // for testing
+	endif
+
+End // NMStimDACUpSamplingOK
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function StimIntervalGet_DEPRECATED1(sdf, boardNum)
 	String sdf // stim data folder path
 	Variable boardNum // NOT USED
@@ -530,7 +547,7 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	NMMakeStructNull( m )
 	
 	Variable numWaves = NumVarOrDefault(sdf+"NumStimWaves", 0)
-	Variable wLength = NumVarOrDefault(sdf+"WaveLength", NMStimWaveLength)
+	Variable wLength = NumVarOrDefault(sdf+"WaveLength", 0)
 	Variable pgOff = NumVarOrDefault(sdf+"PulseGenOff", 0)
 	
 	if (DataFolderExists(sdf) == 0)

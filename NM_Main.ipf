@@ -639,9 +639,9 @@ End // NMKill
 Function NMProceduresHideUpdate()
 	
 	if ( NMHideProcedureFiles )
-		Execute /Z "SetIgorOption IndependentModuleDev = 0"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 0"
 	else
-		Execute /Z "SetIgorOption IndependentModuleDev = 1"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	endif
 
 End // NMProceduresHideUpdate
@@ -654,10 +654,10 @@ Function NMProceduresHide( hide )
 
 	if ( hide )
 		NMHistory( "SetIgorOption IndependentModuleDev = 0" )
-		Execute /Z "SetIgorOption IndependentModuleDev = 0"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 0"
 	else
 		NMHistory( "SetIgorOption IndependentModuleDev = 1" )
-		Execute /Z "SetIgorOption IndependentModuleDev = 1"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide
 	endif
 	
 	NMMenuBuild()
@@ -675,7 +675,7 @@ Function /S NMProceduresList()
 	
 	Variable saveIMD = NumVarOrDefault( "V_Flag", NaN )
 	
-	Execute /Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	
 	pList = SortList( WinList( "NM_*", ";", "WIN:128" ), ";", 16 ) // all procedures
 	
@@ -703,6 +703,8 @@ Function NMProceduresKill( [ quiet ] )
 		endif
 		
 	endif
+	
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	
 	windowList = NMProceduresList()
 	
@@ -5259,7 +5261,7 @@ Function NMDeprecatedAlert( newFunction [ oldFunction ] )
 	NMHistory( alert )
 	NMDeprecationNotebook( alert )
 	
-	Execute "SetIgorOption IndependentModuleDev = 1"
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	DisplayProcedure oldFunction
 
 End // NMDeprecatedAlert
@@ -5284,7 +5286,7 @@ Function NMDeprecatedFatalError( newFunction [ oldFunction ] )
 	NMHistory( alert )
 	NMDeprecationNotebook( alert )
 	
-	Execute "SetIgorOption IndependentModuleDev = 1"
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	DisplayProcedure oldFunction
 	
 	DoAlert /T=( "NeuroMatic Deprecation" ) 0, alert
@@ -5619,7 +5621,7 @@ Function /S NMDeprecationFind( [ windowList, NM, fatal, noHistory, d ] )
 					
 					NMHistory( pstr )
 
-					Execute "SetIgorOption IndependentModuleDev = 1"
+					Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 					DisplayProcedure /W=$windowName fxn
 				
 				endif
