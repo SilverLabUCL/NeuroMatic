@@ -76,7 +76,27 @@ Function LoadNM()
 		fileName = StringFromList( icnt, flist )
 		
 		if ( StrSearch( fileName, ".ipf", 0, 2 ) >= 0 )
-			Execute /P/Q/Z "OpenProc /P=NMPath/R/V=0 \"" + filename + "\""
+			Execute /P/Q/Z "OpenProc /P=NMPath/V=0 \"" + filename + "\""
+		endif
+		
+	endfor
+	
+	NewPath /O/Q NMClamp, path + "NMClamp:" // load IPF files from NMClamp subfolder
+	
+	PathInfo NMClamp
+	
+	if ( V_flag == 0 )
+		return -1
+	endif
+	
+	flist = IndexedFile( NMClamp, -1, "????" )
+	
+	for ( icnt = 0; icnt < ItemsInList( flist ); icnt += 1 )
+	
+		fileName = StringFromList( icnt, flist )
+		
+		if ( StrSearch( fileName, ".ipf", 0, 2 ) >= 0 )
+			Execute /P/Q/Z "OpenProc /P=NMClamp/V=0 \"" + filename + "\""
 		endif
 		
 	endfor
@@ -84,6 +104,8 @@ Function LoadNM()
 	Execute /P/Q/Z "COMPILEPROCEDURES "		// Note the space before final quote
 	
 	Execute /P/Q/Z "NMon( 1 )"
+	
+	Execute /P/Q/Z "KillPath NMClamp"
 
 End // LoadNM
 
