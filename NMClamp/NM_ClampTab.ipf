@@ -552,19 +552,19 @@ Function ClampTabMake()
 	xinc = 90
 	yinc = 28
 	
-	Listbox CT4_NotesHeader, pos={x0,y0}, size={260,90}, disable=1, fsize=fs, listWave=$lbn.header, selWave=$lbn.headerSel, win=$NMPanelName
+	Listbox CT4_NotesHeader, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.header, selWave=$lbn.headerSel, win=$NMPanelName
 	Listbox CT4_NotesHeader, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,90,120}, win=$NMPanelName
 	Listbox CT4_NotesHeader, titleWave=$lbn.headerTitles, win=$NMPanelName
 	
-	y0 += 100
+	y0 += 90
 	
-	Listbox CT4_NotesFile, pos={x0,y0}, size={260,90}, disable=1, fsize=fs, listWave=$lbn.file, selWave=$lbn.fileSel, win=$NMPanelName
+	Listbox CT4_NotesFile, pos={x0,y0}, size={260,110}, disable=1, fsize=fs, listWave=$lbn.file, selWave=$lbn.fileSel, win=$NMPanelName
 	Listbox CT4_NotesFile, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,90,120}, win=$NMPanelName
 	Listbox CT4_NotesFile, titleWave=$lbn.fileTitles, win=$NMPanelName
 	
-	y0 += 100
+	y0 += 120
 	
-	Listbox CT4_NotesProgress, pos={x0,y0}, size={260,90}, disable=1, fsize=fs, listWave=$lbn.progress, selWave=$lbn.progressSel, win=$NMPanelName
+	Listbox CT4_NotesProgress, pos={x0,y0}, size={260,80}, disable=1, fsize=fs, listWave=$lbn.progress, selWave=$lbn.progressSel, win=$NMPanelName
 	Listbox CT4_NotesProgress, mode=1, userColumnResize=1, selRow=-1, proc=NMClampNotesLBControl, widths={20,90,120}, win=$NMPanelName
 	Listbox CT4_NotesProgress, titleWave=$lbn.progressTitles, win=$NMPanelName
 	
@@ -3333,10 +3333,13 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 		// 7 - end cell edit
 		// 13 - checkbox clicked
 	
-	Variable icnt
+	Variable icnt, history = 1
 	String killAlert, varName, varName2, typeHFP = "", typeNS = ""
-	String selectStr
+	String selectStr, returnStr, valueStr, typeStr, txt
 	String df = NMNotesDF
+	String cdf = ConfigDF( "ClampNotes" )
+	
+	String timeStr = time()
 	
 	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
 	
@@ -3392,6 +3395,10 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 			return -1
 		endif
 		
+		if ( strsearch( varName, "Note", 0 ) > 0 )
+			typeNS = "S"
+		endif
+		
 		if ( strlen( typeNS ) == 0 )
 			return -1
 		endif
@@ -3411,12 +3418,17 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 				
 					if ( StringMatch( typeNS, "N" ) )
 						KillVariables /Z $df + varName
+						KillVariables /Z $cdf + varName
 					elseif( StringMatch( typeNS, "S" ) )
 						KillStrings /Z $df + varName
+						KillStrings /Z $cdf + varName
 					endif
 					
 					KillVariables /Z $df + "D_" + varName // description
 					KillVariables /Z $df + "T_" + varName // units
+					
+					KillVariables /Z $cdf + "D_" + varName // description
+					KillVariables /Z $cdf + "T_" + varName // units
 					
 					break
 					
@@ -3452,7 +3464,32 @@ Function NMClampNotesLBControl( ctrlName, row, col, event ) : ListboxControl
 		elseif ( editByPrompt )
 		
 			if ( col > 0 )
-				NMConfigEditPrompt( "ClampNotes", varName, editType = 1, editDefinition = 1 )
+			
+				if ( strsearch( varName, "Note", 0 ) > 0 )
+				
+					valueStr = StrVarOrDefault( df + varName, "" )
+					
+					Prompt valueStr, varName
+					DoPrompt "Edit NM Clamp Note", valueStr
+
+					if ( V_flag == 0 )
+						SetNMstr( df + varName, valueStr )
+					endif
+
+				else
+
+					returnStr = NMConfigEditPrompt( "ClampNotes", varName, editType = 1, editDefinition = 1 )
+					valueStr = StringFromList( 0, returnStr)
+
+					if ( strlen( valueStr ) > 0 )
+						typeStr = StringFromList( 1, returnStr)
+						txt = varName + " = " + valueStr + " " + typeStr
+						NMNotesAddNote( txt ) // save as Note with time stamp
+						// keeps history of changes before recording
+					endif
+				
+				endif
+				
 			endif
 			
 		elseif ( ( col > 0 ) && ( event == 7 ) ) 

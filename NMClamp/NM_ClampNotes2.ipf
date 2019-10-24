@@ -581,7 +581,7 @@ Function NMNotesAddNote( usernote [ history ] ) // add user note
 	SetNMstr( varName, txt )
 	
 	if ( history )
-		NMHistory( txt )
+		NMHistory( "NM Clamp Note " + txt )
 	endif
 	
 	//if ( WinType( NMNotesTableName ) == 2 )
