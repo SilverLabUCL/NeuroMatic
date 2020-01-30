@@ -540,8 +540,8 @@ Function ClampSpikeDisplaySetPosition()
 
 	Variable x0, y0, x1, y1
 	
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
+	Variable xPixels = NMScreenPixelsX()
+	Variable yPixels = NMScreenPixelsY()
 
 	String raster = ClampSpikeRaster()
 	String df = NMStimSpikeDF()

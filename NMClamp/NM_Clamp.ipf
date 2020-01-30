@@ -842,14 +842,9 @@ End // ClampError
 Function ClampProgressInit() // use ProgWin XOP display to allow cancel of acquisition
 
 	Variable pflag = NMVarGet( "ProgFlag" )
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
 	
-	Variable xProgress = NMProgressX()
-	Variable yProgress = NMProgressY()
-	
-	String txt = "Alert: Clamp Tab requires ProgWin XOP to cancel acquisition."
-	txt += "Download from ftp site www.wavemetrics.com/Support/ftpinfo.html ( IgorPro/User_Contributions/ )."
+	//String txt = "Alert: Clamp Tab requires ProgWin XOP to cancel acquisition."
+	//txt += "Download from ftp site www.wavemetrics.com/Support/ftpinfo.html ( IgorPro/User_Contributions/ )."
 	
 	if ( pflag != 1 )
 	
@@ -861,13 +856,15 @@ Function ClampProgressInit() // use ProgWin XOP display to allow cancel of acqui
 		//	NMDoAlert( txt )
 		//endif
 		
+		pflag = 1
+		
 		SetNMvar( NMDF+"ProgFlag", 1 )
 	
 	endif
 	
-	if ( ( pflag == 1 ) && ( ( xProgress < 0 ) || ( yProgress < 0 ) ) )
-		SetNMvar( NMDF+"xProgress", xPixels - 500 )
-		SetNMvar( NMDF+"yProgress", yPixels/2 )
+	if ( ( pflag == 1 ) && ( ( NMProgressX() < 0 ) || ( NMProgressY() < 0 ) ) )
+		SetNMvar( NMDF+"xProgress", ( NMScreenPixelsX() - NMProgWinWidth ) * 0.5 )
+		SetNMvar( NMDF+"yProgress", NMScreenPixelsY(igorFrame=1) * 0.7 )
 	endif
 
 End // ClampProgress

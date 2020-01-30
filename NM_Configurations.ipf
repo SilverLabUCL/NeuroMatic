@@ -1434,7 +1434,7 @@ Function NMConfigEdit( flist [ history ] ) // create table to edit config vars
 	
 	String blankStr = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 	
-	Variable xPixels = NMComputerPixelsX()
+	Variable xPixels = NMScreenPixelsX()
 	
 	if ( history )
 		vlist = NMCmdStr( fname, vlist )

@@ -4126,7 +4126,7 @@ Function NMSetsPanel( [ history ] )
 	String tname = NMSetsPanelName + "Table"
 	
 	Variable fs = NMPanelFsize
-	Variable xPixels = NMComputerPixelsX()
+	Variable xPixels = NMScreenPixelsX()
 	
 	String prefixFolder = CurrentNMPrefixFolder()
 	

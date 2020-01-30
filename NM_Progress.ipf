@@ -31,8 +31,8 @@
 //****************************************************************
 //****************************************************************
 
-Static Constant NMProgWinWidth = 260 // pixels
-Static Constant NMProgWinHeight = 100 // pixels
+Constant NMProgWinWidth = 260 // pixels
+Constant NMProgWinHeight = 100 // pixels
 
 Static Constant NMProgButtonX0 = 90
 Static Constant NMProgButtonY0 = 70
@@ -46,41 +46,20 @@ Static Constant NMProgPopupY0 = 70
 //****************************************************************
 //****************************************************************
 
-Function NMProgressXY( xpixels, ypixels )
-	Variable xpixels, ypixels
-	
-	if ( ( numtype( xPixels ) > 0 ) || ( xPixels < 0 ) )
-		xPixels = NaN
-	endif
-	
-	if ( ( numtype( yPixels ) > 0 ) || ( yPixels < 0 ) )
-		yPixels = NaN
-	endif
-	
-	SetNMvar( NMDF+"xProgress", xpixels )
-	SetNMvar( NMDF+"yProgress", ypixels )
-	
-	return 0
-
-End // NMProgressXY
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Function NMProgressX()
 
-	Variable xProgress = NMVarGet( "xProgress" )
-	Variable xLimit = NMComputerPixelsX() - NMProgWinWidth
+	Variable xprogress = NMVarGet( "xProgress" )
+	Variable xpixels = NMScreenPixelsX()
+	Variable xlimit = xpixels - NMProgWinWidth
 	
-	if ( numtype( xProgress ) > 0 )
-		xProgress = ( NMComputerPixelsX() - 2 * NMProgWinWidth ) / 2
-	else
-		xProgress = max( xProgress, 0 )
-		xProgress = min( xProgress, xLimit )
+	if ( numtype( xprogress ) > 0 )
+		xprogress = ( xpixels - NMProgWinWidth ) * 0.5
 	endif
 	
-	return xProgress
+	xprogress = max( xprogress, 0 )
+	xprogress = min( xprogress, xlimit )
+	
+	return xprogress
 	
 End // NMProgressX
 
@@ -90,17 +69,18 @@ End // NMProgressX
 
 Function NMProgressY()
 	
-	Variable yProgress = NMVarGet( "yProgress" )
-	Variable yLimit = NMComputerPixelsY() - NMProgWinHeight
+	Variable yprogress = NMVarGet( "yProgress" )
+	Variable ypixels = NMScreenPixelsY(igorFrame=1)
+	Variable ylimit = ypixels - NMProgWinHeight
 	
-	if ( numtype( yProgress ) > 0 )
-		yProgress = 0.5 * NMComputerPixelsY()
-	else
-		yProgress = max( yProgress, 0 )
-		yProgress = min( yProgress, yLimit )
+	if ( numtype( yprogress ) > 0 )
+		yprogress = 0.7 * ypixels
 	endif
 	
-	return yProgress
+	yprogress = max( yprogress, 0 )
+	yprogress = min( yprogress, ylimit )
+	
+	return yprogress
 
 End // NMProgressY
 
@@ -546,7 +526,7 @@ Function NMProgWin61Kill()
 	
 	GetWindow NMProgressPanel, wsize
 	
-	Variable scale = ScreenResolution / PanelResolution( "" )
+	Variable scale = 1 / NMPointsPerPixel()
 	
 	SetNMvar( NMDF + "xProgress", V_left * scale )
 	SetNMvar( NMDF + "yProgress", V_top * scale ) // save progress window position
@@ -667,7 +647,7 @@ Function NMProgressXYButton( ctrlName ) : ButtonControl
 	Variable x, y, scale = 1
 	
 	if ( NMProgressFlag() == 2 )
-		scale = ScreenResolution / PanelResolution( "" )
+		scale = 1 / NMPointsPerPixel()
 	endif
 	
 	GetWindow NMProgressPanel, wsize
@@ -718,6 +698,28 @@ Function NMProgressTest( candy )
 	return 0
 
 End // NMProgressTest
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMProgressXY( xpixels, ypixels ) // NOT USED
+	Variable xpixels, ypixels
+	
+	if ( ( numtype( xpixels ) > 0 ) || ( xpixels < 0 ) )
+		xpixels = NaN
+	endif
+	
+	if ( ( numtype( ypixels ) > 0 ) || ( ypixels < 0 ) )
+		ypixels = NaN
+	endif
+	
+	SetNMvar( NMDF+"xProgress", xpixels )
+	SetNMvar( NMDF+"yProgress", ypixels )
+	
+	return 0
+
+End // NMProgressXY
 
 //****************************************************************
 //****************************************************************

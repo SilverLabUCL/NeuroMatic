@@ -1651,7 +1651,7 @@ Function NMGroupsPanel( [ history ] )
 		return -1
 	endif
 	
-	Variable xPixels = NMComputerPixelsX()
+	Variable xPixels = NMScreenPixelsX()
 	Variable fs = NMPanelFsize
 	
 	String tname = NMGroupsPanelName + "Table"

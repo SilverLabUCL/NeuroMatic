@@ -754,8 +754,8 @@ Function ClampStatsDisplaySetPosition( select )
 	
 	Variable x0, y0, x1, y1, xshift
 	
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
+	Variable xPixels = NMScreenPixelsX()
+	Variable yPixels = NMScreenPixelsY()
 
 	String gname = ClampStatsDisplayName( select )
 	String ssdf =NMStimStatsDF()

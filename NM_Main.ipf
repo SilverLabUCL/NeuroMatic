@@ -3135,44 +3135,78 @@ End // NextGraphName
 //****************************************************************
 //****************************************************************
 
-Function NMComputerPixelsX()
+Function NMScreenPixelsX([igorFrame])
+	Variable igorFrame
 
-	Variable d0, x0, y0, x1, x2, xPixels = 1000
-
-	String s0 = IgorInfo( 0 )
+	Variable d0, x0, y0, x1, y1, defaultPixels = 1000
+	String s0
 	
+	if (igorFrame)
+		GetWindow kwFrameInner wsizeDC
+		return v_right - v_left
+	endif
+
+	s0 = IgorInfo( 0 )
 	s0 = StringByKey( "SCREEN1", s0, ":" )
 	
-	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, x2
+	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, y1
 	
-	if ( ( numtype( x1 ) == 0 ) && ( x1 > xPixels ) )
-		xPixels = x1
+	if ( numtype( x1 ) == 0 )
+		return x1
 	endif
 	
-	return xPixels
+	return defaultPixels
 
-End // NMComputerPixelsX
+End // NMScreenPixelsX
 
 //****************************************************************
 //****************************************************************
 
-Function NMComputerPixelsY()
+Function NMScreenPixelsY([igorFrame])
+	Variable igorFrame
 
-	Variable d0, x0, y0, x1, x2, yPixels = 800
-
-	String s0 = IgorInfo( 0 )
+	Variable d0, x0, y0, x1, y1, defaultPixels = 800
+	String s0
 	
-	s0 = StringByKey( "SCREEN1", s0, ":" )
-	
-	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, x2
-	
-	if ( ( numtype( x2 ) == 0 ) && ( x2 > yPixels ) )
-		yPixels = x2
+	if (igorFrame)
+		GetWindow kwFrameInner wsizeDC
+		return v_bottom - v_top
 	endif
 	
-	return yPixels
+	s0 = IgorInfo( 0 )
+	s0 = StringByKey( "SCREEN1", s0, ":" )
+	
+	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, y1
+	
+	if ( numtype( y1 ) == 0 )
+		return y1
+	endif
+	
+	return defaultPixels
 
-End // NMComputerPixelsY
+End // NMScreenPixelsY
+
+//****************************************************************
+//****************************************************************
+
+Function NMPointsPerPixel()
+
+	// Display - coordinates in points
+	// Edit - coordinates in points
+	// MoveWindow - coordinates in points
+	// NewPanel - coordinates in pixels
+	// GetWindow wsize - coordinates in points
+	// GetWindow wsizeDC - coordinates in pixels
+
+	Variable panelRes = PanelResolution( "" ) // points per inch (usually 72)
+	
+	Variable screenRes = ScreenResolution // pixels (dots) per inch (DPI)
+	// Mac, 72 DPI
+	// Windows, 96 (small fonts) or 120 (large fonts)
+	
+	return panelRes / screenRes
+
+End // NMPointsPerPixel
 
 //****************************************************************
 //****************************************************************
@@ -3233,8 +3267,8 @@ Function NMWinCascadeRect( w [ width, height, increment ] ) // cascade graph siz
 	
 	Variable offsetPC = 75, offsetMac = 50
 	
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
+	Variable xPixels = NMScreenPixelsX()
+	Variable yPixels = NMScreenPixelsY()
 	
 	Variable cascade = NMVarGet( "Cascade" )
 	String computer = NMComputerType()

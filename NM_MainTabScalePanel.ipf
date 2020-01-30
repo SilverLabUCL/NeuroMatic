@@ -93,7 +93,7 @@ Function /S NMScalePanel( [ mode, align ] )
 	SetNMvar( NMMainDF + "ScalezEditCells", 0 )
 	CheckNMvar( NMMainDF + "ScalezWaveLengthFormat", 1 )
 	
-	xPixels = NMComputerPixelsX()
+	xPixels = NMScreenPixelsX()
 	x1 = ( xPixels - width ) / 2
 	y1 = 140
 	x2 = x1 + width

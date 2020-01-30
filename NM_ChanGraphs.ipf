@@ -1651,8 +1651,10 @@ End // ChanGraphsSetCoordinates
 Function ChanGraphSetCoordinates( channel ) // set default channel graph position
 	Variable channel // ( -1 ) for current channel
 	
-	Variable yinc, width, height, ccnt, where
-	Variable xoffset, yoffset // default offsets
+	Variable yinc, width, height, ccnt, counter
+	Variable xextra, yextra, yextra2, heightPcnt
+	
+	Variable widthPcnt = 0.7
 	
 	if ( channel == -1 )
 		channel = CurrentNMChannel()
@@ -1669,9 +1671,9 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 	Variable x1 = NumVarOrDefault( cdf + "GX1", Nan )
 	Variable y1 = NumVarOrDefault( cdf + "GY1", Nan )
 	
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
-	String Computer = NMComputerType()
+	Variable xpoints = NMScreenPixelsX() * NMPointsPerPixel()
+	Variable ypoints = NMScreenPixelsY(igorFrame=1) * NMPointsPerPixel()
+	String computer = NMComputerType()
 	
 	Variable numChannels = NMNumChannels()
 	
@@ -1685,6 +1687,16 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 		
 	endfor
 	
+	if ( numChannels <= 0 )
+		return -1
+	elseif ( numChannels == 1 )
+		heightPcnt = 0.5
+	elseif ( numChannels == 2 )
+		heightPcnt = 0.8
+	else
+		heightPcnt = 0.9
+	endif
+	
 	for ( ccnt = 0; ccnt < channel; ccnt+=1 )
 		
 		cdf = ChanDF( ccnt )
@@ -1694,33 +1706,35 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 		endif
 		
 		if ( NumVarOrDefault( cdf + "On", 1 ) )
-			where += 1
+			counter += 1
 		endif
 		
 	endfor
 	
 	cdf = ChanDF( channel )
 	
-	if ( numtype( x0 * y0 * x1 * y1 ) > 0 ) // compute graph coordinates
+	if ( numtype( x0 * y0 * x1 * y1 ) > 0 )
 	
-		width = xPixels / 2
-		height = yPixels / ( numChannels + 2 )
-	
-		strswitch( Computer )
+		strswitch( computer )
 			case "pc":
-				x0 = 5
-				y0 = 42
-				yinc = height + 26
+				xextra = 5 // extra, adjusted by hand
+				yextra = 40.25 // 42 // extra (menu bar), adjusted by hand
+				yextra2 = 26 // top of graph
+				//yinc = height + 26
 				break
 			default:
-				x0 = 10
-				y0 = 44
-				yinc = height + 25
+				xextra = 10
+				yextra = 44
+				yextra2 = 25
+				//yinc = height + 25
 				break
 		endswitch
 		
-		x0 += xoffset
-		y0 += yoffset + yinc*where
+		width = ( xpoints - 2 * xextra) * widthPcnt
+		height = ( ypoints - yextra2 * numChannels) * heightPcnt / numChannels
+		
+		x0 = xextra
+		y0 = yextra + ( height + yextra2 ) * counter
 		x1 = x0 + width
 		y1 = y0 + height
 		
