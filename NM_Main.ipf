@@ -3141,8 +3141,8 @@ Function NMScreenPixelsX([igorFrame])
 	Variable d0, x0, y0, x1, y1, defaultPixels = 1000
 	String s0
 	
-	if (igorFrame)
-		GetWindow kwFrameInner wsizeDC
+	if ( igorFrame && StringMatch( NMComputerType(), "pc" ) )
+		GetWindow kwFrameInner wsizeDC // frames on Windows only
 		return v_right - v_left
 	endif
 
@@ -3168,8 +3168,8 @@ Function NMScreenPixelsY([igorFrame])
 	Variable d0, x0, y0, x1, y1, defaultPixels = 800
 	String s0
 	
-	if (igorFrame)
-		GetWindow kwFrameInner wsizeDC
+	if ( igorFrame && StringMatch( NMComputerType(), "pc" ) )
+		GetWindow kwFrameInner wsizeDC // frames on Windows only
 		return v_bottom - v_top
 	endif
 	
@@ -3195,8 +3195,8 @@ Function NMPointsPerPixel()
 	// Edit - coordinates in points
 	// MoveWindow - coordinates in points
 	// NewPanel - coordinates in pixels
-	// GetWindow wsize - coordinates in points
-	// GetWindow wsizeDC - coordinates in pixels
+	// GetWindow wsize - coordinates in points (Windows only)
+	// GetWindow wsizeDC - coordinates in pixels (Windows only)
 
 	Variable panelRes = PanelResolution( "" ) // points per inch (usually 72)
 	
@@ -3458,33 +3458,40 @@ End // NMHistory
 
 Function NMCommandWindowReposition()
 
-	Variable vleft, vright, vtop, vbottom
-
-	String ctype = NMComputerType()
+	Variable vleft, vtop, vright, vbottom // points
+	Variable xpoints, ypoints, yheight, yoffset
 	
 	DoWindow /F/H/Hide=0
 	
-	if ( StringMatch( ctype, "pc" ) )
+	if ( StringMatch( NMComputerType(), "pc" ) )
 	
-		GetWindow kwFrameInner wsize
-	
-		MoveWindow /C V_left + 6, V_bottom - 120, V_right - 6, V_bottom + 12
+		GetWindow kwFrameInner wsize // Windows only, points
+		
+		yheight = 180
+		yoffset = 12
+		
+		vleft = V_left + 6
+		vright = V_right - 6
+		vbottom = V_bottom + yoffset
+		vtop = vbottom - yheight
 	
 	else
 	
-		MoveWindow /C 0, 0, 1000, 150
+		xpoints = NMScreenPixelsX() * NMPointsPerPixel()
+		ypoints = NMScreenPixelsY() * NMPointsPerPixel()
+		yheight = 180
+		yoffset = 50
+	
+		vleft = 0
+		vright = xpoints
+		vbottom = ypoints - yoffset
+		vtop = vbottom - yheight
 	
 	endif
 	
+	MoveWindow /C vleft, vtop, vright, vbottom
+	
 End // NMCommandWindowReposition
-
-//****************************************************************
-//****************************************************************
-
-Function NMCommandWindowSave()
-
-
-End // NMCommandWindowSave
 
 //****************************************************************
 //****************************************************************
