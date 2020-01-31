@@ -754,8 +754,8 @@ Function ClampStatsDisplaySetPosition( select )
 	
 	Variable x0, y0, x1, y1, xshift
 	
-	Variable xPixels = NMScreenPixelsX()
-	Variable yPixels = NMScreenPixelsY()
+	Variable xpoints = NMScreenPointsX()
+	Variable ypoints = NMScreenPointsY()
 
 	String gname = ClampStatsDisplayName( select )
 	String ssdf =NMStimStatsDF()
@@ -772,8 +772,8 @@ Function ClampStatsDisplaySetPosition( select )
 	
 	if ( statsOn == 1 )
 		
-		x0 = NumVarOrDefault( ssdf + "CS" + select[0,0] + "_X0", xPixels * 0.1 + xshift)
-		y0 = NumVarOrDefault( ssdf + "CS" + select[0,0] + "_Y0", yPixels * 0.5 )
+		x0 = NumVarOrDefault( ssdf + "CS" + select[0,0] + "_X0", xpoints * 0.1 + xshift)
+		y0 = NumVarOrDefault( ssdf + "CS" + select[0,0] + "_Y0", ypoints * 0.5 )
 		x1 = NumVarOrDefault( ssdf + "CS" + select[0,0] + "_X1", x0 + 260 )
 		y1 = NumVarOrDefault( ssdf + "CS" + select[0,0] + "_Y1", y0 + 170 )
 		

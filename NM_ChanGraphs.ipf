@@ -1671,8 +1671,8 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 	Variable x1 = NumVarOrDefault( cdf + "GX1", Nan )
 	Variable y1 = NumVarOrDefault( cdf + "GY1", Nan )
 	
-	Variable xpoints = NMScreenPixelsX() * NMPointsPerPixel()
-	Variable ypoints = NMScreenPixelsY(igorFrame=1) * NMPointsPerPixel()
+	Variable xpoints = NMScreenPointsX(igorFrame=1)
+	Variable ypoints = NMScreenPointsY(igorFrame=1)
 	String computer = NMComputerType()
 	
 	Variable numChannels = NMNumChannels()

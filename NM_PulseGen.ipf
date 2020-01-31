@@ -7123,8 +7123,8 @@ Function PulseGraphMake()
 		pw = 600
 	endif
 	
-	Variable x0 = ceil((NMScreenPixelsX() - pw)/4)
-	Variable y0 = ceil((NMScreenPixelsY() - ph)/4)
+	Variable x0 = ceil((NMScreenPointsX(igorFrame=1) - pw)/4)
+	Variable y0 = ceil((NMScreenPointsY(igorFrame=1) - ph)/4)
 	
 	Make /O/N=0 PU_DumWave
 	

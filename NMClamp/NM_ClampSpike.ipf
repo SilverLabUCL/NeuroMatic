@@ -192,7 +192,7 @@ End // ClampSpikeRetrieveFromStim
 
 Function ClampSpikeInit()
 
-	if (NMStimSpikeOn() == 1)
+	if (NMStimSpikeOn())
 		ClampSpikeSaveAsk()
 		ClampSpikeRetrieveFromStim() // get Spike from new stim
 		NMSpikeDisplayClear()
@@ -215,7 +215,7 @@ Function ClampSpikeStart()
 	ClampSpikeDisplay(0) // clear display
 	ClampSpikeRemoveWaves(1) // kill waves
 	
-	if (NMStimSpikeOn() == 1)
+	if (NMStimSpikeOn())
 		ClampSpikeRasterMake()
 		ClampSpikeDisplay(1)
 	endif
@@ -454,7 +454,7 @@ Function ClampSpikeDisplay(enable)
 		
 	endif
 	
-	if ((NMStimSpikeOn() == 0) || (enable == 0))
+	if (!NMStimSpikeOn() || (enable == 0))
 		return 0
 	endif
 	
@@ -540,22 +540,20 @@ Function ClampSpikeDisplaySetPosition()
 
 	Variable x0, y0, x1, y1
 	
-	Variable xPixels = NMScreenPixelsX()
-	Variable yPixels = NMScreenPixelsY()
+	Variable xpoints = NMScreenPointsX()
+	Variable ypoints = NMScreenPointsY()
 
 	String raster = ClampSpikeRaster()
 	String df = NMStimSpikeDF()
-	
-	Variable spikeOn = NMStimSpikeOn()
 	
 	if ( WinType(raster) == 0 )
 		return 0
 	endif
 	
-	if (spikeOn == 1)
+	if (NMStimSpikeOn())
 	
-		x0 = NumVarOrDefault(df+"CSR_X0", xPixels * 0.2)
-		y0 = NumVarOrDefault(df+"CSR_Y0", yPixels * 0.5)
+		x0 = NumVarOrDefault(df+"CSR_X0", xpoints * 0.2)
+		y0 = NumVarOrDefault(df+"CSR_Y0", ypoints * 0.5)
 		x1 = NumVarOrDefault(df+"CSR_X1", x0 + 260)
 		y1 = NumVarOrDefault(df+"CSR_Y1", y0 + 170)
 		

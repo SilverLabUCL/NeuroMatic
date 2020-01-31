@@ -49,7 +49,7 @@ Static Constant NMProgPopupY0 = 70
 Function NMProgressX()
 
 	Variable xprogress = NMVarGet( "xProgress" )
-	Variable xpixels = NMScreenPixelsX()
+	Variable xpixels = NMScreenPixelsX(igorFrame=1)
 	Variable xlimit = xpixels - NMProgWinWidth
 	
 	if ( numtype( xprogress ) > 0 )
@@ -524,12 +524,10 @@ Function NMProgWin61Kill()
 		return 0
 	endif
 	
-	GetWindow NMProgressPanel, wsize
+	GetWindow NMProgressPanel, wsizeDC
 	
-	Variable scale = 1 / NMPointsPerPixel()
-	
-	SetNMvar( NMDF + "xProgress", V_left * scale )
-	SetNMvar( NMDF + "yProgress", V_top * scale ) // save progress window position
+	SetNMvar( NMDF + "xProgress", V_left )
+	SetNMvar( NMDF + "yProgress", V_top ) // save progress window position
 	
 	KillWindow NMProgressPanel
 
