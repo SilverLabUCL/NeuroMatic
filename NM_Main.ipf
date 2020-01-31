@@ -3189,6 +3189,26 @@ End // NMScreenPixelsY
 //****************************************************************
 //****************************************************************
 
+Function NMScreenPointsX([igorFrame])
+	Variable igorFrame
+	
+	return NMScreenPixelsX(igorFrame=igorFrame) * NMPointsPerPixel()
+	
+End // NMScreenPointsX
+
+//****************************************************************
+//****************************************************************
+
+Function NMScreenPointsY([igorFrame])
+	Variable igorFrame
+	
+	return NMScreenPixelsY(igorFrame=igorFrame) * NMPointsPerPixel()
+	
+End // NMScreenPointsY
+
+//****************************************************************
+//****************************************************************
+
 Function NMPointsPerPixel()
 
 	// Display - coordinates in points
@@ -3267,8 +3287,8 @@ Function NMWinCascadeRect( w [ width, height, increment ] ) // cascade graph siz
 	
 	Variable offsetPC = 75, offsetMac = 50
 	
-	Variable xPixels = NMScreenPixelsX()
-	Variable yPixels = NMScreenPixelsY()
+	Variable xpoints = NMScreenPointsX()
+	Variable ypoints = NMScreenPointsY()
 	
 	Variable cascade = NMVarGet( "Cascade" )
 	String computer = NMComputerType()
@@ -3310,7 +3330,7 @@ Function NMWinCascadeRect( w [ width, height, increment ] ) // cascade graph siz
 	
 	if ( increment )
 	
-		if ( ( w.left > xPixels * 0.4 ) || ( w.top > yPixels * 0.4 ) )
+		if ( ( w.left > xpoints * 0.5 ) || ( w.top > ypoints * 0.5 ) )
 			cascade = 0 // reset Cascade counter
 		else
 			cascade += 1 // increment Cascade counter
@@ -3459,26 +3479,25 @@ End // NMHistory
 Function NMCommandWindowReposition()
 
 	Variable vleft, vtop, vright, vbottom // points
-	Variable xpoints, ypoints, yheight, yoffset
+	Variable yheight, yoffset // points
 	
 	DoWindow /F/H/Hide=0
 	
-	if ( StringMatch( NMComputerType(), "pc" ) )
+	Variable xpoints = NMScreenPointsX(igorFrame=1)
+	Variable ypoints = NMScreenPointsY(igorFrame=1)
 	
-		GetWindow kwFrameInner wsize // Windows only, points
+	if ( StringMatch( NMComputerType(), "pc" ) )
 		
-		yheight = 180
-		yoffset = 12
+		yheight = 150
+		yoffset = 13
 		
-		vleft = V_left + 6
-		vright = V_right - 6
-		vbottom = V_bottom + yoffset
+		vleft = 6
+		vright = xpoints - 6
+		vbottom = ypoints + yoffset
 		vtop = vbottom - yheight
 	
 	else
 	
-		xpoints = NMScreenPixelsX() * NMPointsPerPixel()
-		ypoints = NMScreenPixelsY() * NMPointsPerPixel()
 		yheight = 180
 		yoffset = 50
 	
