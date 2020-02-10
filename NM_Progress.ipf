@@ -441,8 +441,8 @@ Function NMProgWin61( fraction, progressStr [ buttonNameList, buttonFxn ] ) // I
 		y0 = yProgress
 		x1 = xProgress + NMProgWinWidth
 		y1 = yProgress + pheight
-	
-		NewPanel /FLT/K=1/N=NMProgressPanel /W=(x0,y0,x1,y1 ) as "NM Progress"
+		
+		NewPanel /FLT/K=1/N=NMProgressPanel /W=(x0,y0,x1,y1) as "NM Progress"
 		
 		TitleBox /Z NM_ProgWinTitle, pos={5,10}, size={xw,18}, fsize=fs, fixedSize=1, win=NMProgressPanel
 		TitleBox /Z NM_ProgWinTitle, frame=0, title=progressStr, anchor=MC, win=NMProgressPanel
@@ -520,14 +520,23 @@ End // NMProgWin61
 
 Function NMProgWin61Kill()
 
+	Variable x, y, scale = 1
+
 	if ( WinType( "NMProgressPanel" ) == 0 )
 		return 0
 	endif
 	
-	GetWindow NMProgressPanel, wsizeDC
+	if ( NMProgressFlag() == 2 )
+		scale = 1 / NMPointsPerPixel()
+	endif
 	
-	SetNMvar( NMDF + "xProgress", V_left )
-	SetNMvar( NMDF + "yProgress", V_top ) // save progress window position
+	GetWindow NMProgressPanel, wsize
+	
+	x = round( V_left * scale )
+	y = round( V_top * scale )
+	
+	SetNMvar( NMDF + "xProgress", x )
+	SetNMvar( NMDF + "yProgress", y ) // save progress window position
 	
 	KillWindow NMProgressPanel
 

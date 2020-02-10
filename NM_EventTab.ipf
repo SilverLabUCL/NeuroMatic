@@ -3734,7 +3734,7 @@ Function EventFindAll( waveSelect, displayResults [ history ] ) // find events u
 			
 			do
 			
-				if ( NMProgressCall( -2, "Detecting Events..." ) == 1 )
+				if ( NMProgressCall( -2, "Detecting Events... n=" + num2istr(ecnt) ) == 1 )
 					break
 				endif
 				
