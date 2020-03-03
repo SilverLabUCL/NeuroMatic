@@ -1,3 +1,4 @@
+#pragma TextEncoding = "UTF-8"
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 #pragma hide = 1
 
@@ -58,7 +59,7 @@ Static Constant RiseTimePend = 90
 Static Constant DecayTimePercent = 63.2 // = 100 - 36.7879 = 100 * ( 1 - e^-1 )
 
 StrConstant NMStatsDF = "root:Packages:NeuroMatic:Stats:"
-StrConstant NMStats2FxnList = "Functions;---;Plot;Edit;Wave Stats;Print Note;Print Name;Histogram;Inequality <>;Stability;Significant Difference;MPFA Stats; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;" // extra at end to create scrollbar
+StrConstant NMStats2FxnList = "Functions;---;Plot;Edit;Wave Stats;Print Note;Print Name;Histogram;Inequality <>=;Stability;Significant Difference;MPFA Stats; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;" // extra at end to create scrollbar
 StrConstant NMStats2AllFxnList = "Functions;---;Plot;Edit;Wave Stats;Print Notes;Print Names;"
 
 Static StrConstant StatsFxnList = "Off;Max;Min;Avg;Avg+SDev;Avg+SEM;Median;SDev;SEM;Var;RMS;NumPnts;Area;Sum;PathLength;Slope;Onset;Level;Level+;Level-;MaxAvg;MinAvg;Value@xbgn;Value@xend;RiseTime+;RTslope+;DecayTime+;FWHM+;RiseTime-;RTslope-;DecayTime-;FWHM-;"
@@ -93,7 +94,7 @@ Function StatsTab( enable )
 
 	if ( enable )
 		CheckNMPackage( "Stats", 1 ) // declare globals if necessary
-		StatsChanCheck( updateStats = 0 )
+		StatsChanCheck( updateStats=0 )
 		StatsAmpWinBegin()
 		MakeStats( 0 ) // make controls if necessary
 	endif
@@ -210,14 +211,14 @@ Function NMStatsSet( [ win, fxn, level, levelPos, levelNeg, maxAvgWin, minAvgWin
 			return NM2Error( 10, "numWindows", num2str( numWindows ) )
 		endif
 		
-		CheckNMStatsWaves( 0, pointsAtLeast = numWindows )
+		CheckNMStatsWaves( 0, pointsAtLeast=numWindows )
 		updateStatsTab = 1
 	
 	endif
 	
 	if ( !ParamIsDefault( winSelect ) )
 	
-		vlist = NMCmdNumOptional( "winSelect", winSelect, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "winSelect", winSelect, vlist, integer=1 )
 	
 		if ( ( numtype( winSelect ) > 0 ) || ( winSelect < 0 ) || ( winSelect >= numpnts( $aName ) ) )
 			return NM2Error( 10, "winSelect", num2str( winSelect ) )
@@ -241,7 +242,7 @@ Function NMStatsSet( [ win, fxn, level, levelPos, levelNeg, maxAvgWin, minAvgWin
 		return -1
 	endif
 	
-	vlistWin = NMCmdNumOptional( "win", win, "", integer = 1 )
+	vlistWin = NMCmdNumOptional( "win", win, "", integer=1 )
 		
 	if ( !ParamIsDefault( fxn ) && !bslnEntry )
 	
@@ -676,7 +677,7 @@ Function NMStatsSet( [ win, fxn, level, levelPos, levelNeg, maxAvgWin, minAvgWin
 		
 	endif
 	
-	if ( !StringMatch( vlistWin, NMCmdNumOptional( "win", win, "", integer = 1 ) ) )
+	if ( !StringMatch( vlistWin, NMCmdNumOptional( "win", win, "", integer=1 ) ) )
 		vlist += vlistWin
 	endif
 	
@@ -752,7 +753,7 @@ Function CheckNMStatsWin( win )
 		return Nan
 	endif
 	
-	CheckNMStatsWaves( 0, pointsAtLeast = ( win + 1 ), errorAlert = 1 )
+	CheckNMStatsWaves( 0, pointsAtLeast=( win + 1 ), errorAlert=1 )
 	
 	return win
 
@@ -766,7 +767,7 @@ Function NMStatsCheck()
 	KillVariables /Z $NMStatsDF+"Transform" // kill old variable
 	KillStrings /Z $NMStatsDF+"Transform" // kill old variable
 	
-	return CheckNMStatsWaves( 0, errorAlert = 1 ) 
+	return CheckNMStatsWaves( 0, errorAlert=1 ) 
 	
 End // NMStatsCheck
 
@@ -790,13 +791,13 @@ Function CheckNMStatsWaves( reset [ df, pointsAtLeast, errorAlert ] )
 		return -1
 	endif
 	
-	strValue = NMXaxisStats( InputWaveList, folder = df, select = "maxPoints" )
+	strValue = NMXaxisStats( InputWaveList, folder=df, select="maxPoints" )
 	points = str2num( strValue )
 	
 	if ( numtype( points ) > 0 )
 		points = NumWindows
 	else
-		strValue = NMXaxisStats( OutputWaveList, folder = df, select = "maxPoints" )
+		strValue = NMXaxisStats( OutputWaveList, folder=df, select="maxPoints" )
 		points = max( points, str2num( strValue ) )
 	endif
 	
@@ -806,33 +807,33 @@ Function CheckNMStatsWaves( reset [ df, pointsAtLeast, errorAlert ] )
 	
 	points = max( points, pointsAtLeast )
 	
-	CheckNMStatsWaveT( "AmpSlct", "Off", reset, points = points )
-	CheckNMStatsWave( "AmpB", -inf, reset, points = points )
-	CheckNMStatsWave( "AmpE", inf, reset, points = points )
-	CheckNMStatsWave( "AmpY", NaN, reset, points = points )
+	CheckNMStatsWaveT( "AmpSlct", "Off", reset, points=points )
+	CheckNMStatsWave( "AmpB", -inf, reset, points=points )
+	CheckNMStatsWave( "AmpE", inf, reset, points=points )
+	CheckNMStatsWave( "AmpY", NaN, reset, points=points )
 	
-	CheckNMStatsWave( "Bflag", 0, reset, points = points )
-	CheckNMStatsWaveT( "BslnSlct", "", reset, points = points )
-	CheckNMStatsWave( "BslnB", 0, reset, points = points )
-	CheckNMStatsWave( "BslnE", 0, reset, points = points )
-	CheckNMStatsWave( "BslnSubt", 0, reset, points = points )
+	CheckNMStatsWave( "Bflag", 0, reset, points=points )
+	CheckNMStatsWaveT( "BslnSlct", "", reset, points=points )
+	CheckNMStatsWave( "BslnB", 0, reset, points=points )
+	CheckNMStatsWave( "BslnE", 0, reset, points=points )
+	CheckNMStatsWave( "BslnSubt", 0, reset, points=points )
 	
-	CheckNMStatsWave( "RiseBP", RiseTimePbgn, reset, points = points )
-	CheckNMStatsWave( "RiseEP", RiseTimePend, reset, points = points )
-	CheckNMStatsWave( "DcayP", DecayTimePercent, reset, points = points )
+	CheckNMStatsWave( "RiseBP", RiseTimePbgn, reset, points=points )
+	CheckNMStatsWave( "RiseEP", RiseTimePend, reset, points=points )
+	CheckNMStatsWave( "DcayP", DecayTimePercent, reset, points=points )
 	
-	CheckNMStatsWave( "FilterNum", 0, reset, points = points )
-	CheckNMStatsWaveT( "FilterAlg", "", reset, points = points )
+	CheckNMStatsWave( "FilterNum", 0, reset, points=points )
+	CheckNMStatsWaveT( "FilterAlg", "", reset, points=points )
 	
-	CheckNMStatsWaveT( "Transform", "Off", reset, points = points )
+	CheckNMStatsWaveT( "Transform", "Off", reset, points=points )
 	
-	CheckNMStatsWaveT( "OffsetW", "", reset, points = points )
+	CheckNMStatsWaveT( "OffsetW", "", reset, points=points )
 	
-	CheckNMStatsWave( "ChanSelect", 0, reset, points = points )
+	CheckNMStatsWave( "ChanSelect", 0, reset, points=points )
 	
 	for ( wcnt = 0 ; wcnt < ItemsInList( OutputWaveList ) ; wcnt += 1 )
 		wName = StringFromList( wcnt, OutputWaveList )
-		CheckNMStatsWave( wName, Nan, reset, points = points )
+		CheckNMStatsWave( wName, Nan, reset, points=points )
 	endfor
 	
 	CheckNMStatsTransformWave( df + "Transform", errorAlert )
@@ -1977,10 +1978,10 @@ Function MakeStats( force ) // create Stats tab controls
 	SetVariable ST_2AvgSet, title="\F'Symbol'm =", pos={x0,y0}, size={85,50}, fsize=fs, win=$NMPanelName
 	SetVariable ST_2AvgSet, value=sp.avg, limits={-inf,inf,0}, frame=0, win=$NMPanelName
 	
-	SetVariable ST_2SDVSet, title="� ", pos={x0+85,y0}, size={75,50}, fsize=fs, win=$NMPanelName
+	SetVariable ST_2SDVSet, title="± ", pos={x0+85,y0}, size={75,50}, fsize=fs, win=$NMPanelName
 	SetVariable ST_2SDVSet, value=sp.stdv, limits={0,inf,0}, frame=0, win=$NMPanelName
 	
-	//SetVariable ST_2SEMSet, title="� ", pos={x0+85,y0}, size={75,50}, fsize=fs, win=$NMPanelName
+	//SetVariable ST_2SEMSet, title="± ", pos={x0+85,y0}, size={75,50}, fsize=fs, win=$NMPanelName
 	//SetVariable ST_2SEMSet, value=sp.sem, limits={0,inf,0}, frame=0, win=$NMPanelName
 	
 	SetVariable ST_2CNTSet, title="n =", pos={x0+165,y0}, size={70,50}, fsize=fs, win=$NMPanelName
@@ -2471,7 +2472,7 @@ Function NMStatsWinPopup( ctrlName, popNum, popStr ) : PopupMenuControl
 			break
 			
 		case "Reset All":
-			NMStatsWavesReset( history = 1 )
+			NMStatsWavesReset( history=1 )
 			break
 			
 			
@@ -2484,7 +2485,7 @@ Function NMStatsWinPopup( ctrlName, popNum, popStr ) : PopupMenuControl
 			win = str2num( popStr[ 3, inf ] )
 			
 			if ( numtype( win ) == 0 )
-				return NMStatsSet( winSelect = win, history = 1 )
+				return NMStatsSet( winSelect=win, history=1 )
 			endif
 			
 	endswitch
@@ -2652,27 +2653,27 @@ Static Function z_FxnCall( fxn )
 		
 		case "MaxAvg":
 			avgWin = z_MaxMinWinAvgPrompt( fxn )
-			NMStatsSet( maxAvgWin = avgWin, history = 1 )
+			NMStatsSet( maxAvgWin=avgWin, history=1 )
 			break
 			
 		case "MinAvg":
 			avgWin = z_MaxMinWinAvgPrompt( fxn )
-			NMStatsSet( minAvgWin = avgWin, history = 1 )
+			NMStatsSet( minAvgWin=avgWin, history=1 )
 			break
 			
 		case "Level":
 			level = z_LevelPrompt( fxn )
-			NMStatsSet( level = level, history = 1 )
+			NMStatsSet( level=level, history=1 )
 			break
 			
 		case "Level+":
 			level = z_LevelPrompt( fxn )
-			NMStatsSet( levelPos = level, history = 1 )
+			NMStatsSet( levelPos=level, history=1 )
 			break
 			
 		case "Level-":
 			level = z_LevelPrompt( fxn )
-			NMStatsSet( levelNeg = level, history = 1 )
+			NMStatsSet( levelNeg=level, history=1 )
 			break
 			
 		default:
@@ -2685,7 +2686,7 @@ Static Function z_FxnCall( fxn )
 				return z_DecayTimeCall( fxn )
 			endif
 			
-			NMStatsSet( fxn = fxn, history = 1 )
+			NMStatsSet( fxn=fxn, history=1 )
 		
 	endswitch
 	
@@ -2799,11 +2800,11 @@ Function StatsCall( fxn, select )
 	strswitch( fxn )
 			
 		case "AmpBSet":
-			error = NMStatsSet( xbgn = snum, history = 1 )
+			error = NMStatsSet( xbgn=snum, history=1 )
 			break
 			
 		case "AmpESet":
-			error = NMStatsSet( xend = snum, history = 1 )
+			error = NMStatsSet( xend=snum, history=1 )
 			break
 			
 		case "AmpYSet":
@@ -2813,15 +2814,15 @@ Function StatsCall( fxn, select )
 			strswitch( fxn2 )
 			
 				case "Level":
-					error = NMStatsSet( level = snum, history = 1 )
+					error = NMStatsSet( level=snum, history=1 )
 					break
 					
 				case "Level+":
-					error = NMStatsSet( levelPos = snum, history = 1 )
+					error = NMStatsSet( levelPos=snum, history=1 )
 					break
 					
 				case "Level-":
-					error = NMStatsSet( levelNeg = snum, history = 1 )
+					error = NMStatsSet( levelNeg=snum, history=1 )
 					break
 					
 				case "RiseTime+":
@@ -2843,11 +2844,11 @@ Function StatsCall( fxn, select )
 			strswitch( fxn2[ 0, 5 ] )
 			
 				case "MaxAvg":
-					error = NMStatsSet( maxAvgWin = snum, history = 1 )
+					error = NMStatsSet( maxAvgWin=snum, history=1 )
 					break
 					
 				case "MinAvg":
-					error = NMStatsSet( minAvgWin = snum, history = 1 )
+					error = NMStatsSet( minAvgWin=snum, history=1 )
 					break
 			
 			endswitch
@@ -3016,7 +3017,7 @@ Function StatsChanCheck( [ updateStats ] ) // check to see if current channel ha
 	Wave wtemp = $wName
 
 	if ( wtemp[ 0 ] != currentChan )
-		StatsChan( -1, currentChan, updateStats = updateStats )
+		StatsChan( -1, currentChan, updateStats=updateStats )
 	endif
 	
 	return 0
@@ -3029,7 +3030,7 @@ End // StatsChanCheck
 Function StatsChanCall( chanNum )
 	Variable chanNum // channel number
 	
-	return StatsChan( -1, chanNum, history = 1 )
+	return StatsChan( -1, chanNum, history=1 )
 	
 End // StatsChanCall
 
@@ -3051,8 +3052,8 @@ Function StatsChan( win, chanNum [ updateStats, history ] )
 	endif
 	
 	if ( history )
-		vlist = NMCmdNum( win, vlist, integer = 1 )
-		vlist = NMCmdNum( chanNum, vlist, integer = 1 )
+		vlist = NMCmdNum( win, vlist, integer=1 )
+		vlist = NMCmdNum( chanNum, vlist, integer=1 )
 		NMCommandHistory( vlist )
 	endif
 	
@@ -3079,7 +3080,7 @@ Function StatsChan( win, chanNum [ updateStats, history ] )
 	wtemp = chanNum // for now, only allow one channel to be selected
 	
 	if ( updateStats )
-		NMStatsAuto( force = 1 )
+		NMStatsAuto( force=1 )
 	endif
 	
 	StatsTimeStamp( df )
@@ -3183,7 +3184,7 @@ Function StatsNumWindowsCall()
 		return -1 // cancel
 	endif
 	
-	return NMStatsSet( numWindows = numWindows, history = 1 )
+	return NMStatsSet( numWindows=numWindows, history=1 )
 	
 End // StatsNumWindowsCall
 
@@ -3213,7 +3214,7 @@ End // NMStatsWinTableName
 Function /S NMStatsWinTableCall( select )
 	String select 
 
-	return NMStatsWinTable( select, history = 1 )
+	return NMStatsWinTable( select, history=1 )
 
 End // NMStatsWinTableCall
 
@@ -3313,7 +3314,7 @@ Function NMStatsWinTableHook( s )
 	
 		case 1:
 		case 2:
-			CheckNMStatsWaves( 0, errorAlert = 1 )
+			CheckNMStatsWaves( 0, errorAlert=1 )
 			break
 			
 		case 11:
@@ -3335,8 +3336,8 @@ End // NMStatsWinTableHook
 
 Function NMStatsWinTableExecute()
 
-	CheckNMStatsWaves( 0, errorAlert = 1 )
-	NMStatsAuto( force = 1 )
+	CheckNMStatsWaves( 0, errorAlert=1 )
+	NMStatsAuto( force=1 )
 	
 	return 0
 
@@ -3384,7 +3385,7 @@ Function StatsAmpWinBegin() // find a Stats window that is on
 	sp.winSelect = 0
 		
 	//SetNMwave( df+"ChanSelect", sp.winSelect, chan )
-	//SetNMtwave( df+"Transform", sp.winSelect, NMChanTransformGet( currentChan, list = 1 ) )
+	//SetNMtwave( df+"Transform", sp.winSelect, NMChanTransformGet( currentChan, list=1 ) )
 	//SetNMwave( df+"FilterNum", sp.winSelect, ChanFilterNumGet( currentChan ) )
 	//SetNMtwave( df+"FilterAlg", sp.winSelect, ChanFilterAlgGet( currentChan ) )
 	
@@ -3417,7 +3418,7 @@ Function /S StatsAmpSelectGet( win )
 	
 	STRUCT NMStatsInputsStruct si
 	
-	if ( NMStatsInputsGet( si, win = win ) < 0 )
+	if ( NMStatsInputsGet( si, win=win ) < 0 )
 		return "Off"
 	endif
 	
@@ -3580,9 +3581,9 @@ Static Function z_FilterCall( filterFxn, filterNum )
 	endif
 	
 	if ( filterNum > 0 )
-		return NMStatsSet( filterFxn = filterFxn, filterNum = filterNum, history = 1 )
+		return NMStatsSet( filterFxn=filterFxn, filterNum=filterNum, history=1 )
 	else
-		return NMStatsSet( filterNum = 0, history = 1 )
+		return NMStatsSet( filterNum=0, history=1 )
 	endif
 	
 End // z_FilterCall
@@ -3647,7 +3648,7 @@ Static Function z_BaselineCall( on, xbgn, xend )
 	
 	if ( !on )
 		
-		return NMStatsSet( bsln = 0, history = 1 )
+		return NMStatsSet( bsln=0, history=1 )
 	
 	else
 	
@@ -3697,7 +3698,7 @@ Static Function z_BaselineCall( on, xbgn, xend )
 		
 		subtract -= 1
 		
-		return NMStatsSet( bsln = on, xbgn = xbgn, xend = xend, fxn = fxn, bslnSubtract = subtract, history = 1 )
+		return NMStatsSet( bsln=on, xbgn=xbgn, xend=xend, fxn=fxn, bslnSubtract=subtract, history=1 )
 	
 	endif
 	
@@ -3757,7 +3758,7 @@ Static Function z_RiseTimeCall( fxn )
 		return -1 // cancel
 	endif
 	
-	NMStatsSet( fxn = fxn, risePbgn = pbgn, risePend = pend, history = 1 )
+	NMStatsSet( fxn=fxn, risePbgn=pbgn, risePend=pend, history=1 )
 	
 End // z_RiseTimeCall
 
@@ -3771,7 +3772,7 @@ Function StatsRiseTimeFlag( win )
 	
 	STRUCT NMStatsInputsStruct si
 	
-	if ( NMStatsInputsGet( si, win = win ) < 0 )
+	if ( NMStatsInputsGet( si, win=win ) < 0 )
 		return -1
 	endif
 	
@@ -3799,7 +3800,7 @@ Function StatsDecayTimeFlag( win )
 	
 	STRUCT NMStatsInputsStruct si
 	
-	if ( NMStatsInputsGet( si, win = win ) < 0 )
+	if ( NMStatsInputsGet( si, win=win ) < 0 )
 		return -1
 	endif
 	
@@ -3857,7 +3858,7 @@ Static Function z_DecayTimeCall( fxn )
 		return -1 // cancel
 	endif
 	
-	NMStatsSet( fxn = fxn, decayPcnt = percent, history = 1 )
+	NMStatsSet( fxn=fxn, decayPcnt=percent, history=1 )
 	
 End // z_DecayTimeCall
 
@@ -3883,7 +3884,7 @@ Static Function z_TransformCall( on )
 	
 	endif
 	
-	return NMStatsSet( transform = transform, history = 1 )
+	return NMStatsSet( transform=transform, history=1 )
 
 End // z_TransformCall
 
@@ -3970,7 +3971,7 @@ Function StatsOffsetWinCall( on )
 			
 		endif
 		
-		return NMStatsOffset( folder = df, wName = wName, offsetType = offsetType, baseline = baseline, table = table, history = 1 )
+		return NMStatsOffset( folder=df, wName=wName, offsetType=offsetType, baseline=baseline, table=table, history=1 )
 		
 	endif
 	
@@ -3991,7 +3992,7 @@ Function StatsOffsetWinCall( on )
 	
 	elseif ( select == 2 )
 		
-		return NMStatsOffset( offsetType = 0, history = 1 )
+		return NMStatsOffset( offsetType=0, history=1 )
 	
 	endif
 
@@ -4022,7 +4023,7 @@ Function NMStatsOffset( [ win, folder, wName, offsetType, baseline, table, histo
 		return -1
 	endif
 	
-	vlist = NMCmdNumOptional( "win", win, vlist, integer = 1 )
+	vlist = NMCmdNumOptional( "win", win, vlist, integer=1 )
 	
 	if ( ParamIsDefault( folder ) )
 		folder = ""
@@ -4053,7 +4054,7 @@ Function NMStatsOffset( [ win, folder, wName, offsetType, baseline, table, histo
 	if ( ParamIsDefault( offsetType ) )
 		offsetType = 0
 	else
-		vlist = NMCmdNumOptional( "offsetType", offsetType, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "offsetType", offsetType, vlist, integer=1 )
 	endif
 	
 	if ( ( offsetType != 0 ) && ( offsetType != 1 ) && ( offsetType != 2 ) )
@@ -4068,7 +4069,7 @@ Function NMStatsOffset( [ win, folder, wName, offsetType, baseline, table, histo
 	if ( ParamIsDefault( baseline ) )
 		baseline = 1
 	else
-		vlist = NMCmdNumOptional( "baseline", baseline, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "baseline", baseline, vlist, integer=1 )
 	endif
 	
 	if ( ( baseline != 0 ) && ( baseline != 1 ) )
@@ -4078,7 +4079,7 @@ Function NMStatsOffset( [ win, folder, wName, offsetType, baseline, table, histo
 	if ( ParamIsDefault( table ) )
 		table = 0
 	else
-		vlist = NMCmdNumOptional( "table", table, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "table", table, vlist, integer=1 )
 	endif
 	
 	if ( history )
@@ -4109,7 +4110,7 @@ Function NMStatsOffset( [ win, folder, wName, offsetType, baseline, table, histo
 	
 	SetNMtwave( owName, win, folder + wName )
 	
-	NMStatsAuto( force = 1 )
+	NMStatsAuto( force=1 )
 	StatsTimeStamp( df )
 	
 	if ( table )
@@ -4136,7 +4137,7 @@ Function /S NMStatsOffsetWave( folder, wName, offsetType [ history ] ) // create
 	
 		vlist = NMCmdStr( folder, vlist )
 		vlist = NMCmdStr( wName, vlist )
-		vlist = NMCmdNum( offsetType, vlist, integer = 1 )
+		vlist = NMCmdNum( offsetType, vlist, integer=1 )
 		
 		NMCommandHistory( vlist )
 	
@@ -4484,10 +4485,10 @@ Function StatsChanControlsEnableAll( enable )
 		
 		if ( ( ccnt == currentChan ) && enable )
 			StatsChanControlsUpdate( ccnt, -1, 1 )
-			NMChannelGraphDisable( channel = ccnt, filter = 1, transform = 1 )
+			NMChannelGraphDisable( channel=ccnt, filter=1, transform=1 )
 		else
 			StatsChanControlsUpdate( ccnt, -1, 0 )
-			NMChannelGraphDisable( channel = ccnt, filter = 0, transform = 0 )
+			NMChannelGraphDisable( channel=ccnt, filter=0, transform=0 )
 		endif
 		
 	endfor
@@ -4874,7 +4875,7 @@ Static Function z_AllWavesCall()
 		waveSelectList = NMWaveSelectGet()
 	endif
 	
-	return NMStatsCompute( chanSelectList = chanSelectList, waveSelectList = waveSelectList, windowList = windowList, show = show, delay = delay, tables = tables, graphs = graphs, stats2 = stats2, history = 1 )
+	return NMStatsCompute( chanSelectList=chanSelectList, waveSelectList=waveSelectList, windowList=windowList, show=show, delay=delay, tables=tables, graphs=graphs, stats2=stats2, history=1 )
 
 End // z_AllWavesCall
 
@@ -4937,7 +4938,7 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 	if ( ParamIsDefault( show ) )
 		show = 1
 	else
-		vlist = NMCmdNumOptional( "show", show, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "show", show, vlist, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( delay ) )
@@ -4949,13 +4950,13 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 	if ( ParamIsDefault( tables ) )
 		tables = 1
 	else
-		vlist = NMCmdNumOptional( "tables", tables, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "tables", tables, vlist, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( graphs ) )
 		graphs = 1
 	else
-		vlist = NMCmdNumOptional( "graphs", graphs, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "graphs", graphs, vlist, integer=1 )
 	endif
 	
 	if ( !NMVarGet( "GraphsAndTablesOn" ) )
@@ -4966,7 +4967,7 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 	if ( ParamIsDefault( stats2 ) )
 		stats2 = 0
 	else
-		vlist = NMCmdNumOptional( "stats2", stats2, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "stats2", stats2, vlist, integer=1 )
 	endif
 	
 	if ( history )
@@ -4988,7 +4989,7 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 	
 	Variable waveLengthFormat = NMStatsVarGet( "WaveLengthFormat" )
 	
-	CheckNMStatsWaves( 0, errorAlert = 1 )
+	CheckNMStatsWaves( 0, errorAlert=1 )
 	
 	for ( icnt = 0 ; icnt < max( waveSelectListItems, 1 ) ; icnt += 1 ) // loop thru sets / groups
 		
@@ -5026,7 +5027,7 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 			
 			if ( tables )
 			
-				windowName = NMStatsWavesTable( DEFAULTSUBFOLDER, channel, windowList, hide = 1 )
+				windowName = NMStatsWavesTable( DEFAULTSUBFOLDER, channel, windowList, hide=1 )
 				
 				if ( WinType( windowName ) == 2 )
 					outputWaveList1 = StrVarOrDefault( NMDF + "OutputWaveList", "" )
@@ -5061,10 +5062,10 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 					
 				endif
 				
-				NMCurrentWaveSet( wcnt, update = 0 )
+				NMCurrentWaveSet( wcnt, update=0 )
 				
 				if ( show )
-					NMChanGraphUpdate( channel = channel, waveNum = wcnt )
+					NMChanGraphUpdate( channel=channel, waveNum=wcnt )
 				endif
 		
 				for ( jcnt = 0 ; jcnt < ItemsInList( windowList ) ; jcnt += 1 ) // loop thru Stats windows
@@ -5079,17 +5080,17 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 			endfor // waves
 			
 			if ( ( waveLengthFormat == 1 ) && ( ItemsInList( deleteRowsList ) > 0 ) )
-				NMStatsDelete( channel, NaN, waveNumList = deleteRowsList, windowList = windowList )
+				NMStatsDelete( channel, NaN, waveNumList=deleteRowsList, windowList=windowList )
 			endif
 			
 			subfolder = NMStatsSubfolder( "", channel )
 			
 			NMStats2WaveSelectFilter( "Stats1" )
-			NMStatsSet( folderSelect = subfolder, waveSelect = "" ) // set default values
+			NMStatsSet( folderSelect=subfolder, waveSelect="" ) // set default values
 			
 			if ( graphs )
 			
-				windowName = NMStatsPlot( hide = 1 )
+				windowName = NMStatsPlot( hide=1 )
 				
 				if ( ItemsInList( windowName ) > 0 )
 					windowName = StringFromList( 0, windowName )
@@ -5100,7 +5101,7 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 			
 			if ( stats2 )
 				
-				windowName = NMStatsWaveStats( folder = subfolder, hide = 1 )
+				windowName = NMStatsWaveStats( folder=subfolder, hide=1 )
 				
 				if ( strlen( windowName ) > 0 )
 					windowName = StringFromList( 0, windowName )
@@ -5125,7 +5126,7 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 			SetNMstr( NMDF + "OutputWinList", outputWinList1 )
 			
 			if ( history && !tables )
-				NMHistoryOutputWaves( subfolder = subfolder )
+				NMHistoryOutputWaves( subfolder=subfolder )
 			endif
 			
 		endfor // channels
@@ -5137,14 +5138,14 @@ Function NMStatsCompute( [ chanSelectList, waveSelectList, windowList, show, del
 	endfor // sets
 	
 	if ( chanSelectListItems > 0 )
-		NMChanSelect( saveChanSelectStr, update = 1 )
+		NMChanSelect( saveChanSelectStr, update=1 )
 	endif
 	
 	if ( waveSelectListItems > 0 )
-		NMWaveSelect( saveWaveSelect, update = 1 )
+		NMWaveSelect( saveWaveSelect, update=1 )
 	endif
 	
-	NMCurrentWaveSet( saveCurrentWave, update = 0 )
+	NMCurrentWaveSet( saveCurrentWave, update=0 )
 	
 	StatsDisplayClear()
 	NMStatsOutputWavesStructClear()
@@ -5284,7 +5285,7 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 		wName = NMChanWaveName( chan, waveNum )
 	endif
 	
-	xWave = NMXwave( waveNum = waveNum )
+	xWave = NMXwave( waveNum=waveNum )
 	
 	if ( win == -1 )
 	
@@ -5342,7 +5343,7 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 		endif
 		
 		if ( newWave )
-			if ( ChanWaveMake( chan, wName, dName, xWave = xWave ) < 0 )
+			if ( ChanWaveMake( chan, wName, dName, xWave=xWave ) < 0 )
 				continue
 			endif
 		endif
@@ -5406,7 +5407,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 	
 	STRUCT NMStatsInputsStruct si
 	
-	if ( NMStatsInputsGet( si, win = win ) < 0 )
+	if ( NMStatsInputsGet( si, win=win ) < 0 )
 		return -1
 	endif
 	
@@ -5419,7 +5420,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 		waveNum = -1
 	endif
 	
-	String xWave = NMXwave( waveNum = waveNum )
+	String xWave = NMXwave( waveNum=waveNum )
 	
 	String df = NMStatsDF
 	
@@ -5512,13 +5513,13 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 		if ( numtype( si.xbgnB ) == 0 )
 			bbgn = si.xbgnB
 		else
-			bbgn = NMLeftX( wName, xWave = xWave ) // considers xWave
+			bbgn = NMLeftX( wName, xWave=xWave ) // considers xWave
 		endif
 		
 		if ( numtype( si.xendB ) == 0 )
 			bend = si.xendB
 		else
-			bend = NMRightX( wName, xWave = xWave ) // considers xWave
+			bend = NMRightX( wName, xWave=xWave ) // considers xWave
 		endif
 	 
 	 	if ( ( numtype( xoffset ) == 0 ) && NMStatsOffsetBaseline( win ) )
@@ -5561,7 +5562,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 		case "SEM":
 		case "Var":
 		case "RMS":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = bbgn, xend = bend, fxnSelect = si.selectB )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=bbgn, xend=bend, fxnSelect=si.selectB )
 			NMWaveStatsXY2( s )
 			by = s.y
 			bx = s.x
@@ -5576,15 +5577,15 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "Median":
-			by = NMMedian( wName, xWave = xWave, xbgn = bbgn, xend = bend )
+			by = NMMedian( wName, xWave=xWave, xbgn=bbgn, xend=bend )
 			break
 		
 		case "PathLength":
-			by = NMPathLength( wName, xWave = xWave, xbgn = bbgn, xend = bend )
+			by = NMPathLength( wName, xWave=xWave, xbgn=bbgn, xend=bend )
 			break
 			
 		case "Slope":
-			NMLineStructInit( line, wName, xWave = xWave, xbgn = bbgn, xend = bend )
+			NMLineStructInit( line, wName, xWave=xWave, xbgn=bbgn, xend=bend )
 			NMLinearRegression2( line )
 			bx = line.b
 			by = line.m
@@ -5605,13 +5606,13 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 		if ( numtype( si.xbgn ) == 0 )
 			xbgn = si.xbgn
 		else
-			xbgn = NMLeftX( wName, xWave = xWave )
+			xbgn = NMLeftX( wName, xWave=xWave )
 		endif
 		
 		if ( numtype( si.xend ) == 0 )
 			xend = si.xend
 		else
-			xend = NMRightX( wName, xWave = xWave )
+			xend = NMRightX( wName, xWave=xWave )
 		endif
 		
 		if ( numtype( xoffset ) == 0 )
@@ -5641,7 +5642,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 		case "Var":
 		case "RMS":
 		case "NumPnts":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = xbgn, xend = xend, fxnSelect = select )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=xbgn, xend=xend, fxnSelect=select )
 			NMWaveStatsXY2( s )
 			ay = s.y
 			ax = s.x
@@ -5649,14 +5650,14 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "Avg+SDev":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMWaveStatsXY2( s )
 			ax = s.sdev
 			ay = s.avg
 			break
 			
 		case "Avg+SEM":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMWaveStatsXY2( s )
 			ax = s.sem
 			ay = s.avg
@@ -5671,22 +5672,22 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "Median":
-			ay = NMMedian( wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			ay = NMMedian( wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			break
 		
 		case "PathLength":
-			ay = NMPathLength( wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			ay = NMPathLength( wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			break
 			
 		case "Slope":
-			NMLineStructInit( line, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMLineStructInit( line, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMLinearRegression2( line )
 			m = line.m
 			b = line.b
 			break
 		
 		case "Onset":
-			NMMaxCurvStructInit( mc, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMMaxCurvStructInit( mc, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMMaxCurvatures2( mc )
 			ay = mc.y1
 			ax = mc.x1
@@ -5704,7 +5705,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			endif
 			
 			ay = si.level
-			NMFindLevelStructInit( fl, si.level, wName, xWave = xWave, xbgn = xbgn, xend = xend, edge = edge )
+			NMFindLevelStructInit( fl, si.level, wName, xWave=xWave, xbgn=xbgn, xend=xend, edge=edge )
 			NMFindLevel2( fl )
 			ax = fl.x
 			apnt = fl.pnt
@@ -5712,7 +5713,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 		
 		case "MaxAvg":
-			NMMaxAvgStructInit( maxavg, avgWin, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMMaxAvgStructInit( maxavg, avgWin, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMMaxAvg2( maxavg )
 			ay = maxavg.avg
 			ax = maxavg.maxLoc
@@ -5720,7 +5721,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "MinAvg":
-			NMMinAvgStructInit( minavg, avgWin, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMMinAvgStructInit( minavg, avgWin, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMMinAvg2( minavg )
 			ay = minavg.avg
 			ax = minavg.minLoc
@@ -5796,7 +5797,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 	
 		case "RiseTime+":
-			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave = xWave )
+			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave=xWave )
 			NMRiseTime2( rt, searchFromPeak = NMStatsVarGet( "RiseTimeSearchFromPeak" ) )
 			so.riseXB = rt.x1
 			so.riseXE = rt.x2
@@ -5809,7 +5810,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "RiseTime-":
-			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave = xWave, negative = 1 )
+			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave=xWave, negative=1 )
 			NMRiseTime2( rt, searchFromPeak = NMStatsVarGet( "RiseTimeSearchFromPeak" ) )
 			so.riseXB = rt.x1
 			so.riseXE = rt.x2
@@ -5822,7 +5823,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "RTslope+":
-			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave = xWave )
+			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave=xWave )
 			NMRiseTime2( rt, slope = 1, searchFromPeak = NMStatsVarGet( "RiseTimeSearchFromPeak" ) )
 			so.riseXB = rt.x1
 			so.riseXE = rt.x2
@@ -5837,7 +5838,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "RTslope-":
-			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave = xWave, negative = 1 )
+			NMRiseTimeStructInit( rt, bbgn, bend, xbgn, xend, si.risePB, si.risePE, wName, xWave=xWave, negative=1 )
 			NMRiseTime2( rt, slope = 1, searchFromPeak = NMStatsVarGet( "RiseTimeSearchFromPeak" ) )
 			so.riseXB = rt.x1
 			so.riseXE = rt.x2
@@ -5852,7 +5853,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "DecayTime+":
-			NMDecayTimeStructInit( dt, bbgn, bend, xbgn, xend, si.decayP, wName, xWave = xWave )
+			NMDecayTimeStructInit( dt, bbgn, bend, xbgn, xend, si.decayP, wName, xWave=xWave )
 			NMDecayTime2( dt )
 			so.decayX = dt.xDecay
 			so.decayT = dt.decayTime
@@ -5864,7 +5865,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "DecayTime-":
-			NMDecayTimeStructInit( dt, bbgn, bend, xbgn, xend, si.decayP, wName, xWave = xWave, negative = 1 )
+			NMDecayTimeStructInit( dt, bbgn, bend, xbgn, xend, si.decayP, wName, xWave=xWave, negative=1 )
 			NMDecayTime2( dt )
 			so.decayX = dt.xDecay
 			so.decayT = dt.decayTime
@@ -5876,7 +5877,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 			
 		case "FWHM+":
-			NMFWHMStructInit( fwhm, bbgn, bend, xbgn, xend, wName, xWave = xWave )
+			NMFWHMStructInit( fwhm, bbgn, bend, xbgn, xend, wName, xWave=xWave )
 			NMFWHM2( fwhm )
 			so.riseXB = fwhm.x1
 			so.riseXE = fwhm.x2
@@ -5889,7 +5890,7 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 			break
 		
 		case "FWHM-":
-			NMFWHMStructInit( fwhm, bbgn, bend, xbgn, xend, wName, xWave = xWave, negative = 1 )
+			NMFWHMStructInit( fwhm, bbgn, bend, xbgn, xend, wName, xWave=xWave, negative=1 )
 			NMFWHM2( fwhm )
 			so.riseXB = fwhm.x1
 			so.riseXE = fwhm.x2
@@ -6190,7 +6191,7 @@ Function /S NMStatsWavesTable( folder, chan, windowList [ hide ] ) // create wav
 	SetNMstr( NMDF + "OutputWaveList", wList )
 	SetNMstr( NMDF + "OutputWinList", tName )
 	
-	NMHistoryOutputWaves( subfolder = folder )
+	NMHistoryOutputWaves( subfolder=folder )
 	NMHistoryOutputWindows()
 	
 	return tName
@@ -6212,8 +6213,8 @@ Function /S StatsWavesMake( folder, chan, windowList )
 	String currentPrefix = CurrentNMWavePrefix()
 	String currentWaveName = CurrentNMWaveName()
 	
-	String xLabel = NMChanLabelX( channel = chan )
-	String yLabel = NMChanLabelY( channel = chan )
+	String xLabel = NMChanLabelX( channel=chan )
+	String yLabel = NMChanLabelY( channel=chan )
 	
 	String xUnits = UnitsFromStr( xLabel )
 	String yUnits = UnitsFromStr( yLabel )
@@ -6290,7 +6291,7 @@ Function /S StatsWavesMake( folder, chan, windowList )
 			continue
 		endif
 		
-		if ( NMStatsInputsGet( si, win = win ) < 0 )
+		if ( NMStatsInputsGet( si, win=win ) < 0 )
 			continue
 		endif
 		
@@ -7020,8 +7021,8 @@ Function /S StatsYLabel( select )
 	
 	String currentWaveName = CurrentNMWaveName()
 	
-	String xunits = NMChanLabelX( units = 1 )
-	String yunits = NMChanLabelY( units = 1 )
+	String xunits = NMChanLabelX( units=1 )
+	String yunits = NMChanLabelY( units=1 )
 	
 	strswitch( select )
 		case "SDev":
@@ -7227,16 +7228,16 @@ Function /S NMStats2Call( fxn, select )
 	strswitch( fxn )
 	
 		case "2FolderSelect":
-			NMStatsSet( folderSelect = select, history = 1 )
+			NMStatsSet( folderSelect=select, history=1 )
 			return ""
 			
 		case "2WaveSelect":
-			NMStatsSet( waveSelect = select, history = 1 )
+			NMStatsSet( waveSelect=select, history=1 )
 			return ""
 			
 		case "2FxnAll":
 			allStats2 = BinaryInvert( allStats2 )
-			NMStatsSet( allStats2 = allStats2, history = 1 )
+			NMStatsSet( allStats2=allStats2, history=1 )
 			return ""
 			
 	endswitch
@@ -7254,7 +7255,7 @@ Function /S NMStats2Call( fxn, select )
 		case "Plot":
 			
 			if ( allStats2 )
-				return z_NMStatsPlotCall( all = 1 )
+				return z_NMStatsPlotCall( all=1 )
 			else
 				return z_NMStatsPlotCall()
 			endif
@@ -7265,9 +7266,9 @@ Function /S NMStats2Call( fxn, select )
 			wName = CurrentNMStats2WaveSelect( 0 )
 			
 			if ( allStats2 )
-				return NMStatsEdit( folder = folder, history = 1 )
+				return NMStatsEdit( folder=folder, history=1 )
 			else
-				return NMStatsEdit( folder = folder, wList = wName, history = 1 )
+				return NMStatsEdit( folder=folder, wList=wName, history=1 )
 			endif
 			
 		case "Wave Stats":
@@ -7281,7 +7282,7 @@ Function /S NMStats2Call( fxn, select )
 				folder = CurrentNMStats2FolderSelect( 0 )
 				wName = CurrentNMStats2WaveSelect( 0 )
 			
-				return NMStatsWaveStats( folder = folder, wList = wName, history = 1 )
+				return NMStatsWaveStats( folder=folder, wList=wName, history=1 )
 			
 			endif
 			
@@ -7290,7 +7291,7 @@ Function /S NMStats2Call( fxn, select )
 			folder = CurrentNMStats2FolderSelect( 0 )
 			wName = CurrentNMStats2WaveSelect( 0 )
 			
-			return NMStatsWaveNotes( folder = folder, wList = wName, history = 1 )
+			return NMStatsWaveNotes( folder=folder, wList=wName, history=1 )
 			
 		case "Print Notes":
 			return z_NMStatsWaveNotesCall()
@@ -7306,7 +7307,7 @@ Function /S NMStats2Call( fxn, select )
 			return NMStatsHistogramCall( "" )
 			
 		case "Inequality":
-		case "Inequality <>":
+		case "Inequality <>=":
 			return z_NMStatsInequalityCall()
 			
 		case "Stability":
@@ -7713,9 +7714,9 @@ Static Function /S z_NMStatsPlotCall( [ all ] )
 	endif
 	
 	if ( all )
-		return NMStatsPlot( folder = fNameShort, xWave = xSelect, all = 1, history = 1 )
+		return NMStatsPlot( folder=fNameShort, xWave=xSelect, all=1, history=1 )
 	else
-		return NMStatsPlot( folder = fNameShort, wList = ySelect, xWave = xSelect, history = 1 )
+		return NMStatsPlot( folder=fNameShort, wList=ySelect, xWave=xSelect, history=1 )
 	endif
 	
 End // NMStatsPlotCall
@@ -7755,7 +7756,7 @@ Function /S NMStatsPlot( [ folder, wList, xWave, all, onePlot, hide, history ] )
 		
 		else
 		
-			wList = NMStats2WaveSelectList( 0, folder = folder )
+			wList = NMStats2WaveSelectList( 0, folder=folder )
 		
 			vlist = NMCmdNumOptional( "all", all, vlist )
 		
@@ -7810,7 +7811,7 @@ Function /S NMStatsPlot( [ folder, wList, xWave, all, onePlot, hide, history ] )
 	endif
 	
 	if ( !ParamIsDefault( onePlot ) )
-		vlist = NMCmdNumOptional( "onePlot", onePlot, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "onePlot", onePlot, vlist, integer=1 )
 	endif
 	
 	if ( history )
@@ -8031,7 +8032,7 @@ Static Function /S z_NMStatsPlot( folder, wList, xWave, hide )
 	SetNMstr( NMDF + "OutputWaveList", wList2 )
 	SetNMstr( NMDF + "OutputWinList", gName )
 	
-	NMHistoryOutputWindows( fxn = "NMStatsPlot" )
+	NMHistoryOutputWindows( fxn="NMStatsPlot" )
 	
 	return gName
 
@@ -8072,7 +8073,7 @@ Function /S NMStatsEdit( [ folder, wList, hide, history ] )
 	endif
 	
 	if ( ( strlen( wList ) == 0 ) || StringMatch( wList, SELECTED ) )
-		wList = NMStats2WaveSelectList( 0, folder = folder )
+		wList = NMStats2WaveSelectList( 0, folder=folder )
 	endif
 	
 	if ( history )
@@ -8209,7 +8210,7 @@ Function /S NMStatsHistogramCall( wName )
 	if ( autoBins )
 	
 		NMParamsInit( NMParent( wName ), NMChild( wName ), nm )
-		NMHistrogramBinsAuto( nm, h, all = 1, paddingBins = paddingBins, numBinsMin = 10 )
+		NMHistrogramBinsAuto( nm, h, all=1, paddingBins=paddingBins, numBinsMin=10 )
 	
 		numBins = h.numBins
 		binWidth = h.binWidth
@@ -8220,7 +8221,7 @@ Function /S NMStatsHistogramCall( wName )
 		if ( numtype( numBins * binWidth * binStart ) > 0 )
 		
 			NMParamsInit( NMParent( wName ), NMChild( wName ), nm )
-			NMHistrogramBinsAuto( nm, h, all = 1, paddingBins = paddingBins, numBinsMin = 10 )
+			NMHistrogramBinsAuto( nm, h, all=1, paddingBins=paddingBins, numBinsMin=10 )
 		
 			numBins = h.numBins
 			binWidth = h.binWidth
@@ -8275,7 +8276,7 @@ Function /S NMStatsHistogramCall( wName )
 	folder = NMChild( folder )
 	wName = NMChild( wName )
 	
-	return NMStatsHistogram( folder = folder, wName = wName, binStart = binStart, binWidth = binWidth, numBins = numBins, optionStr = optionStr, history = 1 )
+	return NMStatsHistogram( folder=folder, wName=wName, binStart=binStart, binWidth=binWidth, numBins=numBins, optionStr=optionStr, history=1 )
 	
 End // NMStatsHistogramCall
 
@@ -8371,7 +8372,7 @@ Function /S NMStatsHistogram( [ folder, wName, binStart, binWidth, numBins, opti
 			return NM2ErrorStr( 10, "numBins", num2str( numBins ) )
 		endif
 	
-		vlist = NMCmdNumOptional( "numBins", numBins, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "numBins", numBins, vlist, integer=1 )
 		
 	endif
 	
@@ -8382,11 +8383,11 @@ Function /S NMStatsHistogram( [ folder, wName, binStart, binWidth, numBins, opti
 	endif
 	
 	if ( !ParamIsDefault( noGraph ) )
-		vlist = NMCmdNumOptional( "noGraph", noGraph, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "noGraph", noGraph, vlist, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( returnSelect ) )
-		vlist = NMCmdNumOptional( "returnSelect", returnSelect, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "returnSelect", returnSelect, vlist, integer=1 )
 	endif
 	
 	if ( history )
@@ -8402,7 +8403,7 @@ Function /S NMStatsHistogram( [ folder, wName, binStart, binWidth, numBins, opti
 	else
 	
 		NMParamsInit( NMParent( wName ), wNameShort, nm )
-		NMHistrogramBinsAuto( nm, h, all = 1, paddingBins = paddingBins, numBinsMin = 10 )
+		NMHistrogramBinsAuto( nm, h, all=1, paddingBins=paddingBins, numBinsMin=10 )
 	
 		numBins = h.numBins
 		binWidth = h.binWidth
@@ -8498,9 +8499,9 @@ End // NMStatsHistogram
 Static Function /S z_NMStatsInequalityCall()
 	
 	Variable icnt
-	String wName, wNameShort, setNameSuccess, setNameFailure, setList = ""
+	String fxn, wName, wNameShort, setNameSuccess, setNameFailure, setList = ""
  	
- 	String wSelect, returnList, promptStr = "Stats Inequality <>"
+ 	String wSelect, returnList, promptStr = "Stats Inequality <>="
 	String wList = NMStats2WaveSelectList( 0 )
 	String folder = CurrentNMStats2FolderSelect( 1 )
 	
@@ -8517,9 +8518,15 @@ Static Function /S z_NMStatsInequalityCall()
 	
 	STRUCT NMInequalityStruct s
 	
-	returnList = NMInequalityCall( s, NMStatsDF, promptStr = promptStr )
+	returnList = NMInequalityCall( s, NMStatsDF, promptStr=promptStr )
 	
 	if ( strlen( returnList ) == 0 )
+		return "" // cancel
+	endif
+
+	fxn = StringByKey( "inequality", returnList, "=" )
+	
+	if ( strlen( fxn ) == 0 )
 		return "" // cancel
 	endif
 	
@@ -8572,19 +8579,44 @@ Static Function /S z_NMStatsInequalityCall()
 	folder = NMChild( folder )
 	wSelect = NMChild( wSelect )
 	
-	return NMStatsInequality( folder = folder, wName = wSelect, greaterThan = s.greaterThan, lessThan = s.lessThan, binaryOutput = s.binaryOutput, setList = setList, history = 1 )
+	strswitch( fxn ) // "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+		case "y > a":
+			return NMStatsInequality( folder=folder, wName=wSelect, greaterThan=s.greaterThan, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+		case "y ≥ a":
+			return NMStatsInequality( folder=folder, wName=wSelect, greaterThanOrEqual=s.greaterThanOrEqual, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+		case "y < b":
+			return NMStatsInequality( folder=folder, wName=wSelect, lessThan=s.lessThan, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+		case "y ≤ b":
+			return NMStatsInequality( folder=folder, wName=wSelect, lessThanOrEqual=s.lessThanOrEqual, binaryOutput=s.binaryOutput, setList=setList, history=1 )	
+		case "a < y < b":
+			return NMStatsInequality( folder=folder, wName=wSelect, greaterThan=s.greaterThan, lessThan=s.lessThan, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+		case "a ≤ y ≤ b":
+			return NMStatsInequality( folder=folder, wName=wSelect, greaterThanOrEqual=s.greaterThanOrEqual, lessThanOrEqual=s.lessThanOrEqual, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+		case "y = a":
+			return NMStatsInequality( folder=folder, wName=wSelect, equal=s.equal, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+		case "y ≠ a":
+			return NMStatsInequality( folder=folder, wName=wSelect, notEqual=s.notEqual, binaryOutput=s.binaryOutput, setList=setList, history=1 )
+	endswitch
+	
+	return ""
 	
 End // z_NMStatsInequalityCall
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMStatsInequality( [ folder, wName, greaterThan, lessThan, binaryOutput, setName, setList, noGraph, returnSelect, history, deprecation ] )
+Function /S NMStatsInequality( [ folder, wName, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, binaryOutput, setName, setList, noGraph, returnSelect, history, deprecation ] )
 	String folder // folder or subfolder, or nothing for current Stats subfolder 
 	String wName // wave name, or nothing for current Stats wave select
-	Variable greaterThan // y > value
-	Variable lessThan // y < value
-	Variable binaryOutput // ( 0 ) output wave will contain NaN for false or corresponding input wave value for true ( 1 ) output wave will contain '0' for false or '1' for true
+	Variable greaterThan // y-value > greaterThan
+	Variable greaterThanOrEqual // y-value ≥ greaterThanOrEqual
+	Variable lessThan // y-value < lessThan
+	Variable lessThanOrEqual // y-value ≤ lessThanOrEqual
+	Variable equal // y-value == equal
+	Variable notEqual // y-value != notEqual
+	Variable binaryOutput
+				// ( 0 ) output wave will contain NaN for false or corresponding input wave value for true
+				// ( 1 ) output wave will contain '0' for false or '1' for true
 	String setName // optional output Set name (for success), ( "" ) for none
 	String setList // optional output Set names (first set for success, second set for failure), ( "" ) for none
 	Variable noGraph // ( 0 ) display results in a graph ( 1 ) no graph
@@ -8593,7 +8625,7 @@ Function /S NMStatsInequality( [ folder, wName, greaterThan, lessThan, binaryOut
 	
 	Variable successes, failures, chan, icnt, createSets
 	String chanStr, gName = "", gTitle, wavePrefix, wNameShort, currentPrefix, df = NMStatsDF
-	String fxn, dName, setNameSuccess = "", setNameFailure = "", waveOfWaveNames = "", vlist = ""
+	String fxn = "", dName, setNameSuccess = "", setNameFailure = "", waveOfWaveNames = "", vlist = ""
 	String thisfxn = GetRTStackInfo( 1 )
 	
 	STRUCT Rect w
@@ -8632,16 +8664,46 @@ Function /S NMStatsInequality( [ folder, wName, greaterThan, lessThan, binaryOut
 		return NM2ErrorStr( 1, "wName", wName )
 	endif
 	
-	if ( ParamIsDefault( greaterThan ) )
-		greaterThan = NaN
-	else
+	if ( !ParamIsDefault( greaterThan ) )
 		vlist = NMCmdNumOptional( "greaterThan", greaterThan, vlist )
+		fxn = "y > a"
 	endif
 	
-	if ( ParamIsDefault( lessThan ) )
-		lessThan = NaN
-	else
+	if ( !ParamIsDefault( greaterThanOrEqual ) )
+		vlist = NMCmdNumOptional( "greaterThanOrEqual", greaterThanOrEqual, vlist )
+		fxn = "y ≥ a"
+	endif
+	
+	if ( !ParamIsDefault( lessThan ) )
 		vlist = NMCmdNumOptional( "lessThan", lessThan, vlist )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y < b"
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y < b"
+		else
+			fxn = "y < b"
+		endif
+	endif
+	
+	if ( !ParamIsDefault( lessThanOrEqual ) )
+		vlist = NMCmdNumOptional( "lessThanOrEqual", lessThanOrEqual, vlist )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y ≤ b"
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y ≤ b"
+		else
+			fxn = "y ≤ b"
+		endif
+	endif
+	
+	if ( !ParamIsDefault( equal ) )
+		vlist = NMCmdNumOptional( "equal", equal, vlist )
+		fxn = "y = a"
+	endif
+	
+	if ( !ParamIsDefault( notEqual ) )
+		vlist = NMCmdNumOptional( "notEqual", notEqual, vlist )
+		fxn = "y ≠ a"
 	endif
 	
 	if ( ParamIsDefault( binaryOutput ) )
@@ -8669,8 +8731,8 @@ Function /S NMStatsInequality( [ folder, wName, greaterThan, lessThan, binaryOut
 		NMCommandHistory( vlist )
 	endif
 	
-	if ( ( numtype( greaterThan ) > 0 ) && ( numtype( lessThan ) > 0 ) )
-		return "" // nothing to do
+	if ( strlen( fxn ) == 0 )
+		return ""
 	endif
 	
 	if ( createSets )
@@ -8702,9 +8764,44 @@ Function /S NMStatsInequality( [ folder, wName, greaterThan, lessThan, binaryOut
 	Wave wtemp = $folder + wName
 	Wave dtemp = $folder + dName
 	
-	dtemp = NMInequality( wtemp, greaterThan = greaterThan, lessThan = lessThan, binaryOutput = binaryOutput )
+	strswitch( fxn ) // "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+		case "y > a":
+			dtemp = NMInequality( wtemp, greaterThan=greaterThan, binaryOutput=binaryOutput )
+			fxn = "y > " + num2str( greaterThan )
+			break
+		case "y ≥ a":
+			dtemp = NMInequality( wtemp, greaterThanOrEqual=greaterThanOrEqual, binaryOutput=binaryOutput )
+			fxn = "y ≥ " + num2str( greaterThanOrEqual )
+			break
+		case "y < b":
+			dtemp = NMInequality( wtemp, lessThan=lessThan, binaryOutput=binaryOutput )
+			fxn = "y < " + num2str( lessThan )
+			break
+		case "y ≤ b":
+			dtemp = NMInequality( wtemp, lessThanOrEqual=lessThanOrEqual, binaryOutput=binaryOutput )
+			fxn = "y ≤ " + num2str( lessThanOrEqual )
+			break
+		case "a < y < b":
+			dtemp = NMInequality( wtemp, greaterThan=greaterThan, lessThan=lessThan, binaryOutput=binaryOutput )
+			fxn = num2str( greaterThan ) + " < y < " + num2str( lessThan )
+			break
+		case "a ≤ y ≤ b":
+			dtemp = NMInequality( wtemp, greaterThanOrEqual=greaterThanOrEqual, lessThanOrEqual=lessThanOrEqual, binaryOutput=binaryOutput )
+			fxn = num2str( greaterThanOrEqual ) + " ≤ y ≤ " + num2str( lessThanOrEqual )
+			break
+		case "y = a":
+			dtemp = NMInequality( wtemp, equal=equal, binaryOutput=binaryOutput )
+			fxn = "y = " + num2str( equal )
+			break
+		case "y ≠ a":
+			dtemp = NMInequality( wtemp, notEqual=notEqual, binaryOutput=binaryOutput )
+			fxn = "y ≠ " + num2str( notEqual )
+			break
+		default:
+			return ""
+	endswitch
 	
-	fxn = NMInequalityFxn( greaterThan, lessThan )
+	// fxn = NMInequalityFxn( greaterThan, lessThan )
 	
 	if ( binaryOutput )
 	
@@ -8976,7 +9073,7 @@ Function /S NMStats2SigDiffCall()
 		return "" // something went wrong
 	endif
 	
-	error = NMKSTest( wName1 = wSelect1, wName2 = wSelect2, noGraph = BinaryInvert( dsply ), history = 1 )
+	error = NMKSTest( wName1=wSelect1, wName2=wSelect2, noGraph=BinaryInvert( dsply ), history=1 )
 	
 	return num2str( error )
 	
@@ -9043,7 +9140,7 @@ Static Function /S z_NMStatsWaveScaleCall()
 	folder = NMChild( folder )
 	wSelect = NMChild( wSelect )
 	
-	return NMStatsWaveScale( folder = folder, waveOfScaleValues = wSelect, alg = alg, chanSelect = chanSelect, history = 1 )
+	return NMStatsWaveScale( folder=folder, waveOfScaleValues=wSelect, alg=alg, chanSelect=chanSelect, history=1 )
 
 End // z_NMStatsWaveScaleCall
 
@@ -9175,7 +9272,7 @@ Function /S NMStatsWaveScale( [ folder, waveOfScaleValues, waveOfWaveNames, alg,
 		saveChanSelect = ""
 	endif
 	
-	outList = NMMainScale( op = alg, waveOfFactors = wNameScale )
+	outList = NMMainScale( op=alg, waveOfFactors=wNameScale )
 	
 	if ( strlen( saveChanSelect ) > 0 )
 		NMChanSelect( saveChanSelect )
@@ -9252,7 +9349,7 @@ Static Function /S z_NMStatsWaveAlignmentCall()
 	
 	alignAt = NMAlignAtValue( select, wSelect )
 	
-	return NMStatsWaveAlignment( folder = folder, waveOfAlignments = wSelect, alignAt = alignAt, chanSelect = chanSelect, history = 1 )
+	return NMStatsWaveAlignment( folder=folder, waveOfAlignments=wSelect, alignAt=alignAt, chanSelect=chanSelect, history=1 )
 
 End // z_NMStatsWaveAlignmentCall
 
@@ -9382,7 +9479,7 @@ Function /S NMStatsWaveAlignment( [ folder, waveOfAlignments, waveOfWaveNames, a
 		saveChanSelect = ""
 	endif
 	
-	outList = NMMainAlign( waveOfAlignValues = waveOfAlignValues, alignAt = alignAt )
+	outList = NMMainAlign( waveOfAlignValues=waveOfAlignValues, alignAt=alignAt )
 	
 	if ( strlen( saveChanSelect ) > 0 )
 		NMChanSelect( saveChanSelect )
@@ -9390,7 +9487,7 @@ Function /S NMStatsWaveAlignment( [ folder, waveOfAlignments, waveOfWaveNames, a
 	
 	KillWaves /Z $waveOfAlignValues
 	
-	NMStatsAuto( force = 1 )
+	NMStatsAuto( force=1 )
 	
 	return outList
 	
@@ -9413,7 +9510,7 @@ Static Function /S z_NMStatsSubfolderKillCall()
 		return "" // cancel
 	endif
 	
-	return NMStatsSubfolderKill( subfolder = SELECTED, history = 1 )
+	return NMStatsSubfolderKill( subfolder=SELECTED, history=1 )
 	
 End // z_NMStatsSubfolderKillCall
 
@@ -9477,7 +9574,7 @@ Static Function /S z_NMStatsSubfolderClearCall()
 		return "" // cancel
 	endif
 	
-	return NMStatsSubfolderClear( subfolder = SELECTED, history = 1 )
+	return NMStatsSubfolderClear( subfolder=SELECTED, history=1 )
 	
 End // z_NMStatsSubfolderClearCall
 
@@ -9544,7 +9641,7 @@ Static Function /S z_NMStatsWaveStatsCall()
 	
 	SetNMvar( NMStatsDF + "WaveStatsOutputSelect", outputSelect )
 	
-	return NMStatsWaveStats( folder = folder, outputSelect = outputSelect, history = 1 )
+	return NMStatsWaveStats( folder=folder, outputSelect=outputSelect, history=1 )
 
 End // z_NMStatsWaveStatsCall
 
@@ -9575,7 +9672,7 @@ Function /S NMStatsWaveStats( [ folder, wList, outputSelect, hide, history ] ) /
 	endif
 	
 	if ( ParamIsDefault( wList ) )
-		wList = NMStats2WaveSelectList( 0, folder = folder )
+		wList = NMStats2WaveSelectList( 0, folder=folder )
 	else
 		vlist = NMCmdStrOptional( "wList", wList, vlist )
 	endif
@@ -9591,7 +9688,7 @@ Function /S NMStatsWaveStats( [ folder, wList, outputSelect, hide, history ] ) /
 	if ( ParamIsDefault( outputSelect ) )
 		outputSelect = 0
 	else
-		vlist = NMCmdNumOptional( "outputSelect", outputSelect, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "outputSelect", outputSelect, vlist, integer=1 )
 	endif
 	
 	if ( history )
@@ -9632,7 +9729,7 @@ Function /S NMStatsWaveStats( [ folder, wList, outputSelect, hide, history ] ) /
 	endif
 	
 	if ( outputSelect == 0 ) // Igor history
-		return NMWaveStats( folder = folder, wList = wList, outputSelect = 1 )
+		return NMWaveStats( folder=folder, wList=wList, outputSelect=1 )
 	endif
 	
 	folderShort = NMChild( folder )
@@ -9644,7 +9741,7 @@ Function /S NMStatsWaveStats( [ folder, wList, outputSelect, hide, history ] ) /
 	
 	if ( outputSelect == 1 ) // notebook
 	
-		returnStr = NMWaveStats( folder = folder, wList = wList, outputSelect = 2, windowName = windowName + "_NB", windowTitle = windowTitle )
+		returnStr = NMWaveStats( folder=folder, wList=wList, outputSelect=2, windowName=windowName + "_NB", windowTitle=windowTitle )
 		
 		NMHistoryOutputWindows()
 		
@@ -9654,9 +9751,9 @@ Function /S NMStatsWaveStats( [ folder, wList, outputSelect, hide, history ] ) /
 	
 	if ( outputSelect == 2 ) // table
 	
-		returnStr = NMWaveStats( folder = folder, wList = wList, outputSelect = 3, outputPrefix = "ST2_", windowName = windowName, windowTitle = windowTitle )
+		returnStr = NMWaveStats( folder=folder, wList=wList, outputSelect=3, outputPrefix="ST2_", windowName=windowName, windowTitle=windowTitle )
 		
-		NMHistoryOutputWaves( subfolder = folder )
+		NMHistoryOutputWaves( subfolder=folder )
 		NMHistoryOutputWindows()
 		
 		return returnStr
@@ -9687,7 +9784,7 @@ Static Function /S z_NMStatsWaveNotesCall()
 	
 	SetNMvar( NMStatsDF + "WaveNotes2Notebook", toNotebook )
 	
-	return NMStatsWaveNotes( folder = folder, toNotebook = toNotebook, history = 1 )
+	return NMStatsWaveNotes( folder=folder, toNotebook=toNotebook, history=1 )
 
 End // z_NMStatsWaveNotesCall
 
@@ -9719,13 +9816,13 @@ Function /S NMStatsWaveNotes( [ folder, wList, toNotebook, history ] )
 	endif
 	
 	if ( ParamIsDefault( wList ) )
-		wList = NMStats2WaveSelectList( 0, folder = folder )
+		wList = NMStats2WaveSelectList( 0, folder=folder )
 	else
 		vlist = NMCmdStrOptional( "wList", wList, vlist )
 	endif
 	
 	if ( ( strlen( wList ) == 0 ) || StringMatch( wList, SELECTED ) )
-		wList = NMStats2WaveSelectList( 0, folder = folder )
+		wList = NMStats2WaveSelectList( 0, folder=folder )
 	endif
 	
 	if ( NMParamsInit( folder, wList, nm ) != 0 )
@@ -9750,7 +9847,7 @@ Function /S NMStatsWaveNotes( [ folder, wList, toNotebook, history ] )
 	
 		nbTitle = "Wave Notes : " + folderShort
 	
-		NMWaveNotes2( nm, nbName = nbName, nbTitle = nbTitle )
+		NMWaveNotes2( nm, nbName=nbName, nbTitle=nbTitle )
 		
 		returnStr = NMHistoryOutputWindows()
 		
@@ -9784,7 +9881,7 @@ Static Function /S z_NMStatsWaveNamesCall()
 
 	SetNMvar( NMStatsDF + "PrintNamesFullPath", fullPath )
 	
-	return NMStatsWaveNames( folder = folder, fullPath = fullPath, history = 1 )
+	return NMStatsWaveNames( folder=folder, fullPath=fullPath, history=1 )
 
 End // z_NMStatsWaveNamesCall
 
@@ -9813,14 +9910,14 @@ Function /S NMStatsWaveNames( [ folder, fullPath, history ] )
 	if ( ParamIsDefault( fullPath ) )
 		fullPath = 0
 	else
-		vlist = NMCmdNumOptional( "fullPath", fullPath, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "fullPath", fullPath, vlist, integer=1 )
 	endif
 	
 	if ( history )
 		NMCommandHistory( vlist )
 	endif
 	
-	wList = NMStats2WaveSelectList( fullPath, folder = folder )
+	wList = NMStats2WaveSelectList( fullPath, folder=folder )
 	
 	if ( ItemsInList( wList ) == 0 )
 		return ""
@@ -9881,7 +9978,7 @@ Static Function /S z_NMStatsMPFAStatsCall()
 		return "" // cancel
 	endif
 	
-	return NMStatsMPFAStats( folder = folder, ampWaveName = ampWaveName, noiseWaveName = noiseWaveName, table = 1, history = 1 )
+	return NMStatsMPFAStats( folder=folder, ampWaveName=ampWaveName, noiseWaveName=noiseWaveName, table=1, history=1 )
 
 End // z_NMStatsMPFAStatsCall
 
@@ -9923,7 +10020,7 @@ Function /S NMStatsMPFAStats( [ folder, ampWaveName, noiseWaveName, table, histo
 	if ( ParamIsDefault( table ) )
 		table = 1
 	else
-		vlist = NMCmdNumOptional( "table", table, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "table", table, vlist, integer=1 )
 	endif
 	
 	if ( ( strlen( ampWaveName ) == 0 ) || StringMatch( ampWaveName, SELECTED ) )
@@ -10058,7 +10155,7 @@ Function /S NMStatsMPFAStats( [ folder, ampWaveName, noiseWaveName, table, histo
 		SetNMstr( NMDF + "OutputWinList", tName )
 		SetNMstr( NMDF + "OutputWaveList", wList )
 		
-		NMHistoryOutputWaves( subfolder = folder )
+		NMHistoryOutputWaves( subfolder=folder )
 		NMHistoryOutputWindows()
 	
 	endif
@@ -10125,7 +10222,7 @@ Function XTimes2Stats() // : GraphMarquee // NOT USED
 	AmpB[ win ] = V_left
 	AmpE[ win ] = V_right
 	
-	NMStatsAuto( force = 1 )
+	NMStatsAuto( force=1 )
 
 End // XTimes2Stats
 

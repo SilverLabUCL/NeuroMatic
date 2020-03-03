@@ -44,6 +44,153 @@ StrConstant NMCR = "\r" // carriage return
 //****************************************************************
 //****************************************************************
 
+Function NMTestVarEqual( var1, var2 )
+	Variable var1, var2
+	
+	String flist
+	
+	switch( numtype( var1 ) )
+	
+		case 0:
+			if ( ( numtype( var2 ) == 0 ) && ( var1 == var2 ) )
+				return 1 // var1 = var2
+			endif
+			break
+			
+		case 1: // INF
+			if ( numtype( var2 ) == 1 )
+				if ( ( var1 < 0 ) && ( var2 < 0 ) )
+					return 1 // -INF = -INF
+				elseif ( ( var1 > 0 ) && ( var2 > 0 ) )
+					return 1 // +INF = +INF
+				endif
+			endif
+			break
+			
+		case 2: // NaN
+			if ( numtype( var2 ) == 2 )
+				return 1 // NaN = NaN
+			endif
+			break
+			
+	endswitch
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: unequal numbers: " + num2str( var1 ) + " ≠ " + num2str( var2 ) + ": " + flist
+
+	Abort
+
+End // NMTestVarEqual
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestVarNotEqual( var1, var2 )
+	Variable var1, var2
+	
+	Variable equal
+	String flist
+	
+	switch( numtype( var1 ) )
+	
+		case 0:
+			if ( ( numtype( var2 ) == 0 ) && ( var1 == var2 ) )
+				equal = 1 // var1 = var2
+			endif
+			break
+			
+		case 1: // INF
+			if ( numtype( var2 ) == 1 )
+				if ( ( var1 < 0 ) && ( var2 < 0 ) )
+					equal = 1 // -INF = -INF
+				elseif ( ( var1 > 0 ) && ( var2 > 0 ) )
+					equal = 1 // +INF = +INF
+				endif
+			endif
+			break
+			
+		case 2: // NaN
+			if ( numtype( var2 ) == 2 )
+				equal = 1 // NaN = NaN
+			endif
+			break
+			
+	endswitch
+	
+	if ( !equal )
+		return 1
+	endif
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: equal numbers: " + num2str( var1 ) + " = " + num2str( var2 ) + ": " + flist
+
+	Abort
+
+End // NMTestVarNotEqual
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestStrEqual( str1, str2 [ casesensitive ] )
+	String str1, str2
+	Variable casesensitive // ( 0 ) no ( 1 ) yes
+	
+	String flist
+	
+	if ( ParamIsDefault( casesensitive ) )
+		casesensitive = 1
+	else
+		casesensitive = BinaryCheck( casesensitive )
+	endif
+	
+	if ( CmpStr( str1, str2, casesensitive ) == 0 )
+		return 1
+	endif
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: unequal strings: " + NMQuotes( str1 ) + " ≠ " + NMQuotes( str2 ) + ": " + flist
+
+	Abort
+
+End // NMTestStrEqual
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestStrNotEqual( str1, str2 [ casesensitive ] )
+	String str1, str2
+	Variable casesensitive // ( 0 ) no ( 1 ) yes
+	
+	String flist
+	
+	if ( ParamIsDefault( casesensitive ) )
+		casesensitive = 1
+	else
+		casesensitive = BinaryCheck( casesensitive )
+	endif
+	
+	if ( CmpStr( str1, str2, casesensitive ) != 0 )
+		return 1
+	endif
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: equal strings: " + NMQuotes( str1 ) + " = " + NMQuotes( str2 ) + ": " + flist
+
+	Abort
+
+End // NMTestStrNotEqual
+
+//****************************************************************
+//****************************************************************
+
 Function BinaryCheck( num )
 	Variable num
 	
@@ -100,28 +247,140 @@ End // Nan2Zero
 //****************************************************************
 //****************************************************************
 
-Function NMInequality( testValue [ greaterThan, lessThan, binaryOutput, deprecation ] )
+Function NMInequality( testValue [ greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, logic, binaryOutput, deprecation ] )
 	Variable testValue
-	Variable greaterThan, lessThan
-	Variable binaryOutput // ( 0 ) output wave will contain NaN for false or corresponding input wave value for true ( 1 ) output wave will contain '0' for false or '1' for true
+	Variable greaterThan // testvalue > greaterThan
+	Variable greaterThanOrEqual // testvalue ≥ greaterThanOrEqual
+	Variable lessThan // testvalue < lessThan
+	Variable lessThanOrEqual // testvalue ≤ lessThanOrEqual
+	Variable equal // testvalue == equal
+	Variable notEqual // testvalue != notEqual
+	String logic // sequence logic, "AND" or "OR"
+	Variable binaryOutput
+				// ( 0 ) output wave will contain NaN for false or corresponding input wave value for true
+				// ( 1 ) output wave will contain '0' for false or '1' for true
 	Variable deprecation
 	
-	Variable inequality = 1
+	Variable test, inequality
 	
 	if ( deprecation )
 		NMDeprecationAlert()
+	endif
+	
+	if ( ParamIsDefault( logic ) || !StringMatch( logic, "OR" ) )
+		logic = "AND"
+		inequality = 1
+	else
+		logic = "OR"
+		inequality = 0
 	endif
 	
 	if ( ParamIsDefault( binaryOutput ) )
 		binaryOutput = 1
 	endif
 	
-	if ( !ParamIsDefault( greaterThan ) && ( numtype( greaterThan ) == 0 ) )
-		inequality = inequality && ( testValue > greaterThan )
+	if ( !ParamIsDefault( greaterThan ) )
+	
+		test = testValue > greaterThan
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
 	endif
 	
-	if ( !ParamIsDefault( lessThan ) && ( numtype( lessThan ) == 0 ) )
-		inequality = inequality && ( testValue < lessThan )
+	if ( !ParamIsDefault( greaterThanOrEqual ) )
+	
+		if ( numtype( testValue ) == 2 )
+			test = 0
+		else
+			test = testValue >= greaterThanOrEqual
+		endif
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( lessThan ) )
+	
+		test = testValue < lessThan
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( lessThanOrEqual ) )
+	
+		test = testValue <= lessThanOrEqual
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( equal ) )
+	
+		switch( numtype( equal ) )
+			case 0:
+				test = testValue == equal
+				break
+			case 1: // inf
+				if ( equal > 0 ) // +inf
+					test = ( numtype( testValue ) == 1 ) && ( testValue > 0 )
+				else
+					test = ( numtype( testValue ) == 1 ) && ( testValue < 0 )
+				endif
+				break
+			case 2: // NaN
+				test = numtype( testValue ) == 2
+				break
+		endswitch
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( notEqual ) )
+	
+		switch( numtype( notEqual ) )
+			case 0:
+				test = testValue != notEqual
+				break
+			case 1: // inf
+				if ( notEqual > 0 ) // +inf
+					test = !( ( numtype( testValue ) == 1 ) && ( testValue > 0 ) )
+				else // -inf
+					test = !( ( numtype( testValue ) == 1 ) && ( testValue < 0 ) )
+				endif
+				break
+			case 2: // NaN
+				test = numtype( testValue ) != 2
+				break
+		endswitch
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
 	endif
 	
 	if ( binaryOutput )
@@ -137,27 +396,22 @@ End // NMInequality
 //****************************************************************
 //****************************************************************
 
-Function /S NMInequalityFxn( greaterThan, lessThan ) // create function string
-	Variable greaterThan, lessThan
-	
-	if ( ( numtype( greaterThan ) == 0 ) && ( numtype( lessThan ) == 0 ) )
-		return num2str( greaterThan ) + " < y < " + num2str( lessThan )
-	elseif ( numtype( greaterThan ) == 0 )
-		return "y > " + num2str( greaterThan )
-	elseif ( numtype( lessThan ) == 0 )
-		return "y < " + num2str( lessThan )
-	endif
-	
-End // NMInequalityFxn
-
-//****************************************************************
-//****************************************************************
-
 Structure NMInequalityStruct
 	
-	Variable lessThan, greaterThan, binaryOutput
+	Variable greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, binaryOutput
 
 EndStructure
+
+//****************************************************************
+//****************************************************************
+
+Function NMInequalityStructNull( s )
+	STRUCT NMInequalityStruct &s
+	
+	s.greaterThan = NaN; s.greaterThanOrEqual = NaN; s.lessThan = NaN; s.lessThanOrEqual = NaN;
+	s.equal = NaN; s.notEqual = NaN; s.binaryOutput = 1;
+	
+End // NMInequalityStructNull
 
 //****************************************************************
 //****************************************************************
@@ -177,13 +431,13 @@ EndStructure
 //****************************************************************
 //****************************************************************
 
-Function NMInequalityStructNull( s )
+Function NMInequalityStructOldNull( s )
 	STRUCT NMInequalityStructOld &s
 	
 	s.select = NaN; s.aValue = NaN; s.sValue = NaN; s.nValue = NaN
 	s.lessThan = NaN; s.greaterThan = NaN
 	
-End // NMInequalityStructNull
+End // NMInequalityStructOldNull
 
 //****************************************************************
 //****************************************************************
@@ -193,7 +447,7 @@ Function /S NMInequalityStructConvert( select, aValue, sValue, nValue, s )
 	Variable aValue, sValue, nValue
 	STRUCT NMInequalityStructOld &s
 	
-	NMInequalityStructNull( s )
+	NMInequalityStructOldNull( s )
 	
 	s.select = select
 	s.aValue = aValue
@@ -252,8 +506,11 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 	String df // data folder for global variables
 	String promptStr
 	
+	String returnList
+	String ilist = "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+	
 	if ( ParamIsDefault( promptStr ) || ( strlen( promptStr ) == 0 ) )
-		promptStr = NMPromptStr( "NM Inequality <>" )
+		promptStr = NMPromptStr( "NM Inequality <>=" )
 	endif
 	
 	String inequality = StrVarOrDefault( df + "InequalitySelect", "y > a" )
@@ -261,7 +518,7 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 	Variable aValue = NumVarOrDefault( df + "InequalityValueA", 0 )
 	Variable bValue = NumVarOrDefault( df + "InequalityValueB", 0 )
 	
-	Prompt inequality, "inequality test for wave point values y:", popup "y > a;y < b;a < y < b;"
+	Prompt inequality, "inequality test for wave point values y:", popup ilist
 	Prompt binaryOutput, "denote true and false with:", popup "y and NaN;1 and 0;"
 	Prompt aValue, "enter value for a:"
 	Prompt bValue, "enter value for b:"
@@ -272,6 +529,8 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 		return "" // cancel
 	endif
 	
+	NMInequalityStructNull( s )
+	
 	binaryOutput -= 1
 	
 	SetNMstr( df + "InequalitySelect", inequality )
@@ -280,6 +539,8 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 	s.binaryOutput = binaryOutput
 	
 	promptStr = NMPromptStr( inequality )
+	
+	returnList = "inequality=" + inequality + ";"
 	
 	strswitch( inequality )
 	
@@ -291,14 +552,33 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 				return "" // cancel
 			endif
 			
-			s.lessThan = NaN
-			
 			if ( numtype( aValue ) == 0 )
 				SetNMvar( df + "InequalityValueA", aValue )
 				s.greaterThan = aValue
 			else
 				s.greaterThan = NaN
 			endif
+			
+			returnList += "greaterThan=" + num2str( s.greaterThan ) + ";"
+			
+			break
+			
+		case "y ≥ a":
+		
+			DoPrompt promptStr, aValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.greaterThanOrEqual = aValue
+			else
+				s.greaterThanOrEqual = NaN
+			endif
+			
+			returnList += "greaterThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
 			
 			break
 		
@@ -310,14 +590,33 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 				return "" // cancel
 			endif
 			
-			s.greaterThan = NaN
-			
 			if ( numtype( bValue ) == 0 )
 				SetNMvar( df + "InequalityValueB", bValue )
 				s.lessThan = bValue
 			else
 				s.lessThan = NaN
 			endif
+			
+			returnList += "lessThan=" + num2str( s.greaterThan ) + ";"
+			
+			break
+			
+		case "y ≤ b":
+		
+			DoPrompt promptStr, bValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( bValue ) == 0 )
+				SetNMvar( df + "InequalityValueB", bValue )
+				s.lessThanOrEqual = bValue
+			else
+				s.lessThanOrEqual = NaN
+			endif
+			
+			returnList += "lessThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
 			
 			break
 			
@@ -343,9 +642,81 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 				s.lessThan = NaN
 			endif
 			
+			returnList += "greaterThan=" + num2str( s.greaterThan ) + ";"
+			returnList += "lessThan=" + num2str( s.greaterThan ) + ";"
+			
+			break
+			
+		case "a ≤ y ≤ b":
+		
+			DoPrompt promptStr, aValue, bValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.greaterThanOrEqual = aValue
+			else
+				s.greaterThanOrEqual = NaN
+			endif
+			
+			if ( numtype( bValue ) == 0 )
+				SetNMvar( df + "InequalityValueB", bValue )
+				s.lessThanOrEqual = bValue
+			else
+				s.lessThanOrEqual = NaN
+			endif
+			
+			returnList += "greaterThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
+			returnList += "lessThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
+			
+			break
+			
+		case "y = a":
+		
+			DoPrompt promptStr, aValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.equal = aValue
+			else
+				s.equal = NaN
+			endif
+			
+			returnList += "equal=" + num2str( s.equal ) + ";"
+		
+			break
+		
+		case "y ≠ a":
+		
+			DoPrompt promptStr, aValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.notequal = aValue
+			else
+				s.notequal = NaN
+			endif
+			
+			returnList += "notequal=" + num2str( s.notequal ) + ";"
+		
+			break
+			
 	endswitch
 	
-	return "lessThan=" + num2str( s.lessThan ) + ";greaterThan=" + num2str( s.greaterThan ) + ";binaryOutput=" + num2istr( binaryOutput ) + ";"
+	returnList += "binaryOutput=" + num2istr( binaryOutput ) + ";"
+	
+	return returnList
 	
 End // NMInequalityCall
 
@@ -3963,7 +4334,7 @@ End // NMGaussSTDV2FWHM
 //****************************************************************
 //****************************************************************
 //
-//		Functions not used anymore
+//		Functions NOT USED anymore
 //
 //****************************************************************
 //****************************************************************
@@ -4297,6 +4668,22 @@ Function NMFindStim( wName, xbinSize, conf ) // find stimulus artifact times // 
 	return 0
 
 End // NMFindStim
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMInequalityFxn( greaterThan, lessThan ) // NOT USED
+	Variable greaterThan, lessThan
+	
+	if ( ( numtype( greaterThan ) == 0 ) && ( numtype( lessThan ) == 0 ) )
+		return num2str( greaterThan ) + " < y < " + num2str( lessThan )
+	elseif ( numtype( greaterThan ) == 0 )
+		return "y > " + num2str( greaterThan )
+	elseif ( numtype( lessThan ) == 0 )
+		return "y < " + num2str( lessThan )
+	endif
+	
+End // NMInequalityFxn
 
 //****************************************************************
 //****************************************************************
