@@ -4753,7 +4753,12 @@ Function NMStatsAuto( [ update, force ] ) // compute Stats of currently selected
 	Variable icnt, ifirst = 0, ilast
 	String select
 
-	String wName = ChanDisplayWave( -1 )
+	String dName = ChanDisplayWave( -1 )
+	String xdName = NMChanDisplayWaveNameX( dName )
+	
+	if ( !WaveExists( $xdName ) )
+		xdName = ""
+	endif
 	
 	if ( ParamIsDefault( update ) )
 		update = 1
@@ -4765,7 +4770,7 @@ Function NMStatsAuto( [ update, force ] ) // compute Stats of currently selected
 	StatsDisplayClear()
 	NMStatsOutputWavesStructClear()
 	
-	if ( WaveExists( $wName ) && ( force || NMStatsVarGet( "AutoStats1" ) ) )
+	if ( WaveExists( $dName ) && ( force || NMStatsVarGet( "AutoStats1" ) ) )
 	
 		ilast = numpnts( si.select )
 	
@@ -4774,7 +4779,7 @@ Function NMStatsAuto( [ update, force ] ) // compute Stats of currently selected
 			select = StatsAmpSelectGet( icnt )
 		
 			if ( !StringMatch( select, "Off" ) )
-				StatsComputeWin( icnt, wName, 1 )
+				StatsComputeWin( icnt, dName, 1, xWave=xdName )
 			endif
 			
 		endfor
@@ -5264,7 +5269,8 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 	Variable show // show results in channel graphs while computing ( 0 ) no ( 1 ) yes
 	
 	Variable icnt, ifirst, ilast, dFlag, filterNumLast, newWave
-	String filterFxnLast, transformLast, waveLast, select, dName, subfolder, xWave, df = NMStatsDF
+	String filterFxnLast, transformLast, waveLast, select
+	String dName, xdName, subfolder, xWave, df = NMStatsDF
 	
 	String tName = "ST_WaveTemp"
 	
@@ -5324,6 +5330,8 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 			dName = tName
 		endif
 		
+		xdName = NMChanDisplayWaveNameX( dName )
+		
 		StatsChanControlsEnable( chan, icnt, 1 )
 		
 		newWave = 0
@@ -5354,7 +5362,11 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 			dFlag = 0
 		endif
 		
-		if ( StatsComputeWin( icnt, dName, show * dFlag ) < 0 )
+		if ( !WaveExists( $xdName ) )
+			xdName = ""
+		endif
+		
+		if ( StatsComputeWin( icnt, dName, show * dFlag, xWave=xdName ) < 0 )
 			continue // error
 		endif
 		
@@ -5369,7 +5381,9 @@ Function StatsCompute( wName, chan, waveNum, win, saveflag, show )
 			
 	endfor
 	
-	KillWaves /Z $tName
+	xdName = NMChanDisplayWaveNameX( tName )
+	
+	KillWaves /Z $tName, $xdName
 	
 	return 0
 		
@@ -5378,16 +5392,23 @@ End // StatsCompute
 //****************************************************************
 //****************************************************************
 
-Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
+Function StatsComputeWin( win, wName, show [ waveNum, xWave ] ) // compute window stats
 	Variable win // Stats window number
 	String wName // name of wave to measure
 	Variable show // show results in channel graphs while computing ( 0 ) no ( 1 ) yes
-	Variable waveNum
+	Variable waveNum // NOT USED
+	String xWave
 	
 	Variable ay, ax, apnt, by, bx, dumvar, xoffset, off, bsln, edge, avgWin = NaN
 	Variable m, b // for line fits
 	Variable xbgn, xend, bbgn, bend, yLevel
 	String select
+	
+	String df = NMStatsDF
+	
+	if ( !DataFolderExists( df ) )
+		return NM2Error( 30, "StatsDF", df )
+	endif
 	
 	win = CheckNMStatsWin( win )
 	
@@ -5416,19 +5437,15 @@ Function StatsComputeWin( win, wName, show [ waveNum ] ) // compute window stats
 	STRUCT NMStatsDisplayWavesStruct dw
 	NMStatsDisplayWavesStructRef( dw )
 	
-	if ( ParamIsDefault( waveNum ) || ( waveNum < 0 ) )
-		waveNum = -1
+	//if ( ParamIsDefault( waveNum ) || ( waveNum < 0 ) )
+		//waveNum = -1
+	//endif
+	
+	if ( ParamIsDefault( xWave ) )
+		xWave = ""
 	endif
-	
-	String xWave = NMXwave( waveNum=waveNum )
-	
-	String df = NMStatsDF
 	
 	Variable ampNV = NumVarOrDefault( df + "AmpNV", 0 )
-	
-	if ( !DataFolderExists( df ) )
-		return NM2Error( 30, "StatsDF", df )
-	endif
 	
 	if ( strlen( wName ) == 0 )
 		return -1

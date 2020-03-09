@@ -158,11 +158,29 @@ End // IsChanGraph
 //****************************************************************
 //****************************************************************
 
+Function /S NMChanDisplayWaveNameX( chanDisplayWaveName )
+	String chanDisplayWaveName
+	
+	if ( strlen( chanDisplayWaveName ) == 0 )
+		return ""
+	endif
+	
+	String df = NMParent( chanDisplayWaveName )
+	String wName = NMChild( chanDisplayWaveName )
+	
+	return df + "xScale_" + wName
+	
+End // NMChanDisplayWaveNameX
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function /S ChanDisplayWave( channel )
 	Variable channel // ( -1 ) for current channel
-	
+
 	return ChanDisplayWaveName( 1, channel, 0 )
-	
+
 End // ChanDisplayWave
 
 //****************************************************************
@@ -173,6 +191,7 @@ Function /S ChanDisplayWaveName( directory, channel, wavNum )
 	Variable directory // ( 0 ) no directory ( 1 ) include directory
 	Variable channel // ( -1 ) for current channel
 	Variable wavNum
+	Variable xwave // ( 1 ) for x-wave name
 	
 	String df = ""
 	
@@ -338,7 +357,7 @@ Function NMChanGraphMake( [ channel, waveNum, image ] ) // create channel displa
 
 	Variable scale, tMode, tMarker, tLineStyle, tLineSize, grid, y0 = 8
 	Variable gx0, gy0, gx1, gy1
-	String tColor, gColor, cdf, xdName
+	String tColor, gColor, cdf, xdName = ""
 	
 	STRUCT NMRGB c
 	
@@ -360,9 +379,7 @@ Function NMChanGraphMake( [ channel, waveNum, image ] ) // create channel displa
 	String xWave = NMXwave( waveNum = waveNum )
 	
 	if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
-		xdName = NMDF + "xScale_" + dNameShort
-	else
-		xdName = ""
+		xdName = NMChanDisplayWaveNameX( dName )
 	endif
 	
 	CheckChanSubfolder( channel )
@@ -489,12 +506,12 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 	Variable waveNum
 	Variable makeChanWave // ( 0 ) no ( 1 ) yes
 	
-	Variable autoscale, count, grid, dualDisplay, errorsOn, noErrorCheck, md, image, npnts, dx
+	Variable autoscale, count, grid, dualDisplay, errorsOn, noErrorCheck, xwaveOn = 0
+	Variable md, image, npnts, dx, phaseplane = 0
 	Variable tMode, tMarker, tLineStyle, tLineSize
 	String sName, dName, dNameShort, xdName = "", errorName, gName
 	String transformList, transform, info, gColor, gColorCurrent, tColor, tColorCurrent, cdf
 	String axisName, histoName, histoNameX, histoNameXshort, wList, xWave
-	String phasePlaneName, phasePlaneNameX, phasePlaneNameShort
 	
 	STRUCT NMRGB c
 	
@@ -515,13 +532,13 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 	gName = ChanGraphName( channel )
 	dName = ChanDisplayWave( channel )
 	dNameShort = NMChild( dName )
+	xdName = NMChanDisplayWaveNameX( dName )
 	sName = NMChanWaveName( channel, waveNum ) // source wave
 	
-	xWave = NMXwave( waveNum = waveNum )
+	transformList = NMChanTransformGet( channel, itemNum = 0, errorAlert = 1 )
+	transform = StringFromList( 0, transformList, "," )
 	
-	if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
-		xdName = NMDF + "xScale_" + dNameShort
-	endif
+	xWave = NMXwave( waveNum = waveNum )
 	
 	CheckChanSubfolder( channel )
 	
@@ -576,9 +593,48 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 		DoWindow /T $gName, "Ch " + ChanNum2Char( channel ) + " : " + sName
 	endif
 	
+	if ( !image && ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
+		xwaveOn = 1
+	endif
+	
+	if ( !image && StringMatch( transform, "Phase Plane" ) )
+		phaseplane = 1
+		xwaveOn = 1
+	endif
+	
+	if ( makeChanWave ) // moved here 9 March 2020
+	
+		if ( ChanWaveMake( channel, sName, dName, xWave = xWave ) < 0 )
+			// error, display wave is copy of source
+			if ( WaveExists( $sName ) )
+				Duplicate /O $sName $dName
+				Wave wtemp = $dName
+				wtemp = NaN
+			endif
+		endif
+		
+		if ( xwaveOn && !phaseplane )
+			Duplicate /O $xWave $xdName
+		endif
+	
+	endif
+	
 	if ( !image )
 	
 		wList = TraceNameList( gName, ";", 1 )
+		
+		if ( xwaveOn )
+			if ( WaveExists( $xdName ) && ( strlen( XWaveName( gName, dNameShort ) ) == 0 ) )
+				RemoveFromGraph /W=$gName /Z $dNameShort // force AppendToGraph with x-wave
+				wList = ""
+			endif
+		else
+			if ( strlen( XWaveName( gName, dNameShort ) ) > 0 )
+				RemoveFromGraph /W=$gName /Z $dNameShort // force AppendToGraph without x-wave
+				wList = ""
+			endif
+			KillWaves /Z $xdName
+		endif
 		
 		if ( WhichListItem( dNameShort, wList ) < 0 )
 			if ( WaveExists( $xdName ) )
@@ -608,21 +664,22 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 		ChanOverlayUpdate( channel, xWave = xWave )
 	endif
 	
-	if ( makeChanWave )
+	//if ( makeChanWave )
 	
-		if ( ChanWaveMake( channel, sName, dName, xWave = xWave ) < 0 )
-			if ( WaveExists( $sName ) )
-				Duplicate /O $sName $dName
-				Wave wtemp = $dName
-				wtemp = NaN
-			endif
-		endif
+		//if ( ChanWaveMake( channel, sName, dName, xWave = xWave ) < 0 )
+			// error, display wave is copy of source
+			//if ( WaveExists( $sName ) )
+				//Duplicate /O $sName $dName
+				//Wave wtemp = $dName
+				//wtemp = NaN
+			//endif
+		//endif
 		
-		if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
-			Duplicate /O $xWave $xdName
-		endif
+		//if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
+			//Duplicate /O $xWave $xdName
+		//endif
 	
-	endif
+	//endif
 	
 	//ChanGraphControlsUpdate( channel )
 	
@@ -666,9 +723,6 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 	
 	info = AxisInfo( gName, "bottom" )
 	
-	transformList = NMChanTransformGet( channel, itemNum = 0, errorAlert = 1 )
-	transform = StringFromList( 0, transformList, "," )
-	
 	histoName = dName + "_histo"
 	histoNameX = dName + "_histoX"
 	histoNameXshort = NMChild( histoNameX )
@@ -687,30 +741,6 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 		RemoveFromGraph /W=$gName /Z $histoNameXshort
 		
 		KillWaves /Z $histoName, $histoNameX
-		
-	endif
-	
-	phasePlaneName = dName + "_diff"
-	phasePlaneNameX = dName + "_diffX"
-	phasePlaneNameShort = NMChild( phasePlaneName )
-	
-	if ( !image && StringMatch( transform, "Phase Plane" ) )
-	
-		wList = TraceNameList( gName, ";", 1 )
-		
-		if ( WhichListItem( phasePlaneNameShort, wList ) < 0 )
-			AppendToGraph /W=$gName $phasePlaneName vs $phasePlaneNameX
-		endif
-		
-		RemoveFromGraph /W=$gName /Z $dNameShort
-		
-		noErrorCheck = 1
-		
-	else
-	
-		RemoveFromGraph /W=$gName /Z $phasePlaneNameShort
-		
-		KillWaves /Z $phasePlaneName, $phasePlaneNameX
 		
 	endif
 	
@@ -1179,7 +1209,7 @@ Function ChanGraphAppendDisplayWave( channel [ waveNum ] )
 		xWave = NMXWave( waveNum = waveNum )
 	
 		if ( WaveExists( $xWave ) )
-			xdName = NMDF + "xScale_" + dNameShort
+			xdName = NMChanDisplayWaveNameX( dName )
 			Duplicate /O $xWave $xdName
 			AppendToGraph /W=$gName $dName vs $xdName
 		else
@@ -2070,8 +2100,8 @@ Function ChanOverlayUpdate( channel [ xWave ] )
 	Duplicate /O $dName $odName
 	
 	if ( WaveExists( $xWave ) )
-		xdName = NMDF + "xScale_" + dNameShort
-		xodName = NMDF + "xScale_" + odNameShort
+		xdName = NMChanDisplayWaveNameX( dName )
+		xodName = NMChanDisplayWaveNameX( odName )
 		Duplicate /O $xdName $xodName
 	endif
 	
@@ -2100,7 +2130,7 @@ Function ChanOverlayUpdate( channel [ xWave ] )
 		RemoveFromGraph /W=$gName/Z $odNameShort
 		
 		if ( WaveExists( $xWave ) )
-			xodName = NMDF + "xScale_" + odNameShort
+			xodName = NMChanDisplayWaveNameX( odName )
 			//AppendToGraph /W=$gName $odName vs $xWave
 			AppendToGraph /W=$gName $odName vs $xodName
 		else
@@ -5205,7 +5235,7 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 	Variable outputNum, minValue, maxValue, negone = -1
 	Variable sfreq, fratio, numWaves, numAvgWaves, wrap, bbgn, bend, dx, offset, npnts, method
 	
-	String fxn1, fxn2, wName, wName2, tList, transform, output, mdf = NMMainDF
+	String fxn1, fxn2, wName, wName2, dNameX, tList, transform, output, mdf = NMMainDF
 	
 	String avgList = "" // running avg wave list
 	String avgList2 = "" // for filtering
@@ -5417,11 +5447,15 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 			case "Phase Plane":
 			
-				String phasePlaneName = dstName + "_diff"
-				String phasePlaneNameX = dstName + "_diffX"
+				dNameX = NMChanDisplayWaveNameX( dstName )
 				
-				Duplicate /O $dstName $phasePlaneName, $phasePlaneNameX
-				Differentiate $phasePlaneName
+				Duplicate /O $dstName $dNameX // y-wave becomes x-wave
+				
+				if ( WaveExists( $xWave ) )
+					Differentiate $dstName /X=$xWave
+				else
+					Differentiate $dstName
+				endif
 				
 				break
 				
