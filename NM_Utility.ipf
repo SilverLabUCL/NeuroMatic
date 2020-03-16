@@ -2760,7 +2760,7 @@ Function /S NMUtilityWaveListShort( wList [ prePrefix ] ) // convert wave list t
 	String prePrefix
 	
 	Variable icnt
-	String foundList = "", wList2, oList = ""
+	String foundList = "", wList1, wList2, oList = ""
 	
 	if ( ParamIsDefault( prePrefix ) )
 		prePrefix = NMFoldersWavePrePrefix // prefix of wave names after NM folder merge ("DF0_", "DF1_", etc), or file import
@@ -2772,23 +2772,33 @@ Function /S NMUtilityWaveListShort( wList [ prePrefix ] ) // convert wave list t
 	
 	if ( strlen( prePrefix ) > 0 )
 	
-		for ( icnt = 0 ; icnt < 9999 ; icnt += 1 )
+		wList1 = NMStrSearchList( wList, preprefix )
 		
-			preprefix = NMFoldersWavePrePrefix + num2istr( icnt ) + "_" // e.g. "DF_0"
+		if ( ItemsInList( wList1 ) > 0 )
+	
+			for ( icnt = 0 ; icnt < 999 ; icnt += 1 )
 			
-			wList2 = NMStrSearchList( wList, preprefix )
+				preprefix = NMFoldersWavePrePrefix + num2istr( icnt ) + "_" // e.g. "DF0_"
+				
+				wList2 = NMStrSearchList( wList, preprefix )
+				
+				if ( ItemsInList( wList2 ) == 0 )
+					continue
+				endif
+				
+				olist += NMUtilityWaveListShort2( wList2 )
+				foundList += wList2
+				
+				if ( ItemsInList( foundList ) >= ItemsInList( wList1 ) )
+					break
+				endif
 			
-			if ( ItemsInList( wList2 ) == 0 )
-				break // no more "DF"
+			endfor
+			
+			if ( ItemsInList( foundList ) > 0 )
+				return olist + RemoveFromList( foundList, wList )
 			endif
 			
-			olist += NMUtilityWaveListShort2( wList2 )
-			foundList += wList2
-		
-		endfor
-		
-		if ( ItemsInList( foundList ) > 0 )
-			return olist + RemoveFromList( foundList, wList )
 		endif
 		
 	endif
