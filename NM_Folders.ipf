@@ -46,6 +46,11 @@
 //****************************************************************
 //****************************************************************
 
+StrConstant NMFoldersWavePrePrefix = "DF"
+
+//****************************************************************
+//****************************************************************
+
 Function /S NMFolderCall( fxn )
 	String fxn
 	
@@ -1761,7 +1766,7 @@ Function /S NMFoldersMerge()
 		NMSet( wavePrefixNoPrompt = wavePrefix )
 		
 		if ( countFromZero >= 0 )
-			newPrefix = "DF" + num2str( countFromZero ) + "_"
+			newPrefix = NMFoldersWavePrePrefix + num2str( countFromZero ) + "_"
 			countFromZero += 1
 		else
 			newPrefix = "D" + NMFolderListName( f1 ) + "_"
@@ -1782,7 +1787,7 @@ Function /S NMFoldersMerge()
 		NMSet( wavePrefixNoPrompt = wavePrefix )
 		
 		if ( countFromZero >= 0 )
-			newPrefix = "DF" + num2str( countFromZero ) + "_"
+			newPrefix = NMFoldersWavePrePrefix + num2str( countFromZero ) + "_"
 			countFromZero += 1
 		else
 			newPrefix = "D" + NMFolderListName( f2 ) + "_"
@@ -1845,7 +1850,7 @@ Function /S NMFoldersMerge()
 			NMSet( wavePrefixNoPrompt = wavePrefix )
 			
 			if ( countFromZero >= 0 )
-				newPrefix = "DF" + num2str( countFromZero ) + "_"
+				newPrefix = NMFoldersWavePrePrefix + num2str( countFromZero ) + "_"
 				countFromZero += 1
 			else
 				newPrefix = "D" + NMFolderListName( f2 ) + "_"
@@ -1863,7 +1868,7 @@ Function /S NMFoldersMerge()
 	
 	NMFolderChange( newfolder )
 	
-	newPrefix = "DF"
+	newPrefix = NMFoldersWavePrePrefix
 	
 	NMSet( wavePrefixNoPrompt = newPrefix )
 	
@@ -3041,10 +3046,10 @@ Function /S NMPrefixList()
 		
 	endfor
 	
-	wList = WaveList( "DF0_*", ";", "Text:0" ) // imported data
+	wList = WaveList( NMFoldersWavePrePrefix + "0_*", ";", "Text:0" ) // imported, waves, or waves inside merged folders
 	
 	if ( ItemsInList( wList ) > 0 )
-		prefixList2 = NMAddToList( "DF", prefixList2, ";" )
+		prefixList2 = NMAddToList( NMFoldersWavePrePrefix, prefixList2, ";" )
 	endif
 	
 	prefixList2 = NMAddToList( subfolderList, prefixList2, ";" )

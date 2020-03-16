@@ -2973,7 +2973,7 @@ Function /S NMImportWaves( folder, folderPath, fileList [ usePrefixDF, history ]
 	String ext, extList = "", fileType, fileTypeList = "", vlist = ""
 	
 	String tempFolder = "root:NM_Import_Temp:"
-	String prefixDF = "DF"
+	String prefixDF = NMFoldersWavePrePrefix
 	String prefixDF2 = ""
 	
 	String folderPrefix = NMPrefixSubfolderPrefix

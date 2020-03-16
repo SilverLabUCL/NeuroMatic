@@ -2755,11 +2755,57 @@ End // NMStrSearchList
 //****************************************************************
 //****************************************************************
 
-Function /S NMUtilityWaveListShort( wList ) // convert wave list to short format
+Function /S NMUtilityWaveListShort( wList [ prePrefix ] ) // convert wave list to short format
+	String wList
+	String prePrefix
+	
+	Variable icnt
+	String foundList = "", wList2, oList = ""
+	
+	if ( ParamIsDefault( prePrefix ) )
+		prePrefix = NMFoldersWavePrePrefix // prefix of wave names after NM folder merge ("DF0_", "DF1_", etc), or file import
+	endif
+	
+	if ( ItemsInList( wList ) <= 1 )
+		return wList // not enough waves
+	endif
+	
+	if ( strlen( prePrefix ) > 0 )
+	
+		for ( icnt = 0 ; icnt < 9999 ; icnt += 1 )
+		
+			preprefix = NMFoldersWavePrePrefix + num2istr( icnt ) + "_" // e.g. "DF_0"
+			
+			wList2 = NMStrSearchList( wList, preprefix )
+			
+			if ( ItemsInList( wList2 ) == 0 )
+				break // no more "DF"
+			endif
+			
+			olist += NMUtilityWaveListShort2( wList2 )
+			foundList += wList2
+		
+		endfor
+		
+		if ( ItemsInList( foundList ) > 0 )
+			return olist + RemoveFromList( foundList, wList )
+		endif
+		
+	endif
+	
+	return NMUtilityWaveListShort2( wList )
+	
+End // NMUtilityWaveListShort
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S NMUtilityWaveListShort2( wList ) // convert wave list to short format
 	String wList
 	
 	Variable wcnt
-	String prefix, wName, wNameNew, tempList = "", foundList = "", oList = ""
+	String prefix, wName, wNameNew
+	String tempList = "", foundList = "", oList = ""
 	
 	if ( ItemsInList( wList ) <= 1 )
 		return wList // not enough waves
@@ -2792,7 +2838,7 @@ Function /S NMUtilityWaveListShort( wList ) // convert wave list to short format
 	
 		oList = prefix + ";"
 		
-	elseif ( ItemsInList( tempList ) >= 1 )
+	else
 	
 		tempList = SequenceToRangeStr( tempList, "-" )
 		
@@ -2802,7 +2848,7 @@ Function /S NMUtilityWaveListShort( wList ) // convert wave list to short format
 	
 	return ReplaceString( ",;", oList, ";" ) + RemoveFromList( foundList, wList )
 	
-End // NMUtilityWaveListShort
+End // NMUtilityWaveListShort2
 
 //****************************************************************
 //****************************************************************
@@ -3213,15 +3259,13 @@ End // NMQuotes
 Function /S FindCommonPrefix( wList )
 	String wList
 	
-	Variable icnt, jcnt, thesame
+	Variable icnt, jcnt
 	String wname, wname2, prefix = ""
 	
 	wname = StringFromList( 0, wList )
 	
 	for ( icnt = 0 ; icnt < strlen( wname ) ; icnt += 1 )
 	
-		thesame = 1
-		
 		for ( jcnt = 1 ; jcnt < ItemsInList( wList ) ; jcnt += 1 )
 		
 			wname2 = StringFromList( jcnt, wList )
