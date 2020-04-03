@@ -366,7 +366,7 @@ Function LogTable(ldf [ kill ] ) // create a log table from a log data folder
 	
 	NMWinCascadeRect( w )
 	Edit /K=(NMK())/N=$tName/W=(w.left,w.top,w.right,w.bottom) as "Clamp Log : " + NMChild( ldf )
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Entry" )
+	ModifyTable /W=$tName title(Point)="Entry"
 	
 	wlist = LogWaveList(ldf, "F")
 	
@@ -380,12 +380,11 @@ Function LogTable(ldf [ kill ] ) // create a log table from a log data folder
 	
 		objName = StringFromList(ocnt, wlist)
 		
-		RemoveFromTable $(ldf+objName) // remove wave first before appending
-		AppendToTable $(ldf+objName)
+		RemoveFromTable /W=$tName $(ldf+objName) // remove wave first before appending
+		AppendToTable /W=$tName $(ldf+objName)
 		
 		if (StringMatch(objName[0,3], "Note") == 1)
-			Execute "ModifyTable alignment(" + ldf + objName + ")=0"
-			Execute "ModifyTable width(" + ldf + objName + ")=150"
+			ModifyTable /W=$tName alignment($ldf+objName)=0, width($ldf+objName)=150
 		endif
 		
 	endfor

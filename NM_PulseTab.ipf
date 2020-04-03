@@ -1176,10 +1176,10 @@ Function /S NMPulseConfigsTable( [ history ] )
 		
 		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) $pcwName as title
 		
-		Execute /Z "ModifyTable title( Point )= " + NMQuotes( "Config" )
-		Execute /Z "ModifyTable alignment=0"
-		Execute /Z "ModifyTable width=400"
-		Execute /Z "ModifyTable width( Point )=40"
+		ModifyTable /W=$tName title(Point)="Config"
+		ModifyTable /W=$tName alignment=0
+		ModifyTable /W=$tName width=400
+		ModifyTable /W=$tName width(Point)=40
 		
 		SetWindow $tName hook=NMPulseConfigsTableHook, hookevents=1
 		

@@ -4623,7 +4623,7 @@ Function /S NMOrderWavesCall()
 
 	Variable order = NMVarGet( "OrderWaves" )
 
-	String tname = NMChanWaveListTableName()
+	String tName = NMChanWaveListTableName()
 	
 	String prefixFolder = CurrentNMPrefixFolder()
 	
@@ -4631,12 +4631,8 @@ Function /S NMOrderWavesCall()
 		return ""
 	endif
 		
-	if ( WinType( tname ) == 2 )
-		DoWindow /F $tname
-		wList = NMFolderWaveList( prefixFolder, "*", ";","WIN:"+ tname, 0 )
-		NMChanWaveListOrder( wList )
-		NMChanWaves2WaveList()
-		return ""
+	if ( WinType( tName ) == 2 ) // table exists, execute new order
+		return NMOrderWavesByTable( doit = 1, history = 1 )
 	endif
 	
 	Prompt order, "order waves by:", popup "creation date;alpha-numerically;user-input table;"
@@ -4758,12 +4754,14 @@ End // NMOrderWavesAlphaNum
 //****************************************************************
 //****************************************************************
 
-Function NMOrderWavesByTable( [ prefixFolder, history ] )
+Function /S NMOrderWavesByTable( [ prefixFolder, doit, history ] )
 	String prefixFolder
+	Variable doit // execute reorder if table exists
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
-	Variable currentChan
-	String vlist = ""
+	String wList, vlist = ""
+	
+	String tName = NMChanWaveListTableName()
 	
 	if ( ParamIsDefault( prefixFolder ) )
 		prefixFolder = CurrentNMPrefixFolder()
@@ -4772,20 +4770,32 @@ Function NMOrderWavesByTable( [ prefixFolder, history ] )
 		prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
 	endif
 	
+	if ( !ParamIsDefault( doit ) )
+		vlist = NMCmdNumOptional( "doit", doit, vlist )
+	endif
+	
 	if ( history )
 		NMCommandHistory( vlist )
 	endif
 	
 	if ( strlen( prefixFolder ) == 0 )
-		return -1
+		return ""
 	endif
 	
-	currentChan = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	if ( doit && ( WinType( tName ) == 2 ) )
 	
-	if ( NMChanSelectedAll( prefixFolder = prefixFolder ) )
-		NMChanWaveListOrderTable( -1, prefixFolder = prefixFolder )
+		DoWindow /F $tName
+		wList = NMFolderWaveList( prefixFolder, "*", ";","WIN:"+ tName, 0 )
+		NMChanWaveListOrder( wList, prefixFolder = prefixFolder )
+		NMChanWaves2WaveList()
+		NMMainWaveList( chanSelectList = "All", compact=1, printToHistory=1 )
+		
+		return tName
+	
 	else
-		NMChanWaveListOrderTable( currentChan, prefixFolder = prefixFolder )
+	
+		return NMChanWaveListOrderTable( -1, prefixFolder = prefixFolder ) // all channels, user can remove channel waves from table if needed
+		
 	endif
 
 End // NMOrderWavesByTable
@@ -4804,11 +4814,11 @@ End // NMChanWaveListTableName
 //****************************************************************
 //****************************************************************
 
-Function NMChanWaveListOrderTable( channel [ prefixFolder ] )
+Function /S NMChanWaveListOrderTable( channel [ prefixFolder ] )
 	Variable channel // ( -1 ) for All
 	String prefixFolder
 	
-	Variable ccnt, cbgn = channel, cend = channel
+	Variable numwaves, ccnt, cbgn = channel, cend = channel
 	String wName, wName2, tName, title
 	
 	STRUCT Rect w
@@ -4820,25 +4830,31 @@ Function NMChanWaveListOrderTable( channel [ prefixFolder ] )
 	endif
 	
 	if ( strlen( prefixFolder ) == 0 )
-		return -1
+		return ""
 	endif
 	
-	wName = prefixFolder + "ChanWaveNames" + ChanNum2Char( channel )
-	wName2 = prefixFolder + "wnames_Order"
+	wName = prefixFolder + "ChanWaveNames" + ChanNum2Char( 0 )
+	wName2 = prefixFolder + "NewWaveOrder"
+	
+	numwaves = numpnts( $wName )
+	
+	if ( numwaves == 0 )
+		return ""
+	endif
 	
 	tName = NMChanWaveListTableName()
 	
 	if ( WinType( tName ) > 0 )
 		DoWindow /F $tName
-		return 0
+		return tName
 	endif
 	
-	if ( channel < 0 )
+	if ( channel < 0 ) // all
 		cbgn = 0
 		cend = NumVarOrDefault( prefixFolder + "NumChannels", 0 )
 	endif
 	
-	Make /O/N=( numpnts( $wName ) ) $wName2
+	Make /O/N=(numwaves) $wName2
 	
 	Wave wtemp = $wName2
 	
@@ -4846,11 +4862,11 @@ Function NMChanWaveListOrderTable( channel [ prefixFolder ] )
 	
 	NMWinCascadeRect( w )
 	
-	title = "Click " + NMQuotes( "Order Waves" ) + " to re-order"
+	title = "Enter new wave order and reselect " + NMQuotes( "Order Waves" )
 	
 	Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) $wName2 as title
-	SetWindow $tName hook=NMChanWaveListTableHook
-	Execute /Z "ModifyTable title( Point )= " + NMQuotes( "Order" )
+	//SetWindow $tName hook=NMChanWaveListTableHook
+	ModifyTable /W=$tName format(Point)=1, title(Point)="Order"
 	
 	for ( ccnt = cbgn; ccnt <= cend; ccnt += 1 )
 	
@@ -4865,6 +4881,13 @@ Function NMChanWaveListOrderTable( channel [ prefixFolder ] )
 	RemoveFromTable /W=$tName $wName2
 	
 	AppendToTable /W=$tName $wName2
+	
+	ModifyTable /W=$tName width=140
+	ModifyTable /W=$tName width(Point)=60
+	
+	NMHistory(title)
+	
+	return tName
 
 End // NMChanWaveListOrderTable
 
@@ -4872,7 +4895,7 @@ End // NMChanWaveListOrderTable
 //****************************************************************
 //****************************************************************
 
-Function NMChanWaveListTableHook( infoStr )
+Function NMChanWaveListTableHook( infoStr ) // NOT USED
 	String infoStr
 	
 	String event= StringByKey( "EVENT", infoStr )
@@ -4899,8 +4922,8 @@ Function NMChanWaveListOrder( wList [ prefixFolder ] )
 	String wList
 	String prefixFolder
 
-	Variable wcnt
-	String wName, wName2
+	Variable icnt, jcnt, wcnt, found
+	String pf, wName, wName2, mList = ""
 	
 	if ( ParamIsDefault( prefixFolder ) )
 		prefixFolder = CurrentNMPrefixFolder()
@@ -4912,10 +4935,11 @@ Function NMChanWaveListOrder( wList [ prefixFolder ] )
 		return -1
 	endif
 	
-	wName2 = prefixFolder + "wnames_Order"
+	pf = prefixFolder
+	wName2 = "NewWaveOrder"
 	
-	if ( !WaveExists( $wName2 ) )
-		NMDoAlert( "Abort NMChanWaveListOrder: missing wave wnames_Order" )
+	if ( !WaveExists( $pf+wName2 ) )
+		NMDoAlert( "Abort NMChanWaveListOrder: missing wave " + wName2 )
 		return -1
 	endif
 	
@@ -4926,24 +4950,45 @@ Function NMChanWaveListOrder( wList [ prefixFolder ] )
 		return -1
 	endif
 	
+	Wave wtemp = $pf+wName2
+	
+	for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+		found = 0
+		for ( jcnt = 0 ; jcnt < numpnts( wtemp ) ; jcnt += 1 )
+			if ( wtemp[ jcnt ] == icnt )
+				found = 1
+				break
+			endif
+		endfor
+		if ( found == 0 )
+			mList += num2istr( icnt ) + ";"
+		endif
+	endfor
+	
+	if ( ItemsInList( mList ) > 0 )
+		NMDoAlert( "Abort NMChanWaveListOrder: " + wName2 + ": missing episode #: " + mList )
+		return -1
+	endif
+	
 	for ( wcnt = 0; wcnt < ItemsInList( wList ); wcnt += 1 )
 	
-		wName = prefixFolder + StringFromList( wcnt, wList )
+		wName = StringFromList( wcnt, wList )
 		
-		if ( !WaveExists( $wName ) || ( numpnts( $wName ) != numpnts( $wName2 ) ) )
-			Print "Failed to order waves."
-			continue
+		if ( !WaveExists( $pf+wName ) )
+			NMDoAlert( "Abort NMChanWaveListOrder: cannot locate wave " + wName )
+			return -1
 		endif
 		
-		Sort $wName2, $wName
+		if ( ( numpnts( $pf+wName ) != numpnts( $pf+wName2 ) ) )
+			NMDoAlert( "Abort NMChanWaveListOrder: wave point mismatch: " + wName + ", " + wName2 )
+			return -1
+		endif
+		
+		Sort $pf+wName2, $pf+wName
 		
 	endfor
 	
-	Sort $wName2, $wName2
-	
-	Wave wtemp = $wName2
-	
-	wtemp = x
+	wtemp = x // reset order
 	
 	NMChanWaves2WaveList( prefixFolder = prefixFolder )
 

@@ -655,7 +655,7 @@ Function /S NMStimChainEdit(sdf)
 	String sdf
 	Variable npnts = -1
 
-	String tableName = StimCurrent() + "Chain"
+	String tName = StimCurrent() + "Chain"
 	String tableTitle = StimCurrent() + " Acquisition Table"
 	
 	STRUCT Rect w
@@ -673,14 +673,14 @@ Function /S NMStimChainEdit(sdf)
 	CheckNMtwave(sdf+"Stim_Name", npnts, "")
 	CheckNMwave(sdf+"Stim_Wait", npnts, 0)
 	
-	if (WinType(tableName) == 0)
+	if (WinType(tName) == 0)
 		NMWinCascadeRect( w )
-		Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) $(sdf+"Stim_Name"), $(sdf+"Stim_Wait") as tableTitle
+		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) $(sdf+"Stim_Name"), $(sdf+"Stim_Wait") as tableTitle
 	else
-		DoWindow /F $tableName
+		DoWindow /F $tName
 	endif
 	
-	return tableName
+	return tName
 
 End // NMStimChainEdit
 
@@ -2696,7 +2696,7 @@ Function /S NMStimBoardNamesTable(sdf, hook)
 	String sdf // stim data folder path
 	Variable hook // (0) no update (1) updateNM
 	
-	String wName, tableName, title, bdf
+	String wName, tName, title, bdf
 	
 	STRUCT Rect w
 	
@@ -2709,44 +2709,44 @@ Function /S NMStimBoardNamesTable(sdf, hook)
 		return ""
 	endif
 	
-	tableName = NMCheckStringName(stim + "_config_names")
+	tName = NMCheckStringName(stim + "_config_names")
 	
-	if (WinType(tableName) == 2)
-		DoWindow /F $tableName
-		return tableName
+	if (WinType(tName) == 2)
+		DoWindow /F $tName
+		return tName
 	endif
 	
 	title = "Stim config names : " + stim
 	
 	NMWinCascadeRect( w )
 	
-	DoWindow /K $tableName
-	Edit /N=$tableName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Config" )
+	DoWindow /K $tName
+	Edit /N=$tName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
+	ModifyTable /W=$tName title(Point)="Config"
 	
 	if (hook == 1)
-		SetWindow $tableName hook=NMStimBoardNamesTableHook
+		SetWindow $tName hook=NMStimBoardNamesTableHook
 	endif
 	
 	wName = bdf + "ADCname"
 	
 	if (WaveExists($wName) == 1)
-		AppendToTable $wName
+		AppendToTable /W=$tName $wName
 	endif
 	
 	wName = bdf + "DACname"
 	
 	if (WaveExists($wName) == 1)
-		AppendToTable $wName
+		AppendToTable /W=$tName $wName
 	endif
 	
 	wName = bdf + "TTLname"
 	
 	if (WaveExists($wName) == 1)
-		AppendToTable $wName
+		AppendToTable /W=$tName $wName
 	endif
 	
-	return tableName
+	return tName
 
 End // NMStimBoardNamesTable
 

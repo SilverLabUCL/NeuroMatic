@@ -3697,9 +3697,9 @@ Function EventFindAll( waveSelect, displayResults [ history ] ) // find events u
 	Variable savewave = currentWave
 	Variable savetime = searchTime
 	
-	String tableName = CurrentNMEventTableName()
+	String tName = CurrentNMEventTableName()
 
-	if ( strlen( tableName ) == 0 )
+	if ( strlen( tName ) == 0 )
 		NMEventTableNew()
 	endif
 	
@@ -3785,7 +3785,7 @@ Function EventFindAll( waveSelect, displayResults [ history ] ) // find events u
 	UpdateEventTab()
 	NMEventReviewAlert()
 	
-	DoWindow /F $tableName
+	DoWindow /F $tName
 
 End // EventFindAll
 
@@ -4952,7 +4952,7 @@ Function EventDelete( waveNum, eventTime [ rejections, noAlert ] ) // delete sav
 	Variable event
 	String wNameN, wNameT
 	
-	String tableName = CurrentNMEventTableName()
+	//String tName = CurrentNMEventTableName()
 	
 	wNameN = NMEventTableWaveName( "WaveN", rejections = rejections )
 	wNameT = NMEventTableWaveName( "ThreshT", rejections = rejections )
@@ -5179,7 +5179,7 @@ Function EventTableCall( fxn )
 	String fxn
 	
 	String tableSelect = StrVarOrDefault( "EventTableSelected", "" )
-	String tableName = CurrentNMEventTableName()
+	//String tName = CurrentNMEventTableName()
 
 	strswitch( fxn )
 	
@@ -5277,7 +5277,7 @@ Function /S NMEventTableSelect( tableSelect [ update ] )
 	Variable update
 	
 	Variable tableNum
-	String tableName, xtableName = ""
+	String tName, xtName = ""
 	
 	if ( ParamIsDefault( update ) )
 		update = 1
@@ -5290,24 +5290,24 @@ Function /S NMEventTableSelect( tableSelect [ update ] )
 	if ( NMEventTableOldFormat( tableSelect ) )
 		
 		tableNum = EventNumFromName( tableSelect )
-		tableName = NMEventTableOldName( currentChan, tableNum )
+		tName = NMEventTableOldName( currentChan, tableNum )
 		
 	else
 	
-		tableName = CurrentNMEventTableName()
-		xtableName = CurrentNMEventTableName( rejections = 1 )
+		tName = CurrentNMEventTableName()
+		xtName = CurrentNMEventTableName( rejections = 1 )
 		
 	endif
 	
-	if ( strlen( tableName ) > 0 )
+	if ( strlen( tName ) > 0 )
 	
 		if ( WaveExists( $NMEventTableWaveName( "WaveN", rejections = 1 ) ) )
 			NMEventTableManager( "", "make", rejections = 1 )
-			DoWindow /F $xtableName
+			DoWindow /F $xtName
 		endif
 	
-		NMEventTableManager( tableName, "make" )
-		DoWindow /F $tableName
+		NMEventTableManager( tName, "make" )
+		DoWindow /F $tName
 		
 	endif
 	
@@ -5316,7 +5316,7 @@ Function /S NMEventTableSelect( tableSelect [ update ] )
 		UpdateEventTab()
 	endif
 	
-	return tableName
+	return tName
 	
 End // NMEventTableSelect
 
@@ -5357,7 +5357,7 @@ Function /S CurrentNMEventTableName( [ rejections ] )
 	Variable rejections // event rejections
 
 	Variable tableNum
-	String tablePrefix, tableName
+	String tablePrefix
 	
 	String prefixFolder = CurrentNMPrefixFolder()
 	
@@ -5411,9 +5411,9 @@ End // CurrentNMEventTableName
 Function NMEventTableClearCall()
 
 	String tableSelect = StrVarOrDefault( "EventTableSelected", "" )
-	String tableName = CurrentNMEventTableName()
+	String tName = CurrentNMEventTableName()
 
-	if ( strlen( tableName ) == 0 )
+	if ( strlen( tName ) == 0 )
 		//NMDoAlert( "No event table to clear." )
 		return -1
 	endif
@@ -5470,9 +5470,9 @@ End // NMEventTableClear
 Function NMEventTableKillCall()
 
 	String tableSelect = StrVarOrDefault( "EventTableSelected", "" )
-	String tableName = CurrentNMEventTableName()
+	String tName = CurrentNMEventTableName()
 
-	if ( strlen( tableName ) == 0 )
+	if ( strlen( tName ) == 0 )
 		//NMDoAlert( "No event table to kill." )
 		return -1
 	endif
@@ -5571,7 +5571,7 @@ Function NMEventTableManager( tableName, option [ rejections ] )
 			Make /O/N=0 EV_DumWave
 			DoWindow /K $tableName
 			Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) EV_DumWave as NMEventTableTitle( rejections = rejections )
-			ModifyTable /W=$tableName title( Point )="Event"
+			ModifyTable /W=$tableName title(Point)="Event"
 			RemoveFromTable /W=$tableName EV_DumWave
 			KillWaves /Z EV_DumWave
 			

@@ -800,10 +800,10 @@ Function /S StimTable(sdf, pName, df, prefix [ tableName ] )
 	
 	Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) $(pName) as title
 	
-	Execute /Z "ModifyTable title(Point)= " + NMQuotes( "Config" )
-	Execute /Z "ModifyTable alignment=0"
-	Execute /Z "ModifyTable width=400"
-	Execute /Z "ModifyTable width( Point )=40"
+	ModifyTable /W=$tableName title(Point)="Config"
+	ModifyTable /W=$tableName alignment=0
+	ModifyTable /W=$tableName width=400
+	ModifyTable /W=$tableName width(Point)=40
 	
 	return tableName
 
@@ -850,8 +850,7 @@ Function NMStimBoardConfigTable(sdf, io, wList, hook)
 	NMWinCascadeRect( w )
 	
 	Edit /N=$tName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
-	
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Config" )
+	ModifyTable /W=$tName title(Point)="Config"
 	
 	if (hook == 1)
 		SetWindow $tName
@@ -866,7 +865,7 @@ Function NMStimBoardConfigTable(sdf, io, wList, hook)
 		endif
 		
 		if (WaveExists($wName) == 1)
-			AppendToTable $wName
+			AppendToTable /W=$tName $wName
 		endif
 	
 	endfor

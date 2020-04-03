@@ -981,7 +981,7 @@ Function ClampBoardTable(io, wlist, hook)
 	
 	DoWindow /K $tName
 	Edit /N=$tName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Config" )
+	ModifyTable /W=$tName title(Point)="Config"
 	
 	if (hook == 1)
 		SetWindow $tName hook=ClampBoardTableHook
@@ -992,7 +992,7 @@ Function ClampBoardTable(io, wlist, hook)
 		wName = cdf + io + StringFromList(icnt,wlist)
 		
 		if (WaveExists($wName) == 1)
-			AppendToTable $wName
+			AppendToTable /W=$tName $wName
 		endif
 	
 	endfor

@@ -62,7 +62,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	String cdf = NMDF + "Clamp:"
 	String ndf = NMNotesDF
 	
-	String tableName = NMNotesTableName
+	String tName = NMNotesTableName
 	String tableTitle = "NM Data Acquisition Notes"
 	
 	if ( type == 1 )
@@ -79,7 +79,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 		
 		cdf = ndf
 		
-		tableName = CurrentNMFolderPrefix() + "NotesTable"
+		tName = CurrentNMFolderPrefix() + "NotesTable"
 		
 		tableTitle += " : " + CurrentNMFolder( 0 )
 		
@@ -115,18 +115,18 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	Wave /T StrValue = $(cdf+"StrValue")
 	Wave NumValue = $(cdf+"NumValue")
 	
-	if (WinType(tableName) == 0)
+	if (WinType(tName) == 0)
 	
 		NMWinCascadeRect( w )
 		
-		Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) VarName, NumValue, StrValue as tableTitle
+		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) VarName, NumValue, StrValue as tableTitle
 		
-		Execute "ModifyTable title(Point)= " + NMQuotes( "Entry" )
-		Execute "ModifyTable alignment(" + cdf + "VarName)=0, alignment(" + cdf + "StrValue)=0"
-		Execute "ModifyTable width(" + cdf + "NumValue)=60, width(" + cdf + "StrValue)=200"
+		ModifyTable /W=$tName title(Point)="Entry"
+		ModifyTable /W=$tName alignment($cdf+"VarName")=0, alignment($cdf+"StrValue")=0
+		ModifyTable /W=$tName width($cdf+"NumValue")=60, width($cdf+"StrValue")=200
 		
 		if ( type == 0 )
-			//SetWindow $tableName hook=NMNotesTableHook
+			//SetWindow $tName hook=NMNotesTableHook
 		endif
 		
 	endif
@@ -187,7 +187,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	
 	icnt += 1
 	
-	return tableName
+	return tName
 
 End // NMNotesTable
 

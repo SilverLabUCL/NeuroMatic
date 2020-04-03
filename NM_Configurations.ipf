@@ -1427,7 +1427,7 @@ Function NMConfigEdit( flist [ history ] ) // create table to edit config vars
 	
 	Variable fcnt, ocnt, icnt, items, numItems, strItems
 	
-	String fname, objName, tableName, tableTitle, varList, strList, vlist = ""
+	String fname, objName, tName, tableTitle, varList, strList, vlist = ""
 	String df
 	
 	STRUCT Rect w
@@ -1462,7 +1462,7 @@ Function NMConfigEdit( flist [ history ] ) // create table to edit config vars
 		fname = StringFromList( fcnt, flist )
 		df = ConfigDF( fname )
 	
-		tableName = "Config_" + fname
+		tName = "Config_" + fname
 		tableTitle = fname + " Configurations"
 	
 		varList = NMConfigVarList( fname, 2 )
@@ -1502,33 +1502,33 @@ Function NMConfigEdit( flist [ history ] ) // create table to edit config vars
 		
 		Wave NumValue = $( df+"NumValue" )
 		
-		if ( WinType( tableName ) == 0 )
+		if ( WinType( tName ) == 0 )
 		
 			NMWinCascadeRect( w )
 			
-			Edit /K=1/W=(w.left,w.top,w.right,w.bottom)/N=$tableName VarName as tableTitle
+			Edit /K=1/W=(w.left,w.top,w.right,w.bottom)/N=$tName VarName as tableTitle
 			
 			if ( numItems > 0 )
-				AppendToTable /W=$tableName NumValue
-				Execute /Z "ModifyTable width( " + df + "NumValue )=60"
+				AppendToTable /W=$tName NumValue
+				ModifyTable /W=$tName width( $df+"NumValue" )=60
 			endif
 			
 			if ( strItems > 0 )
-				AppendToTable /W=$tableName StrValue
-				Execute /Z "ModifyTable alignment( " + df + "StrValue )=0, width( " + df + "StrValue )=150"
+				AppendToTable /W=$tName StrValue
+				ModifyTable /W=$tName alignment( $df+"StrValue" )=0, width( $df+"StrValue" )=150
 			endif
 			
-			AppendToTable Description
+			AppendToTable /W=$tName Description
 			
-			Execute /Z "ModifyTable title( Point )= " + NMQuotes( "Entry" )
-			Execute /Z "ModifyTable alignment( " + df + "VarName )=0, width( " + df + "VarName )=100"
-			Execute /Z "ModifyTable alignment( " + df + "Description )=0, width( " + df + "Description )=500"
+			ModifyTable /W=$tName title(Point)="Entry"
+			ModifyTable /W=$tName alignment( $df+"VarName" )=0, width( $df+"VarName" )=100
+			ModifyTable /W=$tName alignment( $df+"Description" )=0, width( $df+"Description" )=500
 			
-			SetWindow $tableName hook=NMConfigEditHook
+			SetWindow $tName hook=NMConfigEditHook
 			
 		endif
 		
-		DoWindow /F $tableName
+		DoWindow /F $tName
 		
 		NMConfigCopy( fname, 1 ) // get current configuration values
 		
@@ -1609,9 +1609,9 @@ Function NMConfigEdit2Vars( fname ) // save table values to config vars
 	Variable icnt, jcnt, items, objNum
 	String objStr, objList, vList
 	
-	String tableName = "Config_" + fname
+	String tName = "Config_" + fname
 
-	if ( WinType( tableName ) != 2 )
+	if ( WinType( tName ) != 2 )
 		return 0 // table doesnt exist
 	endif
 	
