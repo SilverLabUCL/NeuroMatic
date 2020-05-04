@@ -49,7 +49,7 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0j"
+StrConstant NMVersionStr = "3.0k"
 Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
 Static StrConstant NMRights = "Copyright (c) 2020 Jason Rothman"
 Static StrConstant NMEmail = "Jason@ThinkRandom.com"
@@ -57,7 +57,7 @@ Static StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Depart
 
 StrConstant NMDF = "root:Packages:NeuroMatic:"
 StrConstant NMClampDF = "root:Packages:NeuroMatic:Clamp:"
-StrConstant NMWavePrefixList = "Record;Wave;Avg_;Pulse_;ST_;SP_;EV_;Fit_;Histo_;Sort_;Sim_;ROI;"
+StrConstant NMWavePrefixList = "Record;Wave;NMWave;Avg_;Pulse_;ST_;SP_;EV_;Fit_;Histo_;Sort_;Sim_;ROI;"
 StrConstant NMXscalePrefix = "xScale_"
 StrConstant NMTabList = "Main;Stats;Spike;Event;Fit;"
 
