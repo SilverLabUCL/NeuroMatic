@@ -38,7 +38,7 @@
 
 Static StrConstant NMChanGraphPrefix = "Chan"
 StrConstant NMChanPopupList = "Overlay;Grid;Drag;Errors;XLabel;YLabel;FreezeX;FreezeY;To Front;Reset Position;Off;"
-StrConstant NMChanTransformList = "Baseline;Normalize;dF/Fo;Z-score;Invert;Differentiate;Double Differentiate;Integrate;Phase Plane;FFT;Log;Ln;Running Average;Histogram;Clip Events;"
+StrConstant NMChanTransformList = "Baseline;Normalize;dF/Fo;Z-score;Rs Correction;Invert;Differentiate;Double Differentiate;Integrate;Phase Plane;FFT;Log;Ln;Running Average;Histogram;Clip Events;"
 StrConstant NMChanFFTList = "real;magnitude;magnitude square;phase;"
 StrConstant NMFilterList = "binomial;boxcar;low-pass;high-pass;"
 
@@ -3362,6 +3362,23 @@ Function NMChanTransformCheck( transformList )
 				
 				return 0
 				
+			case "Rs Correction":
+				
+				Variable Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
+				Variable Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
+				Variable Rs = str2num( StringByKey("Rs", tList, "=", ",") )
+				Variable Cm = str2num( StringByKey("Cm", tList, "=", ",") )
+				Variable Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
+				Variable Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
+				Variable Fc = str2num( StringByKey("Fc", tList, "=", ",") )
+				String dataUnits = StringByKey("dataUnits", tList, "=", ",")
+				
+				if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) == 0 )
+					return 0 // OK
+				endif
+			
+				return 1
+				
 			case "Integrate":
 			
 				Variable method = str2num( StringByKey("method", tList, "=", ",") )
@@ -3489,6 +3506,7 @@ Function /S NMChanTransformCall( channel, on )
 		case "Normalize":
 		case "dF/Fo":
 		case "Baseline":
+		case "Rs Correction":
 		case "Z-score":
 		case "Integrate":
 		case "FFT":
@@ -3537,6 +3555,9 @@ Function /S NMChanTransformAsk( channel ) // request channel transform function
 			break
 		case "Baseline":
 			transform = NMChanTransformBaselineCall( channel )
+			break
+		case "Rs Correction":
+			transform = NMChanTransformRsCorrCall( channel )
 			break
 		case "Z-score":
 			transform = NMChanTransformZscoreCall( channel )
@@ -3628,6 +3649,10 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformBaseline" ) + " for this channel transformation." )
 			return ""
 			
+		case "Rs Correction":
+			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformRsCorrection" ) + " for this channel transformation." )
+			return ""
+			
 		case "Z-score":
 			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformZscore" ) + " for this channel transformation." )
 			return ""
@@ -3671,6 +3696,159 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 	return transform
 
 End // NMChannelTransformSet
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformRSCorrCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	String promptStr
+	
+	String currentPrefix = CurrentNMWavePrefix()
+	
+	STRUCT NMRsCorr rc
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	String cdf = NMChanTransformDF( channel ) 
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	promptStr = currentPrefix + " : " + ChanNum2Char( channel )
+	
+	if ( NMRsCorrectionCall( cdf, promptStr=promptStr, rc=rc ) == 0 )
+		return NMChanTransformRsCorrect( channel=channel, rc=rc, history=1 )
+	endif
+	
+	return ""
+
+End // NMChanTransformRSCorrCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, FC, dataUnits, rc, history ] )
+	String prefixFolder // prefix folder, pass nothing for current
+	Variable channel // pass nothing for current channel
+	
+	Variable Vhold // mV
+	Variable Vrev // mV
+	Variable Rs // MOhms
+	Variable Cm // pF
+	Variable Vcomp // fraction 0 - 1
+	Variable Ccomp // fraction 0 - 1
+	Variable Fc // kHz
+	String dataUnits // A, mA, uA, nA, pA
+	
+	STRUCT NMRsCorr &rc // or pass this structure instead
+	
+	Variable history
+	
+	String cdf, transformList, paramList = ""
+	
+	if ( ParamIsDefault( prefixFolder ) )
+		prefixFolder = CurrentNMPrefixFolder()
+	else
+		paramList = NMCmdStrOptional( "prefixFolder", prefixFolder, paramList )
+	endif
+	
+	prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
+	
+	if ( strlen( prefixFolder ) == 0 )
+		return ""
+	endif
+	
+	if ( ParamIsDefault( channel ) || ( channel == -1 ) )
+		channel = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	endif
+	
+	cdf = NMChanTransformDF( channel, prefixFolder = prefixFolder )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	paramList = NMCmdNumOptional( "channel", channel, paramList )
+	
+	if ( ParamIsDefault( rc ) )
+	
+		if ( ParamIsDefault( Vhold ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Vrev ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Rs ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Cm ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Vcomp ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Ccomp ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( dataUnits ) )
+			return ""
+		endif
+	
+	else
+	
+		Vhold = rc.Vhold
+		Vrev = rc.Vrev
+		Rs = rc.Rs
+		Cm = rc.Cm
+		Vcomp = rc.Vcomp
+		Ccomp = rc.Ccomp
+		Fc = rc.Fc
+		dataUnits = rc.dataUnits
+		
+	endif
+	
+	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) != 0 )
+		return "" // error
+	endif
+	
+	paramList = NMCmdNumOptional( "Vhold", Vhold, paramList )
+	paramList = NMCmdNumOptional( "Vrev", Vrev, paramList )
+	paramList = NMCmdNumOptional( "Rs", Rs, paramList )
+	paramList = NMCmdNumOptional( "Cm", Cm, paramList )
+	paramList = NMCmdNumOptional( "Vcomp", Vcomp, paramList )
+	paramList = NMCmdNumOptional( "Ccomp", Ccomp, paramList )
+	paramList = NMCmdNumOptional( "Fc", Fc, paramList )
+	paramList = NMCmdStrOptional( "dataUnits", dataUnits, paramList )
+	
+	if ( history )
+		NMCommandHistory( paramList )
+	endif
+	
+	String p1List = "Vhold=" + num2str( Vhold ) + ",Vrev=" + num2str( Vrev ) + ",Rs=" + num2str( Rs ) + ",Cm=" + num2str( Cm ) + ","
+	String p2List = "Vcomp=" + num2str( Vcomp ) + ",Ccomp=" + num2str( Ccomp ) + ",Fc=" + num2str( Fc ) + ",dataUnits=" + dataUnits + ","
+	
+	transformList = "Rs Correction," + p1List + p2List + ";"
+	SetNMstr( cdf + "TransformStr", transformList )
+	
+	ChanGraphsUpdate()
+	NMAutoTabCall()
+	
+	return transformList
+	
+End // NMChanTransformRsCorrect
 
 //****************************************************************
 //****************************************************************
@@ -3898,48 +4076,6 @@ End // NMChanTransformDFOFCall
 //****************************************************************
 //****************************************************************
 
-Function /S NMChanTransformBaselineCall( channel )
-	Variable channel // ( -1 ) for current channel
-	
-	Variable xbgn, xend
-	String cdf, mdf = NMMainDF
-	
-	if ( channel == -1 )
-		channel = CurrentNMChannel()
-	endif
-	
-	cdf = NMChanTransformDF( channel )
-	
-	if ( strlen( cdf ) == 0 )
-		return ""
-	endif
-	
-	xbgn = NumVarOrDefault( mdf+"Bsln_Bgn", NMBaselineXbgn )
-	xend = NumVarOrDefault( mdf+"Bsln_End", NMBaselineXend )
-	
-	xbgn = NumVarOrDefault( cdf + "Bsln_Bbgn", xbgn )
-	xend = NumVarOrDefault( cdf + "Bsln_Bend", xend )
-	
-	Prompt xbgn, NMPromptAddUnitsX( "compute baseline from" )
-	Prompt xend, NMPromptAddUnitsX( "compute baseline to" )
-	
-	DoPrompt "Baseline Subtract", xbgn, xend
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	SetNMvar( cdf + "Bsln_Bbgn", xbgn )
-	SetNMvar( cdf + "Bsln_Bend", xend )
-	
-	return NMChanTransformBaseline( channel, xbgn, xend, history = 1 )
-
-End // NMChanTransformBaselineCall
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Function /S NMChanTransformDFOF( channel, xbgn, xend [ prefixFolder, history ] )
 	Variable channel // ( -1 ) for current channel
 	Variable xbgn, xend // x-axis begin and end, use ( -inf, inf ) for all
@@ -3995,6 +4131,48 @@ Function /S NMChanTransformDFOF( channel, xbgn, xend [ prefixFolder, history ] )
 	return transformList
 	
 End // NMChanTransformDFOF
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformBaselineCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable xbgn, xend
+	String cdf, mdf = NMMainDF
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	cdf = NMChanTransformDF( channel )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	xbgn = NumVarOrDefault( mdf+"Bsln_Bgn", NMBaselineXbgn )
+	xend = NumVarOrDefault( mdf+"Bsln_End", NMBaselineXend )
+	
+	xbgn = NumVarOrDefault( cdf + "Bsln_Bbgn", xbgn )
+	xend = NumVarOrDefault( cdf + "Bsln_Bend", xend )
+	
+	Prompt xbgn, NMPromptAddUnitsX( "compute baseline from" )
+	Prompt xend, NMPromptAddUnitsX( "compute baseline to" )
+	
+	DoPrompt "Baseline Subtract", xbgn, xend
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	SetNMvar( cdf + "Bsln_Bbgn", xbgn )
+	SetNMvar( cdf + "Bsln_Bend", xend )
+	
+	return NMChanTransformBaseline( channel, xbgn, xend, history = 1 )
+
+End // NMChanTransformBaselineCall
 
 //****************************************************************
 //****************************************************************
@@ -5546,6 +5724,29 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				bend = str2num( StringByKey("xend", tList, "=", ",") )
 				
 				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, DFOF = 1 )
+				
+				break
+				
+			case "Rs Correction":
+			
+				STRUCT NMRsCorr rc
+				
+				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
+				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
+				rc.Rs = str2num( StringByKey("Rs", tList, "=", ",") )
+				rc.Cm = str2num( StringByKey("Cm", tList, "=", ",") )
+				rc.Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
+				rc.Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
+				rc.Fc = str2num( StringByKey("Fc", tList, "=", ",") )
+				rc.dataUnits = StringByKey("dataUnits", tList, "=", ",")
+				
+				STRUCT NMParams nm
+				
+				NMParamsNull( nm )
+				nm.folder = NMParent( dstName )
+				nm.wList = NMChild( dstName )
+				
+				NMRsCorrection2( nm, rc )
 				
 				break
 				

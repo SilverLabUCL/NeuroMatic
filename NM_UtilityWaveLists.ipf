@@ -2370,13 +2370,16 @@ End // NMWaveNotes
 //****************************************************************
 //****************************************************************
 
-Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
+Function /S NMWaveNotes2( nm [ kill, notestr, toHistory, toNotebook, nbName, nbTitle, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
+	Variable kill // pass 1 to kill wave notes
 	String notestr // add note to wave notes
+	Variable toHistory // print wave notes to Igor history
+	Variable toNotebook // print wave notes to notebook
 	String nbName, nbTitle // notebook name and title
 	Variable history
 	
-	Variable wcnt, numWaves, toNotebook
+	Variable wcnt, numWaves, success = 0
 	String wName, wNote
 	
 	STRUCT Rect w
@@ -2391,13 +2394,11 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 	
 	if ( ParamIsDefault( notestr ) )
 		notestr = ""
-	elseif ( strlen( notestr ) == 0 )
-		return "" // nothing to do
 	endif
 	
 	if ( ParamIsDefault( nbName ) )
 		nbName = ""
-	else
+	elseif ( strlen( nbName ) > 0 )
 		toNotebook = 1
 	endif
 	
@@ -2405,19 +2406,25 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 		nbTitle = "NM Wave Notes : " + NMChild( nm.folder ) // also used with Igor history
 	endif
 	
-	if ( strlen( notestr ) > 0 )
+	if ( kill || ( strlen( notestr ) > 0 ) )
 	
 		for ( wcnt = 0; wcnt < numWaves; wcnt += 1 )
 	
 			wName = StringFromList( wcnt, nm.wList )
 			
+			if ( kill )
+				Note /K $wName
+			endif
+			
 			notestr = ReplaceString( "  ", notestr, " " )
 			notestr = ReplaceString( "  ", notestr, " " )
 			
-			Note $wName, "NMNote:" + notestr
+			if ( strlen( notestr ) > 0 )
+				Note $wName, "NMNote:" + notestr
+			endif
 			
 			nm.successList += wName + ";"
-		
+
 		endfor
 		
 		NMParamsComputeFailures( nm )
@@ -2428,11 +2435,15 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 		
 		SetNMstr( NMDF + "OutputWaveList", nm.successList )
 		
-		return nm.successList
+		if ( !toNotebook && !toHistory )
+			return nm.successList // finished
+		endif
+		
+		success = 1
 	
 	endif
 	
-	if ( toNotebook == 0 ) // print notes to Igor history
+	if ( toHistory ) // print wave notes to Igor history
 	
 		if ( numWaves > 1 )
 			Print nbTitle + NMCR + NMCR
@@ -2451,7 +2462,9 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 				Print " "
 			endif
 			
-			nm.successList += wName + ";"
+			if ( !success )
+				nm.successList += wName + ";"
+			endif
 		
 		endfor
 		
@@ -2459,11 +2472,23 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 		
 		SetNMstr( NMDF + "OutputWaveList", nm.successList )
 		
-		return nm.successList
+		if ( !toNotebook )
+			return nm.successList // finished
+		endif
+		
+		success = 1
 	
 	endif
 	
+	if ( !toNotebook )
+		return ""
+	endif
+	
 	// write wave notes to a notebook
+	
+	if ( strlen( nbName ) == 0)
+		nbName = UniqueName("NM_WaveNotes", 10, 0)
+	endif
 	
 	if ( WinType( nbName ) == 5 )
 		
@@ -4520,7 +4545,7 @@ Function NMNormalizeCall( df [ promptStr, all, n ] )
 	String df // data folder where normalize variables are stored
 	String promptStr
 	Variable all
-	STRUCT NMNormalizeStruct &n // or use this structure instead of fxn1, xbgn1, etc
+	STRUCT NMNormalizeStruct &n // structure where values are stored
 
 	Variable avgWin1, avgWin2, xbgn1, xend1, xbgn2, xend2, minValue, maxValue, allWavesAvg
 	String fxn1, fxn2, mdf = NMMainDF
@@ -4724,19 +4749,23 @@ Function NMNormalizeCall( df [ promptStr, all, n ] )
 	SetNMvar( df+"Norm_AllWavesAvg", allWavesAvg )
 	SetNMvar( mdf+"Norm_AllWavesAvg", allWavesAvg )
 	
-	n.fxn1 = fxn1
-	n.avgWin1 = avgWin1
-	n.xbgn1 = xbgn1
-	n.xend1 = xend1
-	n.minValue = minValue
+	if ( !ParamIsDefault( n ) )
 	
-	n.fxn2 = fxn2
-	n.avgWin2 = avgWin2
-	n.xbgn2 = xbgn2
-	n.xend2 = xend2
-	n.maxValue = maxValue
+		n.fxn1 = fxn1
+		n.avgWin1 = avgWin1
+		n.xbgn1 = xbgn1
+		n.xend1 = xend1
+		n.minValue = minValue
+		
+		n.fxn2 = fxn2
+		n.avgWin2 = avgWin2
+		n.xbgn2 = xbgn2
+		n.xend2 = xend2
+		n.maxValue = maxValue
+		
+		n.allWavesAvg = allWavesAvg
 	
-	n.allWavesAvg = allWavesAvg
+	endif
 	
 	return 0
 	
@@ -5900,20 +5929,21 @@ Function /S NMFilterIIR2( nm [ fLow, fHigh, fNotch, notchQ, history ] ) // see I
 	
 End // NMFilterIIR2
 
-
 //****************************************************************
 //****************************************************************
 //
 //	"Software-based correction of single compartment series resistance errors"
 //	Stephen F. Traynelis
-//	J Neurosci Methods. 1998 Dec 31;86(1):25-34.
+//	J Neurosci Methods. 1998 Dec 31;86(1):25-34
+// doi: 10.1016/s0165-0270(98)00140-x
+// https://www.sciencedirect.com/science/article/abs/pii/S016502709800140X?via%3Dihub
 //
 //****************************************************************
 //****************************************************************
 //
-// computer algorithm that corrects capacitative filtering that results from pipette
+// Computer algorithm that corrects capacitative filtering that results from pipette
 // series resistance as well as the voltage error for current responses with linear 
-//	current–voltage curve
+//	current–voltage curve.
 //
 //****************************************************************
 //****************************************************************
@@ -5985,16 +6015,116 @@ End // NMRsCorrError
 //****************************************************************
 //****************************************************************
 
+Function NMRsCorrectionCall( df [ promptStr, warning, rc ] )
+	String df // data folder where Rs correction variables are stored
+	String promptStr
+	Variable warning
+	STRUCT NMRsCorr &rc
+
+	String txt, title = "Traynelis Rs Correction"
+
+	if ( warning )
+	
+		txt = "Warning: this series-resistance correction assumes your voltage-clamp data "
+		txt += "is recorded from a single-compartment cell containing a linear membrane conductance. "
+		txt += "Do you want to continue?"
+	
+		DoAlert /T="Traynelis Series-Resistance Correction" 1, txt
+		
+		if ( V_flag == 2 )
+			return -1 // cancel
+		endif
+		
+	endif
+	
+	String dataUnits = NMChanLabelY()
+	String unitsList = " ;A;mA;uA;nA;pA;"
+	
+	if ( strsearch( dataUnits, "mA", 0 ) >= 0 )
+		dataUnits = "mA"
+	elseif ( strsearch( dataUnits, "uA", 0 ) >= 0 )
+		dataUnits = "uA"
+	elseif ( strsearch( dataUnits, "nA", 0 ) >= 0 )
+		dataUnits = "nA"
+	elseif ( strsearch( dataUnits, "pA", 0 ) >= 0 )
+		dataUnits = "pA"
+	else
+		dataUnits = " "
+	endif
+	
+	Prompt dataUnits, "select units of your voltage-clamp data", popup unitsList
+	
+	Doprompt title + " : " + promptStr, dataUnits
+	
+	if ( ( V_flag == 1 ) || StringMatch( dataUnits, " " ) )
+		return -1 // cancel
+	endif
+	
+	Variable Vhold = NumVarOrDefault( df + "RsCorrVhold", -100 ) // mV
+	Variable Vrev = NumVarOrDefault( df + "RsCorrVrev", 0 ) // mV
+	Variable Rs = NumVarOrDefault( df + "RsCorrRs", 10 ) // MOhms
+	Variable Cm = NumVarOrDefault( df + "RsCorrCm", 10 ) // pF
+	
+	Variable Vcomp = NumVarOrDefault( df + "RsCorrVcomp", 1 ) // 0 - 1
+	Variable Ccomp = NumVarOrDefault( df + "RsCorrCcomp", 1 ) // 0 - 1
+	Variable Fc = NumVarOrDefault( df + "RsCorrFc", 100 ) // kHz
+	
+	Prompt Vhold, "voltage-clamp holding potential (mV)"
+	Prompt Vrev, "membrane conductance reversal potential (mV)"
+	Prompt Rs, "electrode series resistance (MOhms)"
+	Prompt Cm, "membrane capacitance (pF)"
+	Doprompt title + " : " + promptStr, Vhold, Vrev, Rs, Cm
+	
+	if ( V_flag == 1 )
+		return -1 // cancel
+	endif
+	
+	SetNMvar( df + "RsCorrVhold", Vhold )
+	SetNMvar( df + "RsCorrVrev", Vrev )
+	SetNMvar( df + "RsCorrRs", Rs )
+	SetNMvar( df + "RsCorrCm", Cm )
+	
+	Prompt Vcomp,"fraction of resistive-current correction to apply (0-1)"
+	Prompt Ccomp,"fraction of capacitive-current correction to apply (0-1)"
+	Prompt Fc,"filter cutofff frequency (kHz)"
+	Doprompt title + " : " + promptStr,  Vcomp, Ccomp, Fc
+	
+	if ( V_flag == 1 )
+		return -1 // cancel
+	endif
+	
+	SetNMvar( df + "RsCorrVcomp", Vcomp )
+	SetNMvar( df + "RsCorrCcomp", Ccomp )
+	SetNMvar( df + "RsCorrFc", Fc )
+	
+	if ( !ParamIsDefault( rc ) )
+		rc.Vhold = Vhold
+		rc.Vrev = Vrev
+		rc.Rs = Rs
+		rc.Cm = Cm
+		rc.Vcomp = Vcomp
+		rc.Ccomp = Ccomp
+		rc.Fc = Fc
+		rc.dataUnits = dataUnits
+	endif
+	
+	return 0
+	
+End // NMRsCorrectionCall
+
+//****************************************************************
+//****************************************************************
+
 Function /S NMRsCorrection2( nm, rc [ history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
 	STRUCT NMRsCorr &rc
 	
 	Variable history
 	
-	Variable icnt, wcnt, numWaves, iAmps, dt
-	Variable icap, vThisPnt, vLastPnt, vCorrect
-	Variable vhold, vrev, Rs, Cm, Fc, dataSCale
-	String wName, dataUnits
+	Variable icnt, wcnt, numWaves, pnts, i_A, dt_ms, dt_s
+	Variable iCap, vThisPnt, vLastPnt, vCorrect, vDrive, vDelta
+	Variable vHold, vRev, Rs, Cm, Fc, dataSCale
+	String wName
 	
 	if ( NMParamsError( nm ) != 0 )
 		return ""
@@ -6013,15 +6143,15 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	NMParamVarAdd( "Fc", rc.Fc, nm )
 	NMParamStrAdd( "dataUnits", rc.dataUnits, nm )
 	
-	vhold = rc.Vhold * 1e-3 // volts
-	vrev = rc.Vrev * 1e-3 // volts
+	vHold = rc.Vhold * 1e-3 // volts
+	vRev = rc.Vrev * 1e-3 // volts
 	Rs = rc.Rs * 1e6 // Ohms
 	Cm = rc.Cm * 1e-12 // F
 	Fc = rc.Fc * 1e3 // Hz
 	
 	// Fc = 1 / ( 2 * pi * tlag )
 	
-	strswitch( dataUnits )
+	strswitch( rc.dataUnits )
 		case "A":
 			dataSCale = 1
 			break
@@ -6041,11 +6171,13 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 			return ""
 	endswitch
 	
+	vDrive = vHold - vRev
+	
 	numWaves = ItemsInList( nm.wList )
 	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
-		if ( NMProgressTimer( wcnt, numWaves, "Computing Rs correction..." ) == 1 )
+		if ( ( numWaves > 1 ) && NMProgressTimer( wcnt, numWaves, "Computing Rs correction..." ) == 1 )
 			break // cancel
 		endif
 	
@@ -6053,48 +6185,52 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 		
 		Wave wtemp = $nm.folder + wName
 		
-		dt = deltax( wtemp ) // ms
-		dt *= 1e-3 // seconds
+		dt_ms = deltax( wtemp )
+		dt_s = dt_ms * 1e-3
 		
+		//Setscale /P x 0, dt_s, wtemp // not necessary
 		wtemp *= dataSCale // A
 		
-		iAmps = wtemp[ 0 ]
+		i_A = wtemp[ 0 ]
+		vLastPnt = vHold - i_A * Rs
+		vDelta = vLastPnt - vRev
 		
-		vLastPnt = vhold - iAmps * Rs
-		
-		if ( vLastPnt == vrev )
-			vCorrect = 0 // divide by 0
+		if ( vDelta == 0 )
+			vCorrect = 0 // avoid divide by 0
 		else
-			vCorrect = rc.Vcomp * ( 1 - ( vhold - vrev ) / ( vLastPnt - vrev ) )
+			vCorrect = rc.Vcomp * ( 1 - vDrive / vDelta )
 		endif
 		
-		wtemp[ 0 ] = iAmps - iAmps * vCorrect
+		wtemp[ 0 ] = i_A - i_A * vCorrect
 		
-		for ( icnt = 1 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+		pnts = numpnts( wtemp )
 		
-			iAmps = wtemp[ icnt ]
+		for ( icnt = 1 ; icnt < pnts ; icnt += 1 )
+		
+			i_A = wtemp[ icnt ]
+			vThisPnt = vHold - i_A * Rs
+			vDelta = vThisPnt - vRev
 			
-			vThisPnt = vhold - iAmps * Rs
-			
-			if ( vThisPnt == vrev )
-				vCorrect = 0 // divide by 0
+			if ( vDelta == 0 )
+				vCorrect = 0 // avoid divide by 0
 			else
-				vCorrect = rc.Vcomp * ( 1 - ( vhold - vrev ) / ( vThisPnt - vrev ) )	
+				vCorrect = rc.Vcomp * ( 1 - vDrive / vDelta )	
 			endif
-		
-			//wtemp[ icnt ] = iAmps - iAmps * vCorrect // not in Traynelis code
 			
-			icap = Cm * ( vThisPnt - vLastPnt ) / dt
-			icap = icap * ( 1 - exp( -2 * pi * dt * Fc ) ) // if tlag = dt, this equals 0.632121
+			iCap = Cm * ( vThisPnt - vLastPnt ) / dt_s
+			iCap *= 1 - exp( -2 * pi * dt_s * Fc ) // if tlag = dt, this equals 0.632121
 			
-			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - rc.Ccomp * icap
-			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - wtemp[ icnt - 1 ] * vCorrect
+			wtemp[ icnt - 1 ] -= rc.Ccomp * iCap
+			wtemp[ icnt - 1 ] -= wtemp[ icnt - 1 ] * vCorrect
 			
 			vLastPnt = vThisPnt
 		
 		endfor
 		
-		wtemp /= dataSCale
+		wtemp[ pnts - 1 ] = NaN // JSR // null last data point
+		
+		//Setscale /P x 0, dt_ms, wtemp // not necessary
+		wtemp /= dataSCale // back to original units
 		
 		NMLoopWaveNote( nm.folder + wName, nm.paramList )
 		

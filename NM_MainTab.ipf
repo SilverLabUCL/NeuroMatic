@@ -59,8 +59,8 @@
 
 StrConstant NMMainDF = "root:Packages:NeuroMatic:Main:"
 
-StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Add Note;Print Notes;Print Names;Print Missing Seq #;" // keep extra space after Graph
-StrConstant NMMainEditList = "Edit;---;Make;Move;Copy;Save;Kill;---;Concatenate;2D Wave;Split;---;Redimension;Delete Points;Insert Points;---;Rename;Renumber;"
+StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Print Notes;Print Names;Print Missing Seq #;"
+StrConstant NMMainEditList = "Edit;---;Make;Move;Copy;Save;Kill;---;Concatenate;2D Wave;Split;---;Redimension;Delete Points;Insert Points;---;Rename;Renumber;---;Add Note;Clear Notes;"
 StrConstant NMMainXScaleList = "X-scale;---;Align;StartX;DeltaX;XLabel;Xwave;Make Xwave;---;Resample;Decimate;Interpolate;---;Continuous;Episodic;---;sec;msec;usec;"
 StrConstant NMMainOperationsList = "Operations;---;Baseline;dF/Fo;Normalize;Scale By Num;Scale By Wave;Rescale;Smooth;FilterFIR;FilterIIR;Rs Correction;Add Noise;Reverse;Rotate;Sort;Integrate;Differentiate;FFT;Replace Value;Delete NANs;Clip Events;"
 StrConstant NMMainFunctionList = "Functions;---;Wave Stats;Average;Sum;SumSqrs;Histogram;Inequality <>=;"
@@ -627,10 +627,6 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 		case "Print Names":
 			returnStr = zCall_NMMainWaveList()
 			break
-			
-		case "Add Note":
-			returnStr = zCall_NMMainWaveNotesAdd()
-			break
 		
 		case "Notes":
 		case "Print Notes":
@@ -709,6 +705,14 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 		case "Kill":
 		case "Delete":
 			returnStr = zCall_NMMainKillWaves()
+			break
+		
+		case "Add Note":
+			returnStr = zCall_NMMainWaveNotesAdd()
+			break
+			
+		case "Clear Notes":
+			returnStr = zCall_NMMainWaveNotesClear()
 			break
 			
 		// X-scale Functions
@@ -3925,54 +3929,81 @@ End // zCall_NMMainWaveNotesAdd
 //****************************************************************
 //****************************************************************
 
+Static Function /S zCall_NMMainWaveNotesClear()
+
+	String promptStr = "NM Wave Notes"
+
+	DoAlert /T=( promptStr ) 2, "Alert: Are you sure you want to clear the notes of all selected waves?"
+		
+	if ( V_flag != 1 )
+		return "" // cancel
+	endif
+	
+	return NMMainWaveNotes( kill=1, history=1 )
+
+End // zCall_NMMainWaveNotesClear
+
+//****************************************************************
+//****************************************************************
+
 Static Function /S zCall_NMMainWaveNotesPrint()
 
-	Variable toNotebook = 1 + NumVarOrDefault( NMMainDF + "WaveNotes2Notebook", 0 )
+	Variable to = 1 + NumVarOrDefault( NMMainDF + "WaveNotesPrintTo", 0 )
 	
-	Prompt toNotebook, "print wave notes to:", popup "Igor history;notebook;"
-	DoPrompt NMPromptStr( "NM Wave Notes" ), toNotebook
+	Prompt to, "print wave notes to:", popup "Igor history;notebook;"
+	DoPrompt NMPromptStr( "NM Wave Notes" ), to
 	
 	if ( V_flag == 1 )
 		return "" // cancel
 	endif
 	
-	toNotebook -= 1
+	to -= 1
 	
-	SetNMvar( NMMainDF + "WaveNotes2Notebook", toNotebook )
+	SetNMvar( NMMainDF + "WaveNotesPrintTo", to )
 	
-	return NMMainWaveNotes( toNotebook=toNotebook, history=1 )
+	if ( to == 0 )
+		return NMMainWaveNotes( toHistory=1, history=1 )
+	endif
+	
+	if ( to == 1 )
+		return NMMainWaveNotes( toNotebook=1, history=1 )
+	endif
+	
+	return ""
 
 End // zCall_NMMainWaveNotesPrint
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainWaveNotes( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, toNotebook, notestr ] )
+Function /S NMMainWaveNotes( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, kill, notestr, toHistory, toNotebook ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
-	Variable toNotebook // print wave notes to ( 0 ) Igor history ( 1 ) notebook
-	String notestr // or add note to wave notes (ignores toNotebook )
+	Variable kill // kill all wave notes (executed first)
+	String notestr // add note to wave notes
+	Variable toHistory // print wave notes to Igor history
+	Variable toNotebook // print wave notes to notebook
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
 	
+	if ( kill )
+		NMLoopExecVarAdd( "kill", kill, nm, integer = 1 )
+	endif
+	
 	if ( ParamIsDefault( notestr ) )
-	
 		notestr = ""
-		
-	else
-	
-		if ( strlen( notestr ) == 0 )
-			return "" // nothing to do
-		endif
-		
+	elseif (strlen( notestr ) > 0 )
 		NMLoopExecStrAdd( "notestr", notestr, nm )
-	
 	endif
 	
 	if ( toNotebook )
 		NMLoopExecVarAdd( "toNotebook", toNotebook, nm, integer = 1 )
+	endif
+	
+	if ( toHistory )
+		NMLoopExecVarAdd( "toHistory", toHistory, nm, integer = 1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -4007,21 +4038,21 @@ End // NMMainWaveNotes
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNotebook, notestr ] )
+Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, kill, notestr, toHistory, toNotebook ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
 	
-	Variable toNotebook // print wave notes to ( 0 ) Igor history ( 1 ) notebook
-	String notestr // or add note to wave notes
+	Variable kill // kill all wave notes (executed first)
+	String notestr // add note to wave notes
+	Variable toHistory // print wave notes to Igor history
+	Variable toNotebook // print wave notes to notebook
 	
-	String nbName, nbTitle, fxn = "NMWaveNotes"
+	String nbName = "", nbTitle = "", fxn = "NMWaveNotes"
 	
 	STRUCT NMParams nm
 	
 	if ( ParamIsDefault( notestr ) )
 		notestr = ""
-	elseif ( strlen( notestr ) == 0 )
-		return "" // nothing to do
 	endif
 	
 	if ( ParamIsDefault( folder ) )
@@ -4044,20 +4075,12 @@ Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNoteb
 		return ""
 	endif
 	
-	if ( strlen( notestr ) > 0 )
-		return NMWaveNotes2( nm, notestr=notestr, history=1 )
-	endif
-	
 	if ( toNotebook )
-	
 		nbName = NMMainWindowName( folder, wavePrefix, chanNum, waveSelect, "notebook" )
 		nbTitle = NMMainWindowTitle( "Wave Notes", folder, wavePrefix, chanNum, waveSelect, nm.wList )
-	
-		return NMWaveNotes2( nm, nbName=nbName, nbTitle=nbTitle, history=1 )
-		
 	endif
 	
-	return NMWaveNotes2( nm, history=1 )
+	return NMWaveNotes2( nm, kill=kill, notestr=notestr, toHistory=toHistory, nbName=nbName, nbTitle=nbTitle, history=1 )
 
 End // NMMainWaveNotes2
 
@@ -8765,80 +8788,21 @@ End // NMMainFilterIIR2
 //****************************************************************
 
 Static Function /S zCall_NMMainRsCorrection()
-
+	
+	String df = NMDF
+	
+	String promptStr = NMPromptStr( "" )
+	
+	Variable warning = NumVarOrDefault( df + "RsCorrWarning", 1 )
+	
 	STRUCT NMRsCorr rc
-
-	String txt = "Warning: this correction (Traynellis assumes your voltage-clamp data is recorded from "
-	txt += "a one-compartment cell containing a linear membrane conductance. "
-	txt += "Do you want to continue?"
-
-	DoAlert /T="NM Series-Resistance Correction" 1, txt
 	
-	if ( V_flag == 2 )
-		return "" // cancel
+	if ( NMRsCorrectionCall( df, promptStr=promptStr, warning=warning, rc=rc ) == 0 )
+		SetNMvar( df + "RsCorrWarning", 0 ) // turn off warning after first use
+		return NMMainRsCorrection( Vhold=rc.Vhold, Vrev=rc.Vrev, Rs=rc.Rs, Cm=rc.Cm, Vcomp=rc.Vcomp, Ccomp=rc.Ccomp, Fc=rc.Fc, dataUnits=rc.dataUnits, history=1 )
 	endif
 	
-	String dataUnits = NMChanLabelY()
-	String unitsList = " ;A;mA;uA;nA;pA;"
-	
-	if ( strsearch( dataUnits, "mA", 0 ) >= 0 )
-		dataUnits = "mA"
-	elseif ( strsearch( dataUnits, "uA", 0 ) >= 0 )
-		dataUnits = "uA"
-	elseif ( strsearch( dataUnits, "nA", 0 ) >= 0 )
-		dataUnits = "nA"
-	elseif ( strsearch( dataUnits, "pA", 0 ) >= 0 )
-		dataUnits = "pA"
-	else
-		dataUnits = " "
-	endif
-	
-	Prompt dataUnits, "select units of your voltage-clamp data", popup unitsList
-	
-	Doprompt "Cell Parameters", dataUnits
-	
-	if ( ( V_flag == 1 ) || StringMatch( dataUnits, " " ) )
-		return "" // cancel
-	endif
-	
-	Variable Vhold = NumVarOrDefault( NMDF + "RsCorrVhold", -100 ) // mV
-	Variable Vrev = NumVarOrDefault( NMDF + "RsCorrVrev", 0 ) // mV
-	Variable Rs = NumVarOrDefault( NMDF + "RsCorrRs", 10 ) // MOhms
-	Variable Cm = NumVarOrDefault( NMDF + "RsCorrCm", 10 ) // pF
-	
-	Variable Vcomp = NumVarOrDefault( NMDF + "RsCorrVcomp", 1 ) // 0 - 1
-	Variable Ccomp = NumVarOrDefault( NMDF + "RsCorrCcomp", 1 ) // 0 - 1
-	Variable Fc = NumVarOrDefault( NMDF + "RsCorrFc", 100 ) // kHz
-	
-	Prompt Vhold, "voltage-clamp holding potential (mV)"
-	Prompt Vrev, "membrane conductance reversal potential (mV)"
-	Prompt Rs, "electrode series resistance (MOhms)"
-	Prompt Cm, "membrane capacitance (pF)"
-	Doprompt "Cell Parameters", Vhold, Vrev, Rs, Cm
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	SetNMvar( NMDF + "RsCorrVhold", Vhold )
-	SetNMvar( NMDF + "RsCorrVrev", Vrev )
-	SetNMvar( NMDF + "RsCorrRs", Rs )
-	SetNMvar( NMDF + "RsCorrCm", Cm )
-	
-	Prompt Vcomp,"fraction of resistive-current correction to apply (0-1)"
-	Prompt Ccomp,"fraction of capacitive-current correction to apply (0-1)"
-	Prompt Fc,"filter cutofff frequency (kHz)"
-	Doprompt "Compensation Parameters",  Vcomp, Ccomp, Fc
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	SetNMvar( NMDF + "RsCorrVcomp", Vcomp )
-	SetNMvar( NMDF + "RsCorrCcomp", Ccomp )
-	SetNMvar( NMDF + "RsCorrFc", Fc )
-	
-	return NMMainRsCorrection( Vhold=Vhold, Vrev=Vrev, Rs=Rs, Cm=Cm, Vcomp=Vcomp, Ccomp=Ccomp, Fc=Fc, dataUnits=dataUnits, history=1 )
+	return ""
 	
 End // zCall_NMMainRsCorrection
 
