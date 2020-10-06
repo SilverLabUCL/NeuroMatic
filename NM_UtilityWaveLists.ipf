@@ -5945,6 +5945,21 @@ End // NMFilterIIR2
 // series resistance as well as the voltage error for current responses with linear 
 //	current–voltage curve.
 //
+//	Page 27:
+//	"This correction is also applied with a lag
+//	time equal to the digitization interval. Longer lag times
+//	for Eqs. (8) and (10) can be achieved by applying a 1
+//	pole RC filter to the capacitative current correction,
+//	which delays and smooths this correction before it is
+//	added to the raw current."
+//
+// Fc = 1 / ( 2 * pi * tlag )
+// tlag = 1 / ( 2 * pi * Fc )
+// tlag = dt = 1 / ( 2 * pi * Fc )
+// Fc = 1 / ( 2 * pi * dt )
+//
+// For dt = 0.01, Fc = 15.9155, tlag = 0.01
+//
 //****************************************************************
 //****************************************************************
 
@@ -5965,39 +5980,38 @@ EndStructure
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits )
-	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
-	String dataUnits
+Function NMRsCorrError( rc )
+	STRUCT NMRsCorr &rc
 	
-	if ( numtype( Vhold ) > 0 )
-		return NM2Error( 10, "Vhold", num2str( Vhold ) )
+	if ( numtype( rc.Vhold ) > 0 )
+		return NM2Error( 10, "Vhold", num2str( rc.Vhold ) )
 	endif
 	
-	if ( numtype( Vrev ) > 0 )
-		return NM2Error( 10, "Vrev", num2str( Vrev ) )
+	if ( numtype( rc.Vrev ) > 0 )
+		return NM2Error( 10, "Vrev", num2str( rc.Vrev ) )
 	endif
 	
-	if ( ( numtype( Rs ) > 0 ) || ( Rs <= 0 ) )
-		return NM2Error( 10, "Rs", num2str( Rs ) )
+	if ( ( numtype( rc.Rs ) > 0 ) || ( rc.Rs <= 0 ) )
+		return NM2Error( 10, "Rs", num2str( rc.Rs ) )
 	endif
 	
-	if ( ( numtype( Cm ) > 0 ) || ( Cm <= 0 ) )
-		return NM2Error( 10, "Cm", num2str( Cm ) )
+	if ( ( numtype( rc.Cm ) > 0 ) || ( rc.Cm <= 0 ) )
+		return NM2Error( 10, "Cm", num2str( rc.Cm ) )
 	endif
 	
-	if ( ( numtype( Vcomp ) > 0 ) || ( Vcomp < 0 ) || ( Vcomp > 1 ) )
-		return NM2Error( 10, "Vcomp", num2str( Vcomp ) )
+	if ( ( numtype( rc.Vcomp ) > 0 ) || ( rc.Vcomp < 0 ) || ( rc.Vcomp > 1 ) )
+		return NM2Error( 10, "Vcomp", num2str( rc.Vcomp ) )
 	endif
 	
-	if ( ( numtype( Ccomp ) > 0 ) || ( Ccomp < 0 ) || ( Ccomp > 1 ) )
-		return NM2Error( 10, "Ccomp", num2str( Ccomp ) )
+	if ( ( numtype( rc.Ccomp ) > 0 ) || ( rc.Ccomp < 0 ) || ( rc.Ccomp > 1 ) )
+		return NM2Error( 10, "Ccomp", num2str( rc.Ccomp ) )
 	endif
 	
-	if ( ( numtype( Fc ) > 0 ) || ( Fc <= 0 ) )
-		return NM2Error( 10, "Fc", num2str( Fc ) )
+	if ( ( numtype( rc.Fc ) > 0 ) || ( rc.Fc <= 0 ) )
+		//return NM2Error( 10, "Fc", num2str( rc.Fc ) )
 	endif
 	
-	strswitch( dataUnits )
+	strswitch( rc.dataUnits )
 		case "A":
 		case "mA":
 		case "uA":
@@ -6005,7 +6019,7 @@ Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits )
 		case "pA":
 			break
 		default:
-			return NM2Error( 20, "dataUnits", dataUnits )
+			return NM2Error( 20, "dataUnits", rc.dataUnits )
 	endswitch
 	
 	return 0
@@ -6015,13 +6029,17 @@ End // NMRsCorrError
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrectionCall( df [ promptStr, warning, rc ] )
+Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
 	String df // data folder where Rs correction variables are stored
 	String promptStr
+	String yLabel // data y-label that should include units (e.g. "pA")
+	Variable dx // sample interval of data // ms
 	Variable warning
 	STRUCT NMRsCorr &rc
 
 	String txt, title = "Traynelis Rs Correction"
+	
+	Variable Fc = 100 // kHz // default value
 
 	if ( warning )
 	
@@ -6037,7 +6055,19 @@ Function NMRsCorrectionCall( df [ promptStr, warning, rc ] )
 		
 	endif
 	
-	String dataUnits = NMChanLabelY()
+	if ( ParamIsDefault( promptStr ) )
+		promptStr = ""
+	endif
+	
+	if ( ParamIsDefault( yLabel ) )
+		yLabel = ""
+	endif
+	
+	if ( !ParamIsDefault( dx ) && ( numtype( dx ) == 0 ) && (dx > 0) )
+		Fc = 1 / dx
+	endif
+	
+	String dataUnits = yLabel // NMChanLabelY()
 	String unitsList = " ;A;mA;uA;nA;pA;"
 	
 	if ( strsearch( dataUnits, "mA", 0 ) >= 0 )
@@ -6067,7 +6097,8 @@ Function NMRsCorrectionCall( df [ promptStr, warning, rc ] )
 	
 	Variable Vcomp = NumVarOrDefault( df + "RsCorrVcomp", 1 ) // 0 - 1
 	Variable Ccomp = NumVarOrDefault( df + "RsCorrCcomp", 1 ) // 0 - 1
-	Variable Fc = NumVarOrDefault( df + "RsCorrFc", 100 ) // kHz
+	
+	Fc = NumVarOrDefault( df + "RsCorrFc", Fc ) // kHz
 	
 	Prompt Vhold, "voltage-clamp holding potential (mV)"
 	Prompt Vrev, "membrane conductance reversal potential (mV)"
@@ -6086,7 +6117,7 @@ Function NMRsCorrectionCall( df [ promptStr, warning, rc ] )
 	
 	Prompt Vcomp,"fraction of resistive-current correction to apply (0-1)"
 	Prompt Ccomp,"fraction of capacitive-current correction to apply (0-1)"
-	Prompt Fc,"filter cutofff frequency (kHz)"
+	Prompt Fc,"filter cutofff frequency (kHz; default = 1/dt)"
 	Doprompt title + " : " + promptStr,  Vcomp, Ccomp, Fc
 	
 	if ( V_flag == 1 )
@@ -6130,7 +6161,7 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 		return ""
 	endif
 	
-	if ( NMRsCorrError( rc.Vhold, rc.Vrev, rc.Rs, rc.Cm, rc.Vcomp, rc.Ccomp, rc.Fc, rc.dataUnits ) != 0 )
+	if ( NMRsCorrError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -6148,8 +6179,6 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	Rs = rc.Rs * 1e6 // Ohms
 	Cm = rc.Cm * 1e-12 // F
 	Fc = rc.Fc * 1e3 // Hz
-	
-	// Fc = 1 / ( 2 * pi * tlag )
 	
 	strswitch( rc.dataUnits )
 		case "A":
@@ -6218,7 +6247,10 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 			endif
 			
 			iCap = Cm * ( vThisPnt - vLastPnt ) / dt_s
-			iCap *= 1 - exp( -2 * pi * dt_s * Fc ) // if tlag = dt, this equals 0.632121
+			
+			if ( ( numtype( Fc ) == 0 ) && ( Fc > 0 ) )
+				iCap *= 1 - exp( -2 * pi * dt_s * Fc )
+			endif
 			
 			wtemp[ icnt - 1 ] -= rc.Ccomp * iCap
 			wtemp[ icnt - 1 ] -= wtemp[ icnt - 1 ] * vCorrect

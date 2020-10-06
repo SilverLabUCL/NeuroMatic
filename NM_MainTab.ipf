@@ -8789,16 +8789,17 @@ End // NMMainFilterIIR2
 
 Static Function /S zCall_NMMainRsCorrection()
 	
-	String df = NMDF
-	
 	String promptStr = NMPromptStr( "" )
+	String yLabel = NMChanLabelY()
 	
-	Variable warning = NumVarOrDefault( df + "RsCorrWarning", 1 )
+	Variable warning = NumVarOrDefault( NMDF + "RsCorrWarning", 1 )
+	
+	Variable dx = NMChanDeltaX( 0, 1 )
 	
 	STRUCT NMRsCorr rc
 	
-	if ( NMRsCorrectionCall( df, promptStr=promptStr, warning=warning, rc=rc ) == 0 )
-		SetNMvar( df + "RsCorrWarning", 0 ) // turn off warning after first use
+	if ( NMRsCorrectionCall( NMDF, promptStr=promptStr, yLabel=yLabel, dx=dx, warning=warning, rc=rc ) == 0 )
+		SetNMvar( NMDF + "RsCorrWarning", 0 ) // turn off warning after first use
 		return NMMainRsCorrection( Vhold=rc.Vhold, Vrev=rc.Vrev, Rs=rc.Rs, Cm=rc.Cm, Vcomp=rc.Vcomp, Ccomp=rc.Ccomp, Fc=rc.Fc, dataUnits=rc.dataUnits, history=1 )
 	endif
 	
@@ -8867,7 +8868,18 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	
 	NMLoopExecStrAdd( "dataUnits", dataUnits, nm )
 	
-	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) != 0 )
+	STRUCT NMRsCorr rc
+	
+	rc.Vhold = Vhold
+	rc.Vrev = Vrev
+	rc.Rs = Rs
+	rc.Cm = Cm
+	rc.Vcomp = Vcomp
+	rc.Ccomp = Ccomp
+	rc.Fc = Fc
+	rc.dataUnits = dataUnits
+	
+	if ( NMRsCorrError( rc ) != 0 )
 		return ""
 	endif
 	

@@ -3363,17 +3363,19 @@ Function NMChanTransformCheck( transformList )
 				return 0
 				
 			case "Rs Correction":
+			
+				STRUCT NMRsCorr rc
 				
-				Variable Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
-				Variable Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
-				Variable Rs = str2num( StringByKey("Rs", tList, "=", ",") )
-				Variable Cm = str2num( StringByKey("Cm", tList, "=", ",") )
-				Variable Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
-				Variable Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
-				Variable Fc = str2num( StringByKey("Fc", tList, "=", ",") )
-				String dataUnits = StringByKey("dataUnits", tList, "=", ",")
+				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
+				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
+				rc.Rs = str2num( StringByKey("Rs", tList, "=", ",") )
+				rc.Cm = str2num( StringByKey("Cm", tList, "=", ",") )
+				rc.Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
+				rc.Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
+				rc.Fc = str2num( StringByKey("Fc", tList, "=", ",") )
+				rc.dataUnits = StringByKey("dataUnits", tList, "=", ",")
 				
-				if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) == 0 )
+				if ( NMRsCorrError( rc ) == 0 )
 					return 0 // OK
 				endif
 			
@@ -3704,7 +3706,8 @@ End // NMChannelTransformSet
 Function /S NMChanTransformRSCorrCall( channel )
 	Variable channel // ( -1 ) for current channel
 	
-	String promptStr
+	Variable dx
+	String promptStr, yLabel, wName
 	
 	String currentPrefix = CurrentNMWavePrefix()
 	
@@ -3720,9 +3723,14 @@ Function /S NMChanTransformRSCorrCall( channel )
 		return ""
 	endif
 	
+	yLabel = NMChanLabelY( channel=channel )
+	wName = ChanDisplayWave( channel )
+	
+	dx = deltax( $wName )
+	
 	promptStr = currentPrefix + " : " + ChanNum2Char( channel )
 	
-	if ( NMRsCorrectionCall( cdf, promptStr=promptStr, rc=rc ) == 0 )
+	if ( NMRsCorrectionCall( cdf, promptStr=promptStr, yLabel=yLabel, dx=dx, rc=rc ) == 0 )
 		return NMChanTransformRsCorrect( channel=channel, rc=rc, history=1 )
 	endif
 	
@@ -3752,6 +3760,8 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 	Variable history
 	
 	String cdf, transformList, paramList = ""
+	
+	STRUCT NMRsCorr rc2
 	
 	if ( ParamIsDefault( prefixFolder ) )
 		prefixFolder = CurrentNMPrefixFolder()
@@ -3806,9 +3816,20 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 		if ( ParamIsDefault( dataUnits ) )
 			return ""
 		endif
+		
+		rc2.Vhold = Vhold
+		rc2.Vrev = Vrev
+		rc2.Rs = Rs
+		rc2.Cm = Cm
+		rc2.Vcomp = Vcomp
+		rc2.Ccomp = Ccomp
+		rc2.Fc = Fc
+		rc2.dataUnits = dataUnits
 	
 	else
 	
+		rc2 = rc
+		
 		Vhold = rc.Vhold
 		Vrev = rc.Vrev
 		Rs = rc.Rs
@@ -3820,7 +3841,7 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 		
 	endif
 	
-	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) != 0 )
+	if ( NMRsCorrError( rc2 ) != 0 )
 		return "" // error
 	endif
 	
