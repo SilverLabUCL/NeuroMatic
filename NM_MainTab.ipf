@@ -8790,17 +8790,18 @@ End // NMMainFilterIIR2
 Static Function /S zCall_NMMainRsCorrection()
 	
 	String promptStr = NMPromptStr( "" )
+	String xLabel = NMChanLabelX()
 	String yLabel = NMChanLabelY()
 	
 	Variable warning = NumVarOrDefault( NMDF + "RsCorrWarning", 1 )
 	
 	Variable dx = NMChanDeltaX( 0, 1 )
 	
-	STRUCT NMRsCorr rc
+	STRUCT NMRsCorrTraynelis rc
 	
-	if ( NMRsCorrectionCall( NMDF, promptStr=promptStr, yLabel=yLabel, dx=dx, warning=warning, rc=rc ) == 0 )
+	if ( NMRsCompTraynelisCall( NMDF, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, warning=warning, rc=rc ) == 0 )
 		SetNMvar( NMDF + "RsCorrWarning", 0 ) // turn off warning after first use
-		return NMMainRsCorrection( Vhold=rc.Vhold, Vrev=rc.Vrev, Rs=rc.Rs, Cm=rc.Cm, Vcomp=rc.Vcomp, Ccomp=rc.Ccomp, Fc=rc.Fc, dataUnits=rc.dataUnits, history=1 )
+		return NMMainRsCorrection( Vhold=rc.Vhold, Vrev=rc.Vrev, Rs=rc.Rs, Cm=rc.Cm, Vcomp=rc.Vcomp, Ccomp=rc.Ccomp, Fc=rc.Fc, dataUnitsX=rc.dataUnitsX, dataUnitsY=rc.dataUnitsY, history=1 )
 	endif
 	
 	return ""
@@ -8810,12 +8811,12 @@ End // zCall_NMMainRsCorrection
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ] )
+Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
-	String dataUnits
+	String dataUnitsX, dataUnitsY
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
@@ -8862,13 +8863,18 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	
 	NMLoopExecVarAdd( "Fc", Fc, nm )
 	
-	if ( ParamIsDefault( dataUnits ) )
-		return NM2ErrorStr( 21, "dataUnits", dataUnits )
+	if ( ParamIsDefault( dataUnitsX ) )
+		return NM2ErrorStr( 21, "dataUnitsX", dataUnitsX )
 	endif
 	
-	NMLoopExecStrAdd( "dataUnits", dataUnits, nm )
+	if ( ParamIsDefault( dataUnitsY ) )
+		return NM2ErrorStr( 21, "dataUnitsY", dataUnitsY )
+	endif
 	
-	STRUCT NMRsCorr rc
+	NMLoopExecStrAdd( "dataUnitsX", dataUnitsX, nm )
+	NMLoopExecStrAdd( "dataUnitsY", dataUnitsY, nm )
+	
+	STRUCT NMRsCorrTraynelis rc
 	
 	rc.Vhold = Vhold
 	rc.Vrev = Vrev
@@ -8877,9 +8883,10 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	rc.Vcomp = Vcomp
 	rc.Ccomp = Ccomp
 	rc.Fc = Fc
-	rc.dataUnits = dataUnits
+	rc.dataUnitsX = dataUnitsX
+	rc.dataUnitsY = dataUnitsY
 	
-	if ( NMRsCorrError( rc ) != 0 )
+	if ( NMRsCorrTraynelisError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -8915,12 +8922,12 @@ End // NMMainRsCorrection
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ] )
+Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
 	
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
-	String dataUnits
+	String dataUnitsX, dataUnitsY
 	
 	String fxn = "NMRsCorrection"
 	
@@ -8946,7 +8953,7 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 		return ""
 	endif
 	
-	STRUCT NMRsCorr rc
+	STRUCT NMRsCorrTraynelis rc
 	
 	rc.Vhold = Vhold
 	rc.Vrev = Vrev
@@ -8955,9 +8962,10 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 	rc.Vcomp = Vcomp
 	rc.Ccomp = Ccomp
 	rc.Fc = Fc
-	rc.dataUnits = dataUnits
+	rc.dataUnitsX = dataUnitsX
+	rc.dataUnitsY = dataUnitsY
 	
-	return NMRsCorrection2( nm, rc, history = 1 )
+	return NMRsCompTraynelis( nm, rc, history = 1 )
 	
 End // NMMainRsCorrection2
 

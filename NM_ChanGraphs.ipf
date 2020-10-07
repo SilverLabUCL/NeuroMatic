@@ -3364,7 +3364,7 @@ Function NMChanTransformCheck( transformList )
 				
 			case "Rs Correction":
 			
-				STRUCT NMRsCorr rc
+				STRUCT NMRsCorrTraynelis rc
 				
 				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
 				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
@@ -3373,9 +3373,10 @@ Function NMChanTransformCheck( transformList )
 				rc.Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
 				rc.Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
 				rc.Fc = str2num( StringByKey("Fc", tList, "=", ",") )
-				rc.dataUnits = StringByKey("dataUnits", tList, "=", ",")
+				rc.dataUnitsX = StringByKey("dataUnitsX", tList, "=", ",")
+				rc.dataUnitsY = StringByKey("dataUnitsY", tList, "=", ",")
 				
-				if ( NMRsCorrError( rc ) == 0 )
+				if ( NMRsCorrTraynelisError( rc ) == 0 )
 					return 0 // OK
 				endif
 			
@@ -3707,11 +3708,11 @@ Function /S NMChanTransformRSCorrCall( channel )
 	Variable channel // ( -1 ) for current channel
 	
 	Variable dx
-	String promptStr, yLabel, wName
+	String promptStr, xLabel, yLabel, wName
 	
 	String currentPrefix = CurrentNMWavePrefix()
 	
-	STRUCT NMRsCorr rc
+	STRUCT NMRsCorrTraynelis rc
 	
 	if ( channel == -1 )
 		channel = CurrentNMChannel()
@@ -3723,6 +3724,7 @@ Function /S NMChanTransformRSCorrCall( channel )
 		return ""
 	endif
 	
+	xLabel = NMChanLabelX( channel=channel )
 	yLabel = NMChanLabelY( channel=channel )
 	wName = ChanDisplayWave( channel )
 	
@@ -3730,7 +3732,7 @@ Function /S NMChanTransformRSCorrCall( channel )
 	
 	promptStr = currentPrefix + " : " + ChanNum2Char( channel )
 	
-	if ( NMRsCorrectionCall( cdf, promptStr=promptStr, yLabel=yLabel, dx=dx, rc=rc ) == 0 )
+	if ( NMRsCompTraynelisCall( cdf, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, rc=rc ) == 0 )
 		return NMChanTransformRsCorrect( channel=channel, rc=rc, history=1 )
 	endif
 	
@@ -3742,7 +3744,7 @@ End // NMChanTransformRSCorrCall
 //****************************************************************
 //****************************************************************
 
-Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, FC, dataUnits, rc, history ] )
+Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, FC, dataUnitsX, dataUnitsY, rc, history ] )
 	String prefixFolder // prefix folder, pass nothing for current
 	Variable channel // pass nothing for current channel
 	
@@ -3753,15 +3755,16 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 	Variable Vcomp // fraction 0 - 1
 	Variable Ccomp // fraction 0 - 1
 	Variable Fc // kHz
-	String dataUnits // A, mA, uA, nA, pA
+	String dataUnitsX // s, ms, us
+	String dataUnitsY // A, mA, uA, nA, pA
 	
-	STRUCT NMRsCorr &rc // or pass this structure instead
+	STRUCT NMRsCorrTraynelis &rc // or pass this structure instead
 	
 	Variable history
 	
 	String cdf, transformList, paramList = ""
 	
-	STRUCT NMRsCorr rc2
+	STRUCT NMRsCorrTraynelis rc2
 	
 	if ( ParamIsDefault( prefixFolder ) )
 		prefixFolder = CurrentNMPrefixFolder()
@@ -3813,7 +3816,11 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 			return ""
 		endif
 		
-		if ( ParamIsDefault( dataUnits ) )
+		if ( ParamIsDefault( dataUnitsX ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( dataUnitsY ) )
 			return ""
 		endif
 		
@@ -3824,7 +3831,8 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 		rc2.Vcomp = Vcomp
 		rc2.Ccomp = Ccomp
 		rc2.Fc = Fc
-		rc2.dataUnits = dataUnits
+		rc2.dataUnitsX = dataUnitsX
+		rc2.dataUnitsY = dataUnitsY
 	
 	else
 	
@@ -3837,11 +3845,12 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 		Vcomp = rc.Vcomp
 		Ccomp = rc.Ccomp
 		Fc = rc.Fc
-		dataUnits = rc.dataUnits
+		dataUnitsX = rc.dataUnitsX
+		dataUnitsY = rc.dataUnitsY
 		
 	endif
 	
-	if ( NMRsCorrError( rc2 ) != 0 )
+	if ( NMRsCorrTraynelisError( rc2 ) != 0 )
 		return "" // error
 	endif
 	
@@ -3852,14 +3861,15 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 	paramList = NMCmdNumOptional( "Vcomp", Vcomp, paramList )
 	paramList = NMCmdNumOptional( "Ccomp", Ccomp, paramList )
 	paramList = NMCmdNumOptional( "Fc", Fc, paramList )
-	paramList = NMCmdStrOptional( "dataUnits", dataUnits, paramList )
+	paramList = NMCmdStrOptional( "dataUnitsX", dataUnitsX, paramList )
+	paramList = NMCmdStrOptional( "dataUnitsY", dataUnitsY, paramList )
 	
 	if ( history )
 		NMCommandHistory( paramList )
 	endif
 	
 	String p1List = "Vhold=" + num2str( Vhold ) + ",Vrev=" + num2str( Vrev ) + ",Rs=" + num2str( Rs ) + ",Cm=" + num2str( Cm ) + ","
-	String p2List = "Vcomp=" + num2str( Vcomp ) + ",Ccomp=" + num2str( Ccomp ) + ",Fc=" + num2str( Fc ) + ",dataUnits=" + dataUnits + ","
+	String p2List = "Vcomp=" + num2str( Vcomp ) + ",Ccomp=" + num2str( Ccomp ) + ",Fc=" + num2str( Fc ) + ",dataUnitsX=" + dataUnitsX + "," + ",dataUnitsY=" + dataUnitsY + ","
 	
 	transformList = "Rs Correction," + p1List + p2List + ";"
 	SetNMstr( cdf + "TransformStr", transformList )
@@ -5750,7 +5760,7 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 			case "Rs Correction":
 			
-				STRUCT NMRsCorr rc
+				STRUCT NMRsCorrTraynelis rc
 				
 				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
 				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
@@ -5759,7 +5769,8 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				rc.Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
 				rc.Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
 				rc.Fc = str2num( StringByKey("Fc", tList, "=", ",") )
-				rc.dataUnits = StringByKey("dataUnits", tList, "=", ",")
+				rc.dataUnitsX = StringByKey("dataUnitsX", tList, "=", ",")
+				rc.dataUnitsY = StringByKey("dataUnitsY", tList, "=", ",")
 				
 				STRUCT NMParams nm
 				
@@ -5767,7 +5778,7 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				nm.folder = NMParent( dstName )
 				nm.wList = NMChild( dstName )
 				
-				NMRsCorrection2( nm, rc )
+				NMRsCompTraynelis( nm, rc )
 				
 				break
 				

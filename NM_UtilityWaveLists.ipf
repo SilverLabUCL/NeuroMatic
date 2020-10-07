@@ -5963,7 +5963,7 @@ End // NMFilterIIR2
 //****************************************************************
 //****************************************************************
 
-Structure NMRsCorr
+Structure NMRsCorrTraynelis
 
 	Variable Vhold // mV
 	Variable Vrev // mV
@@ -5973,15 +5973,45 @@ Structure NMRsCorr
 	Variable Ccomp // fraction 0 - 1
 	Variable Fc // kHz
 	
-	String dataUnits // A, mA, uA, nA, pA
+	String dataUnitsX // s, ms, us
+	String dataUnitsY // A, mA, uA, nA, pA
 
-EndStructure
+EndStructure // NMRsCorrTraynelis
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrError( rc )
-	STRUCT NMRsCorr &rc
+Function NMRsCorrTraynelisStructSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY,rc )
+	Variable Vhold // mV
+	Variable Vrev // mV
+	Variable Rs // MOhms
+	Variable Cm // pF
+	Variable Vcomp // fraction 0 - 1
+	Variable Ccomp // fraction 0 - 1
+	Variable Fc // kHz
+	String dataUnitsX
+	String dataUnitsY
+	
+	STRUCT NMRsCorrTraynelis &rc
+	
+	rc.Vhold = Vhold
+	rc.Vrev = Vrev
+	rc.Rs = Rs
+	rc.Cm = Cm
+	rc.Vcomp = Vcomp
+	rc.Ccomp = Ccomp
+	rc.Fc = Fc
+	
+	rc.dataUnitsX = dataUnitsX
+	rc.dataUnitsY = dataUnitsY
+	
+End // NMRsCorrTraynelisStructSet
+
+//****************************************************************
+//****************************************************************
+
+Function NMRsCorrTraynelisError( rc )
+	STRUCT NMRsCorrTraynelis &rc
 	
 	if ( numtype( rc.Vhold ) > 0 )
 		return NM2Error( 10, "Vhold", num2str( rc.Vhold ) )
@@ -6011,31 +6041,41 @@ Function NMRsCorrError( rc )
 		//return NM2Error( 10, "Fc", num2str( rc.Fc ) )
 	endif
 	
-	strswitch( rc.dataUnits )
+	strswitch( rc.dataUnitsX )
+		case "s":
+		case "ms":
+		case "us":
+			break // ok
+		default:
+			return NM2Error( 20, "dataUnitsX", rc.dataUnitsX )
+	endswitch
+	
+	strswitch( rc.dataUnitsY )
 		case "A":
 		case "mA":
 		case "uA":
 		case "nA":
 		case "pA":
-			break
+			break // ok
 		default:
-			return NM2Error( 20, "dataUnits", rc.dataUnits )
+			return NM2Error( 20, "dataUnitsY", rc.dataUnitsY )
 	endswitch
 	
 	return 0
 
-End // NMRsCorrError
+End // NMRsCorrTraynelisError
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
+Function NMRsCompTraynelisCall( df [ promptStr, xLabel, yLabel, dx, warning, rc ] )
 	String df // data folder where Rs correction variables are stored
 	String promptStr
-	String yLabel // data y-label that should include units (e.g. "pA")
+	String xLabel // data x-label that should include units (e.g. "ms" or "s")
+	String yLabel // data y-label that should include units (e.g. "pA" or "A")
 	Variable dx // sample interval of data // ms
 	Variable warning
-	STRUCT NMRsCorr &rc
+	STRUCT NMRsCorrTraynelis &rc
 
 	String txt, title = "Traynelis Rs Correction"
 	
@@ -6059,6 +6099,10 @@ Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
 		promptStr = ""
 	endif
 	
+	if ( ParamIsDefault( xLabel ) )
+		xLabel = ""
+	endif
+	
 	if ( ParamIsDefault( yLabel ) )
 		yLabel = ""
 	endif
@@ -6067,26 +6111,38 @@ Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
 		Fc = 1 / dx
 	endif
 	
-	String dataUnits = yLabel // NMChanLabelY()
-	String unitsList = " ;A;mA;uA;nA;pA;"
+	String dataUnitsX = " "
+	String dataUnitsY = " "
 	
-	if ( strsearch( dataUnits, "mA", 0 ) >= 0 )
-		dataUnits = "mA"
-	elseif ( strsearch( dataUnits, "uA", 0 ) >= 0 )
-		dataUnits = "uA"
-	elseif ( strsearch( dataUnits, "nA", 0 ) >= 0 )
-		dataUnits = "nA"
-	elseif ( strsearch( dataUnits, "pA", 0 ) >= 0 )
-		dataUnits = "pA"
-	else
-		dataUnits = " "
+	String unitsListX = " ;s;ms;us;"
+	String unitsListY = " ;A;mA;uA;nA;pA;"
+	
+	if ( strsearch( xLabel, "ms", 0 ) >= 0 )
+		dataUnitsX = "ms"
+	elseif ( strsearch( xLabel, "us", 0 ) >= 0 )
+		dataUnitsX = "us"
+	elseif ( StringMatch( xLabel, "s" ) )
+		dataUnitsX = "s"
 	endif
 	
-	Prompt dataUnits, "select units of your voltage-clamp data", popup unitsList
+	if ( strsearch( yLabel, "mA", 0 ) >= 0 )
+		dataUnitsY = "mA"
+	elseif ( strsearch( yLabel, "uA", 0 ) >= 0 )
+		dataUnitsY = "uA"
+	elseif ( strsearch( yLabel, "nA", 0 ) >= 0 )
+		dataUnitsY = "nA"
+	elseif ( strsearch( yLabel, "pA", 0 ) >= 0 )
+		dataUnitsY = "pA"
+	elseif ( StringMatch( yLabel, "A" ) )
+		dataUnitsY = "A"
+	endif
 	
-	Doprompt title + " : " + promptStr, dataUnits
+	Prompt dataUnitsX, "select timescale units of your voltage-clamp data", popup unitsListX
+	Prompt dataUnitsY, "select current units of your voltage-clamp data", popup unitsListY
 	
-	if ( ( V_flag == 1 ) || StringMatch( dataUnits, " " ) )
+	Doprompt title + " : " + promptStr, dataUnitsX, dataUnitsY
+	
+	if ( ( V_flag == 1 ) || StringMatch( dataUnitsX, " " ) || StringMatch( dataUnitsY, " " ) )
 		return -1 // cancel
 	endif
 	
@@ -6100,10 +6156,10 @@ Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
 	
 	Fc = NumVarOrDefault( df + "RsCorrFc", Fc ) // kHz
 	
-	Prompt Vhold, "voltage-clamp holding potential (mV)"
-	Prompt Vrev, "membrane conductance reversal potential (mV)"
-	Prompt Rs, "electrode series resistance (MOhms)"
-	Prompt Cm, "membrane capacitance (pF)"
+	Prompt Vhold, "voltage-clamp holding potential (Vhold; mV)"
+	Prompt Vrev, "membrane conductance reversal potential (Vrev; mV)"
+	Prompt Rs, "electrode series resistance (Rs; MOhms)"
+	Prompt Cm, "membrane capacitance (Cm; pF)"
 	Doprompt title + " : " + promptStr, Vhold, Vrev, Rs, Cm
 	
 	if ( V_flag == 1 )
@@ -6115,9 +6171,9 @@ Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
 	SetNMvar( df + "RsCorrRs", Rs )
 	SetNMvar( df + "RsCorrCm", Cm )
 	
-	Prompt Vcomp,"fraction of resistive-current correction to apply (0-1)"
-	Prompt Ccomp,"fraction of capacitive-current correction to apply (0-1)"
-	Prompt Fc,"filter cutofff frequency (kHz; default = 1/dt)"
+	Prompt Vcomp,"fraction of steady-state voltage correction to apply (0-1)"
+	Prompt Ccomp,"fraction of capacitative filtering correction to apply (0-1)"
+	Prompt Fc,"filter cutoff frequency (Fc; kHz)"
 	Doprompt title + " : " + promptStr,  Vcomp, Ccomp, Fc
 	
 	if ( V_flag == 1 )
@@ -6129,39 +6185,32 @@ Function NMRsCorrectionCall( df [ promptStr, yLabel, dx, warning, rc ] )
 	SetNMvar( df + "RsCorrFc", Fc )
 	
 	if ( !ParamIsDefault( rc ) )
-		rc.Vhold = Vhold
-		rc.Vrev = Vrev
-		rc.Rs = Rs
-		rc.Cm = Cm
-		rc.Vcomp = Vcomp
-		rc.Ccomp = Ccomp
-		rc.Fc = Fc
-		rc.dataUnits = dataUnits
+		NMRsCorrTraynelisStructSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY, rc )
 	endif
 	
 	return 0
 	
-End // NMRsCorrectionCall
+End // NMRsCompTraynelisCall
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMRsCorrection2( nm, rc [ history ] )
+Function /S NMRsCompTraynelis( nm, rc [ history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
-	STRUCT NMRsCorr &rc
+	STRUCT NMRsCorrTraynelis &rc
 	
 	Variable history
 	
-	Variable icnt, wcnt, numWaves, pnts, i_A, dt_ms, dt_s
+	Variable icnt, wcnt, numWaves, pnts, dt, dt_s
 	Variable iCap, vThisPnt, vLastPnt, vCorrect, vDrive, vDelta
-	Variable vHold, vRev, Rs, Cm, Fc, dataSCale
+	Variable vHold, vRev, Rs, Cm, Fc, dataScaleX, dataScaleY
 	String wName
 	
 	if ( NMParamsError( nm ) != 0 )
 		return ""
 	endif
 	
-	if ( NMRsCorrError( rc ) != 0 )
+	if ( NMRsCorrTraynelisError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -6172,7 +6221,8 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	NMParamVarAdd( "Vcomp", rc.Vcomp, nm )
 	NMParamVarAdd( "Ccomp", rc.Ccomp, nm )
 	NMParamVarAdd( "Fc", rc.Fc, nm )
-	NMParamStrAdd( "dataUnits", rc.dataUnits, nm )
+	NMParamStrAdd( "dataUnitsX", rc.dataUnitsX, nm )
+	NMParamStrAdd( "dataUnitsY", rc.dataUnitsY, nm )
 	
 	vHold = rc.Vhold * 1e-3 // volts
 	vRev = rc.Vrev * 1e-3 // volts
@@ -6180,21 +6230,35 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	Cm = rc.Cm * 1e-12 // F
 	Fc = rc.Fc * 1e3 // Hz
 	
-	strswitch( rc.dataUnits )
+	strswitch( rc.dataUnitsX )
+		case "s":
+			dataScaleX = 1
+			break
+		case "ms":
+			dataScaleX = 1e-3
+			break
+		case "us":
+			dataScaleX = 1e-6
+			break
+		default:
+			return ""
+	endswitch
+	
+	strswitch( rc.dataUnitsY )
 		case "A":
-			dataSCale = 1
+			dataScaleY = 1
 			break
 		case "mA":
-			dataSCale = 1e-3
+			dataScaleY = 1e-3
 			break
 		case "uA":
-			dataSCale = 1e-6
+			dataScaleY = 1e-6
 			break
 		case "nA":
-			dataSCale = 1e-9
+			dataScaleY = 1e-9
 			break
 		case "pA":
-			dataSCale = 1e-12
+			dataScaleY = 1e-12
 			break
 		default:
 			return ""
@@ -6212,16 +6276,16 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	
 		wName = StringFromList( wcnt, nm.wList )
 		
-		Wave wtemp = $nm.folder + wName
+		Wave i_data = $nm.folder + wName
 		
-		dt_ms = deltax( wtemp )
-		dt_s = dt_ms * 1e-3
+		dt = deltax( i_data )
+		dt_s = dt * dataScaleX
 		
 		//Setscale /P x 0, dt_s, wtemp // not necessary
-		wtemp *= dataSCale // A
+		i_data *= dataScaleY // Amps
 		
-		i_A = wtemp[ 0 ]
-		vLastPnt = vHold - i_A * Rs
+		//i_A = i_data[ 0 ]
+		vLastPnt = vHold - i_data[ 0 ] * Rs
 		vDelta = vLastPnt - vRev
 		
 		if ( vDelta == 0 )
@@ -6230,14 +6294,13 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 			vCorrect = rc.Vcomp * ( 1 - vDrive / vDelta )
 		endif
 		
-		wtemp[ 0 ] = i_A - i_A * vCorrect
+		i_data[ 0 ] -= i_data[ 0 ] * vCorrect
 		
-		pnts = numpnts( wtemp )
+		pnts = numpnts( i_data )
 		
 		for ( icnt = 1 ; icnt < pnts ; icnt += 1 )
-		
-			i_A = wtemp[ icnt ]
-			vThisPnt = vHold - i_A * Rs
+		 
+			vThisPnt = vHold - i_data[ icnt ] * Rs
 			vDelta = vThisPnt - vRev
 			
 			if ( vDelta == 0 )
@@ -6252,17 +6315,17 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 				iCap *= 1 - exp( -2 * pi * dt_s * Fc )
 			endif
 			
-			wtemp[ icnt - 1 ] -= rc.Ccomp * iCap
-			wtemp[ icnt - 1 ] -= wtemp[ icnt - 1 ] * vCorrect
+			i_data[ icnt - 1 ] -= rc.Ccomp * iCap
+			i_data[ icnt - 1 ] -= i_data[ icnt - 1 ] * vCorrect
 			
 			vLastPnt = vThisPnt
 		
 		endfor
 		
-		wtemp[ pnts - 1 ] = NaN // JSR // null last data point
+		i_data[ pnts - 1 ] = NaN // JSR // null last data point
 		
-		//Setscale /P x 0, dt_ms, wtemp // not necessary
-		wtemp /= dataSCale // back to original units
+		//Setscale /P x 0, dt, i_data // not necessary
+		i_data /= dataScaleY // back to original units
 		
 		NMLoopWaveNote( nm.folder + wName, nm.paramList )
 		
@@ -6278,7 +6341,7 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 
 	return nm.successList
 
-End // NMRsCorrection2
+End // NMRsCompTraynelis
 
 //****************************************************************
 //****************************************************************
