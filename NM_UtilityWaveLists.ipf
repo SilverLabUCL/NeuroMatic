@@ -5963,7 +5963,7 @@ End // NMFilterIIR2
 //****************************************************************
 //****************************************************************
 
-Structure NMRsCorrTraynelis
+Structure NMRsCorrParams
 
 	Variable Vhold // mV
 	Variable Vrev // mV
@@ -5976,12 +5976,12 @@ Structure NMRsCorrTraynelis
 	String dataUnitsX // s, ms, us
 	String dataUnitsY // A, mA, uA, nA, pA
 
-EndStructure // NMRsCorrTraynelis
+EndStructure // NMRsCorrParams
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrTraynelisStructSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY,rc )
+Function NMRsCorrParamsSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY, rc )
 	Variable Vhold // mV
 	Variable Vrev // mV
 	Variable Rs // MOhms
@@ -5992,7 +5992,7 @@ Function NMRsCorrTraynelisStructSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, data
 	String dataUnitsX
 	String dataUnitsY
 	
-	STRUCT NMRsCorrTraynelis &rc
+	STRUCT NMRsCorrParams &rc
 	
 	rc.Vhold = Vhold
 	rc.Vrev = Vrev
@@ -6005,13 +6005,13 @@ Function NMRsCorrTraynelisStructSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, data
 	rc.dataUnitsX = dataUnitsX
 	rc.dataUnitsY = dataUnitsY
 	
-End // NMRsCorrTraynelisStructSet
+End // NMRsCorrParamsSet
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrTraynelisError( rc )
-	STRUCT NMRsCorrTraynelis &rc
+Function NMRsCorrError( rc )
+	STRUCT NMRsCorrParams &rc
 	
 	if ( numtype( rc.Vhold ) > 0 )
 		return NM2Error( 10, "Vhold", num2str( rc.Vhold ) )
@@ -6063,19 +6063,19 @@ Function NMRsCorrTraynelisError( rc )
 	
 	return 0
 
-End // NMRsCorrTraynelisError
+End // NMRsCorrError
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCompTraynelisCall( df [ promptStr, xLabel, yLabel, dx, warning, rc ] )
+Function NMRsCorrectionCall( df [ promptStr, xLabel, yLabel, dx, warning, rc ] )
 	String df // data folder where Rs correction variables are stored
 	String promptStr
 	String xLabel // data x-label that should include units (e.g. "ms" or "s")
 	String yLabel // data y-label that should include units (e.g. "pA" or "A")
 	Variable dx // sample interval of data // ms
 	Variable warning
-	STRUCT NMRsCorrTraynelis &rc
+	STRUCT NMRsCorrParams &rc
 
 	String txt, title = "Traynelis Rs Correction"
 	
@@ -6185,24 +6185,24 @@ Function NMRsCompTraynelisCall( df [ promptStr, xLabel, yLabel, dx, warning, rc 
 	SetNMvar( df + "RsCorrFc", Fc )
 	
 	if ( !ParamIsDefault( rc ) )
-		NMRsCorrTraynelisStructSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY, rc )
+		NMRsCorrParamsSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY, rc )
 	endif
 	
 	return 0
 	
-End // NMRsCompTraynelisCall
+End // NMRsCorrectionCall
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMRsCompTraynelis( nm, rc [ history ] )
+Function /S NMRsCorrection( nm, rc [ history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
-	STRUCT NMRsCorrTraynelis &rc
+	STRUCT NMRsCorrParams &rc
 	
 	Variable history
 	
 	Variable icnt, wcnt, numWaves, pnts, dt, dt_s
-	Variable iCap, vThisPnt, vLastPnt, vCorrect, vDrive, vDelta
+	Variable iCap, vThisPnt, vLastPnt, vCorrect, vDrive
 	Variable vHold, vRev, Rs, Cm, Fc, dataScaleX, dataScaleY
 	String wName
 	
@@ -6210,7 +6210,7 @@ Function /S NMRsCompTraynelis( nm, rc [ history ] )
 		return ""
 	endif
 	
-	if ( NMRsCorrTraynelisError( rc ) != 0 )
+	if ( NMRsCorrError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -6284,45 +6284,7 @@ Function /S NMRsCompTraynelis( nm, rc [ history ] )
 		//Setscale /P x 0, dt_s, wtemp // not necessary
 		i_data *= dataScaleY // Amps
 		
-		//i_A = i_data[ 0 ]
-		vLastPnt = vHold - i_data[ 0 ] * Rs
-		vDelta = vLastPnt - vRev
-		
-		if ( vDelta == 0 )
-			vCorrect = 0 // avoid divide by 0
-		else
-			vCorrect = rc.Vcomp * ( 1 - vDrive / vDelta )
-		endif
-		
-		i_data[ 0 ] -= i_data[ 0 ] * vCorrect
-		
-		pnts = numpnts( i_data )
-		
-		for ( icnt = 1 ; icnt < pnts ; icnt += 1 )
-		 
-			vThisPnt = vHold - i_data[ icnt ] * Rs
-			vDelta = vThisPnt - vRev
-			
-			if ( vDelta == 0 )
-				vCorrect = 0 // avoid divide by 0
-			else
-				vCorrect = rc.Vcomp * ( 1 - vDrive / vDelta )	
-			endif
-			
-			iCap = Cm * ( vThisPnt - vLastPnt ) / dt_s
-			
-			if ( ( numtype( Fc ) == 0 ) && ( Fc > 0 ) )
-				iCap *= 1 - exp( -2 * pi * dt_s * Fc )
-			endif
-			
-			i_data[ icnt - 1 ] -= rc.Ccomp * iCap
-			i_data[ icnt - 1 ] -= i_data[ icnt - 1 ] * vCorrect
-			
-			vLastPnt = vThisPnt
-		
-		endfor
-		
-		i_data[ pnts - 1 ] = NaN // JSR // null last data point
+		NMRsCorrTraynelis( i_data, dt_s, vDrive, Rs, Cm, rc.Vcomp, rc.Ccomp, Fc )
 		
 		//Setscale /P x 0, dt, i_data // not necessary
 		i_data /= dataScaleY // back to original units
@@ -6341,7 +6303,57 @@ Function /S NMRsCompTraynelis( nm, rc [ history ] )
 
 	return nm.successList
 
-End // NMRsCompTraynelis
+End // NMRsCorrection
+
+//****************************************************************
+//****************************************************************
+
+Function NMRsCorrTraynelis( i_data, dt, vDrive, Rs, Cm, Vcomp, Ccomp, Fc )
+	Wave i_data // Amps
+	Variable dt // seconds
+	Variable vDrive // volts
+	Variable Rs // Ohms
+	Variable Cm // Farads
+	Variable Vcomp, Ccomp // 0 - 1
+	Variable Fc // Hz
+	
+	Variable icnt, vLastPnt, vThisPnt, pnts, iCap
+	
+	vLastPnt = vDrive - i_data[ 0 ] * Rs
+	
+	if ( ( Vcomp > 0 ) && ( vLastPnt != 0 ) )
+		i_data[ 0 ] -= i_data[ 0 ] * Vcomp * ( 1 - vDrive / vLastPnt ) // Traynelis Eq 8
+	endif
+	
+	pnts = numpnts( i_data )
+	
+	for ( icnt = 1 ; icnt < pnts ; icnt += 1 )
+	 
+		vThisPnt = vDrive - i_data[ icnt ] * Rs
+		
+		if ( Ccomp > 0 ) // Icap compensation
+		
+			iCap = Cm * ( vThisPnt - vLastPnt ) / dt // Traynelis Eq 11
+			
+			if ( ( numtype( Fc ) == 0 ) && ( Fc > 0 ) )
+				iCap *= 1 - exp( -2 * pi * dt * Fc ) // Traynelis Eq 12
+			endif
+			
+			i_data[ icnt - 1 ] -= Ccomp * iCap // Traynelis Eq 9
+			
+		endif
+		
+		if ( ( Vcomp > 0 ) && ( vThisPnt != 0 ) ) // Vcomp compensation
+			i_data[ icnt - 1 ] -= i_data[ icnt - 1 ] * Vcomp * ( 1 - vDrive / vThisPnt ) // Traynelis Eq 8
+		endif
+		
+		vLastPnt = vThisPnt
+	
+	endfor
+	
+	i_data[ pnts - 1 ] = NaN // JSR // null last data point
+
+End // NMRsCorrTraynelis
 
 //****************************************************************
 //****************************************************************

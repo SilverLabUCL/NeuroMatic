@@ -8797,9 +8797,9 @@ Static Function /S zCall_NMMainRsCorrection()
 	
 	Variable dx = NMChanDeltaX( 0, 1 )
 	
-	STRUCT NMRsCorrTraynelis rc
+	STRUCT NMRsCorrParams rc
 	
-	if ( NMRsCompTraynelisCall( NMDF, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, warning=warning, rc=rc ) == 0 )
+	if ( NMRsCorrectionCall( NMDF, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, warning=warning, rc=rc ) == 0 )
 		SetNMvar( NMDF + "RsCorrWarning", 0 ) // turn off warning after first use
 		return NMMainRsCorrection( Vhold=rc.Vhold, Vrev=rc.Vrev, Rs=rc.Rs, Cm=rc.Cm, Vcomp=rc.Vcomp, Ccomp=rc.Ccomp, Fc=rc.Fc, dataUnitsX=rc.dataUnitsX, dataUnitsY=rc.dataUnitsY, history=1 )
 	endif
@@ -8874,7 +8874,7 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	NMLoopExecStrAdd( "dataUnitsX", dataUnitsX, nm )
 	NMLoopExecStrAdd( "dataUnitsY", dataUnitsY, nm )
 	
-	STRUCT NMRsCorrTraynelis rc
+	STRUCT NMRsCorrParams rc
 	
 	rc.Vhold = Vhold
 	rc.Vrev = Vrev
@@ -8886,7 +8886,7 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	rc.dataUnitsX = dataUnitsX
 	rc.dataUnitsY = dataUnitsY
 	
-	if ( NMRsCorrTraynelisError( rc ) != 0 )
+	if ( NMRsCorrError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -8953,7 +8953,7 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 		return ""
 	endif
 	
-	STRUCT NMRsCorrTraynelis rc
+	STRUCT NMRsCorrParams rc
 	
 	rc.Vhold = Vhold
 	rc.Vrev = Vrev
@@ -8965,7 +8965,7 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 	rc.dataUnitsX = dataUnitsX
 	rc.dataUnitsY = dataUnitsY
 	
-	return NMRsCompTraynelis( nm, rc, history = 1 )
+	return NMRsCorrection( nm, rc, history = 1 )
 	
 End // NMMainRsCorrection2
 

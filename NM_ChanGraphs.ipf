@@ -3364,7 +3364,7 @@ Function NMChanTransformCheck( transformList )
 				
 			case "Rs Correction":
 			
-				STRUCT NMRsCorrTraynelis rc
+				STRUCT NMRsCorrParams rc
 				
 				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
 				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
@@ -3376,7 +3376,7 @@ Function NMChanTransformCheck( transformList )
 				rc.dataUnitsX = StringByKey("dataUnitsX", tList, "=", ",")
 				rc.dataUnitsY = StringByKey("dataUnitsY", tList, "=", ",")
 				
-				if ( NMRsCorrTraynelisError( rc ) == 0 )
+				if ( NMRsCorrError( rc ) == 0 )
 					return 0 // OK
 				endif
 			
@@ -3712,7 +3712,7 @@ Function /S NMChanTransformRSCorrCall( channel )
 	
 	String currentPrefix = CurrentNMWavePrefix()
 	
-	STRUCT NMRsCorrTraynelis rc
+	STRUCT NMRsCorrParams rc
 	
 	if ( channel == -1 )
 		channel = CurrentNMChannel()
@@ -3732,7 +3732,7 @@ Function /S NMChanTransformRSCorrCall( channel )
 	
 	promptStr = currentPrefix + " : " + ChanNum2Char( channel )
 	
-	if ( NMRsCompTraynelisCall( cdf, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, rc=rc ) == 0 )
+	if ( NMRsCorrectionCall( cdf, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, rc=rc ) == 0 )
 		return NMChanTransformRsCorrect( channel=channel, rc=rc, history=1 )
 	endif
 	
@@ -3758,13 +3758,13 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 	String dataUnitsX // s, ms, us
 	String dataUnitsY // A, mA, uA, nA, pA
 	
-	STRUCT NMRsCorrTraynelis &rc // or pass this structure instead
+	STRUCT NMRsCorrParams &rc // or pass this structure instead
 	
 	Variable history
 	
 	String cdf, transformList, paramList = ""
 	
-	STRUCT NMRsCorrTraynelis rc2
+	STRUCT NMRsCorrParams rc2
 	
 	if ( ParamIsDefault( prefixFolder ) )
 		prefixFolder = CurrentNMPrefixFolder()
@@ -3850,7 +3850,7 @@ Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, 
 		
 	endif
 	
-	if ( NMRsCorrTraynelisError( rc2 ) != 0 )
+	if ( NMRsCorrError( rc2 ) != 0 )
 		return "" // error
 	endif
 	
@@ -5760,7 +5760,7 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 			case "Rs Correction":
 			
-				STRUCT NMRsCorrTraynelis rc
+				STRUCT NMRsCorrParams rc
 				
 				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
 				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
@@ -5778,7 +5778,7 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				nm.folder = NMParent( dstName )
 				nm.wList = NMChild( dstName )
 				
-				NMRsCompTraynelis( nm, rc )
+				NMRsCorrection( nm, rc )
 				
 				break
 				
