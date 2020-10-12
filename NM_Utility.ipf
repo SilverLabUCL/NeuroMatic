@@ -41,6 +41,10 @@ StrConstant NMPlotColorList = "black;gray;red;yellow;green;blue;purple;white;"
 StrConstant NMCancel = "CANCEL"
 StrConstant NMCR = "\r" // carriage return
 
+Constant NMBoltzmannConstant = 1.38064852e-23 // K // m2·kg·s-2·K-1
+Constant NMFaradayConstant = 96485.33212331 // F // C·mol−1 // equal to elementary charge e
+Constant NMGasConstant = 8.31446261815324 // R // kg⋅m2·K−1⋅mol−1⋅s−2
+
 //****************************************************************
 //****************************************************************
 
