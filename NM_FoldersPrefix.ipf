@@ -1193,6 +1193,8 @@ Function /S NMXwaveSet( xWave [ prefixFolder, update, history ] )
 	SetNMstr( prefixFolder + "Xwave", xWave )
 	SetNMstr( prefixFolder + "XwavePrefix", "" )
 	
+	RemoveWaveUnits( xWave )
+	
 	if ( history )
 		//NMHistory( fxn + " : " + xWave )
 	endif
