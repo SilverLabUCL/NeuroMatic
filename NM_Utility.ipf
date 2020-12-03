@@ -2615,21 +2615,44 @@ End // CheckGraphName
 //****************************************************************
 //****************************************************************
 
-Function GraphRainbow( gName, wList ) // change color of waves to raindow
+Function GraphRainbow( gName, wList [ wavePrefix ] ) // change color of waves to raindow
 	String gName // graph name
 	String wList // wave list or "_ALL_" for all waves in the graph
+	String wavePrefix // for waves in graph that begin with this wave prefix
 	
 	Variable wcnt
-	String wName
+	String wName, wList2 = ""
 	
 	STRUCT NMRGB c
+	
+	if ( ParamIsDefault( wavePrefix ) )
+		wavePrefix = ""
+	endif
 	
 	if ( Wintype( gName ) != 1 )
 		return NM2Error( 40, "gName", gName )
 	endif
 	
-	if ( StringMatch( wList, "_ALL_" ) || ( ItemsInList( wList ) == 0 ) )
+	if ( StringMatch( wList, "_ALL_" ) || ( ItemsInList( wList ) == 0 ) || ( strlen( wavePrefix ) > 0 ) )
+	
 		wList = TraceNameList( gName, ";", 1 )
+		
+		if ( strlen( wavePrefix ) > 0 )
+		
+			for ( wcnt = 0; wcnt < ItemsInList( wList ); wcnt += 1 )
+	
+				wName = StringFromList( wcnt, wList )
+				
+				if ( strsearch( wName, wavePrefix, 0, 2 ) == 0 )
+					wList2 += wName + ";"
+				endif
+				
+			endfor
+			
+			wList = wList2
+		
+		endif
+		
 	endif
 
 	for ( wcnt = 0; wcnt < ItemsInList( wList ); wcnt += 1 )
