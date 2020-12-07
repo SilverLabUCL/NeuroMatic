@@ -2691,6 +2691,16 @@ Function NMFitWave( [ history ] )
 			
 			W_weightwave = "/W=" + saveDF + weightingPrefix + sourceWave
 			
+		elseif ( WaveExists( $( weightingPrefix ) ) )
+		
+			W_weightwave = "/W=" + saveDF + weightingPrefix
+			
+			if ( StringMatch( weightingPrefix[ 0, 2 ], "Inv" ) )
+				I_weight = "/I=0" // reciprocal or inverse
+			else
+				I_weight = "/I=1"
+			endif
+			
 		else
 		
 			NM2Error( 90, "cannot locate weighting wave: " + weightingPrefix + sourceWave, "" )
@@ -5591,3 +5601,4 @@ End
 //****************************************************************
 
 
+		
