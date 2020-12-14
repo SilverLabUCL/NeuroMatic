@@ -77,7 +77,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingGamma,n:5;f:NMCircle,n:2;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingGamma,n:5;f:NMCircle,n:2;"
 
 //****************************************************************
 //****************************************************************
@@ -1795,20 +1795,25 @@ Function NMFitFunctionSet( fxn [ update ] )
 			pList = "X0;Alpha;Beta;"
 			eq = "Gamma(x0,alpha,beta)"
 			break
+		case "NMGauss":
+			sfxn = "Gauss"
+			pList = "X0;STDVx;"
+			eq = "Gauss(x,X0,STDVx)"
+			break
 		case "NMGauss1":
 			sfxn = "Gauss1"
 			pList = "A0;A;X0;STDVx;"
-			eq = "A0+A·gauss(x,X0,STDVx)"
+			eq = "A0+A·Gauss(x,X0,STDVx)"
 			break
 		case "NMGauss2":
 			sfxn = "Gauss2"
 			pList = "Y0;A;X0;STDVx;Y0;STDVy;"
-			eq = "Y0+A·gauss(x,X0,STDVx,y,Y0,STDVy)"
+			eq = "Y0+A·Gauss(x,X0,STDVx,y,Y0,STDVy)"
 			break
 		case "NMGauss3":
 			sfxn = "Gauss3"
 			pList = "Y0;A;X0;STDVx;Y0;STDVy;Z0;STDVz;"
-			eq = "Y0+A·gauss(x,X0,STDVx,y,Y0,STDVy,z,Z0,STDVz)"
+			eq = "Y0+A·Gauss(x,X0,STDVx,y,Y0,STDVy,z,Z0,STDVz)"
 			break
 		case "NMSynExp3":
 			sfxn = "Syn3"
@@ -2047,9 +2052,13 @@ End // NMFitAuto
 
 Static Function /S z_FitAllCall()
 
-	Variable p
-	String returnStr, chanSelectList, waveSelectList
+	Variable p, startFrom = 0
+	String returnStr, chanSelectList, waveSelectList, title = "Fit All Waves"
 	
+	Variable currentWaveNum = CurrentNMWave()
+	Variable numWaves = NMNumWaves()
+	
+	Variable start = NumVarOrDefault( NMFitDF + "FitAllWavesStart", 1 )
 	Variable pauseMode = NumVarOrDefault( NMFitDF + "FitAllWavesPause", NMFitVarGet( "FitAllWavesPause" ) )
 	Variable pauseValue = 0
 	
@@ -2068,13 +2077,24 @@ Static Function /S z_FitAllCall()
 		pauseValue = 0
 	endif
 	
+	Prompt start, "starting from wave number:", popup "0;" + num2istr( currentWaveNum ) + ";"
 	Prompt p, "pause after each fit?", popup "no;yes;yes, with OK prompt;"
 	Prompt pauseValue, "pause time ( sec ):"
 	
-	DoPrompt "Fit All Waves", p
+	if ( currentWaveNum > 0 )
+		DoPrompt title, start, p
+	else
+		DoPrompt "Fit All Waves", p
+	endif
 	
 	if ( V_flag == 1 )
 		return "" // cancel
+	endif
+	
+	SetNMvar( NMFitDF + "FitAllWavesStart", start )
+	
+	if ( start == 2 )
+		startFrom = currentWaveNum
 	endif
 	
 	if ( p == 2 )
@@ -2115,7 +2135,11 @@ Static Function /S z_FitAllCall()
 		waveSelectList = NMWaveSelectGet()
 	endif
 
-	returnStr = NMFitAll( chanSelectList = chanSelectList, waveSelectList = waveSelectList, pause = pauseMode, history = 1 )
+	if ( startFrom > 0 )
+		returnStr = NMFitAll( chanSelectList = chanSelectList, waveSelectList = waveSelectList, startWaveNum = startFrom, pause = pauseMode, history = 1 )
+	else
+		returnStr = NMFitAll( chanSelectList = chanSelectList, waveSelectList = waveSelectList, pause = pauseMode, history = 1 )
+	endif
 	
 	if ( NMFitVarGet( "SaveFitWaves" ) && NMFitVarGet( "AutoGraph" ) && NMVarGet( "GraphsAndTablesOn" ) )
 		NMFitPlotAll( 1 )
@@ -2129,9 +2153,10 @@ End // z_FitAllCall
 //****************************************************************
 //****************************************************************
 
-Function /S NMFitAll( [ chanSelectList, waveSelectList, pause, history ] )
+Function /S NMFitAll( [ chanSelectList, waveSelectList, startWaveNum, pause, history ] )
 	String chanSelectList // channel select list ( e.g. "A;B;" )
 	String waveSelectList // wave select list ( e.g. "Set1;Set2;" )
+	Variable startWaveNum // start from wave number (in waveSelectList)
 	Variable pause // ( 0 ) no pause ( > 0 ) pause for given sec ( < 0 ) pause with OK prompt
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 
@@ -2169,6 +2194,12 @@ Function /S NMFitAll( [ chanSelectList, waveSelectList, pause, history ] )
 		waveSelectList = NMWaveSelectAllList()
 	else
 		vlist = NMCmdStrOptional( "waveSelectList", waveSelectList, vlist )
+	endif
+	
+	if ( ParamIsDefault( startWaveNum ) )
+		startWaveNum = 0
+	else
+		vlist = NMCmdNumOptional( "startWaveNum", startWaveNum, vlist )
 	endif
 	
 	if ( ParamIsDefault( pause ) )
@@ -2255,7 +2286,7 @@ Function /S NMFitAll( [ chanSelectList, waveSelectList, pause, history ] )
 			
 			progressStr = "Fit Chan " + ChanNum2Char( currentChan )
 			
-			for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 ) // loop thru waves
+			for ( wcnt = startWaveNum ; wcnt < numWaves ; wcnt += 1 ) // loop thru waves
 		
 				if ( ( pause >= 0 ) && ( NMProgress( wcnt, numWaves, progressStr ) == 1 ) )
 					break
@@ -3148,6 +3179,9 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 		case "NMGamma":
 			fit = NMGamma( w, x )
 			break
+		case "NMGauss":
+			fit = NMGauss( w, x )
+			break
 		case "NMGauss1":
 			fit = NMGauss1( w, x )
 			break
@@ -3442,6 +3476,12 @@ Function NMFitGuess()
 				FT_guess[0] = xbgn // X0
 				FT_guess[1] = 3 // Alapha
 				FT_guess[2] = 1 // Beta
+			endif
+			break
+		case "NMGauss":
+			if ( numpnts( FT_guess ) == 2 )
+				FT_guess[0] = 0 // X0
+				FT_guess[1] = 1 // STDVx
 			endif
 			break
 		case "NMGauss1":
@@ -4675,7 +4715,6 @@ Function NMGamma( w, x ) : FitFunc
 	
 End // NMGamma
 
-
 //****************************************************************
 //****************************************************************
 //****************************************************************
@@ -4687,7 +4726,7 @@ Function NMGauss( w, x ) : FitFunc // PDF // uses Igor "gauss" function.
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the Function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = gauss(x,x0,STDVx)
+	//CurveFitDialog/ f(x) = Gauss(x,x0,STDVx)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -4695,7 +4734,7 @@ Function NMGauss( w, x ) : FitFunc // PDF // uses Igor "gauss" function.
 	//CurveFitDialog/ w[0] = x0
 	//CurveFitDialog/ w[1] = STDVx
 	
-	return gauss( x, w[0], w[1] )
+	return Gauss( x, w[0], w[1] )
 
 End // NMGauss
 
@@ -4710,7 +4749,7 @@ Function NMGauss1( w, x ) : FitFunc // uses Igor "gauss" function. removes confu
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the Function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = A0 + A·gauss(x,x0,STDVx)
+	//CurveFitDialog/ f(x) = A0 + A·Gauss(x,x0,STDVx)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -4722,7 +4761,7 @@ Function NMGauss1( w, x ) : FitFunc // uses Igor "gauss" function. removes confu
 	
 	Variable amp = 1 / ( w[3] * sqrt( 2 * pi ) )
 	
-	return w[0] + w[1] * gauss( x, w[2], w[3] ) / amp
+	return w[0] + w[1] * Gauss( x, w[2], w[3] ) / amp
 
 End // NMGauss1
 
@@ -4737,7 +4776,7 @@ Function NMGaussSum( w, x ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the Function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = A0 + A1·gauss(x,x1,STDV1) + A2·gauss(x,x2,STDV2)
+	//CurveFitDialog/ f(x) = A0 + A1·Gauss(x,x1,STDV1) + A2·Gauss(x,x2,STDV2)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -4753,8 +4792,8 @@ Function NMGaussSum( w, x ) : FitFunc
 	Variable amp1 = 1 / ( w[3] * sqrt( 2 * pi ) )
 	Variable amp2 = 1 / ( w[6] * sqrt( 2 * pi ) )
 	
-	Variable g1 = w[1] * gauss( x, w[2], w[3] ) / amp1
-	Variable g2 = w[4] * gauss( x, w[5], w[6] ) / amp2
+	Variable g1 = w[1] * Gauss( x, w[2], w[3] ) / amp1
+	Variable g2 = w[4] * Gauss( x, w[5], w[6] ) / amp2
 	
 	return w[0] + g1 + g2
 
@@ -4772,7 +4811,7 @@ Function NMGauss2( w, x, y ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the Function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x,y) = A0 + A·gauss(x,x0,STDVx,y,y0,STDVy)
+	//CurveFitDialog/ f(x,y) = A0 + A·Gauss(x,x0,STDVx,y,y0,STDVy)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 2
 	//CurveFitDialog/ x
@@ -4787,7 +4826,7 @@ Function NMGauss2( w, x, y ) : FitFunc
 	
 	Variable amp = 1 / ( w[3] * w[5] * 2 * pi )
 	
-	return w[0] + w[1] * gauss( x, w[2], w[3], y, w[4], w[5] ) / amp
+	return w[0] + w[1] * Gauss( x, w[2], w[3], y, w[4], w[5] ) / amp
 
 End // NMGauss2
 
@@ -4804,7 +4843,7 @@ Function NMGauss3( w, x, y, z ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the Function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x,y,z) = A0 + A·gauss(x,x0,STDVx,y,y0,STDVy,z,z0,STDVz)
+	//CurveFitDialog/ f(x,y,z) = A0 + A·Gauss(x,x0,STDVx,y,y0,STDVy,z,z0,STDVz)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 3
 	//CurveFitDialog/ x
@@ -4822,7 +4861,7 @@ Function NMGauss3( w, x, y, z ) : FitFunc
 	
 	Variable amp = 1 / ( w[3] * w[5] * w[7] * 2 * pi * sqrt( 2 * pi ) )
 	
-	return w[0] + w[1] * gauss( x, w[2], w[3], y, w[4], w[5], z, w[6], w[7] )
+	return w[0] + w[1] * Gauss( x, w[2], w[3], y, w[4], w[5], z, w[6], w[7] )
 
 End // NMGauss3
 
