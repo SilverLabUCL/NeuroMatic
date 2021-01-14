@@ -2160,7 +2160,7 @@ Function /S NMFitAll( [ chanSelectList, waveSelectList, startWaveNum, pause, his
 	Variable pause // ( 0 ) no pause ( > 0 ) pause for given sec ( < 0 ) pause with OK prompt
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 
-	Variable icnt, ccnt, wcnt, chanNum, changeChan, fitError
+	Variable icnt, ccnt, wcnt, wcnt2, chanNum, changeChan, fitError
 	Variable numChannels, numWaves, currentChan, currentWave
 	Variable chanSelectListItems, waveSelectListItems
 	
@@ -2285,6 +2285,8 @@ Function /S NMFitAll( [ chanSelectList, waveSelectList, startWaveNum, pause, his
 			endif
 			
 			progressStr = "Fit Chan " + ChanNum2Char( currentChan )
+			
+			NMProgress( 0, numWaves, progressStr ) // if startWaveNum > 0
 			
 			for ( wcnt = startWaveNum ; wcnt < numWaves ; wcnt += 1 ) // loop thru waves
 		

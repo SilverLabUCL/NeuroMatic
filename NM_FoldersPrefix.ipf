@@ -4925,7 +4925,7 @@ Function NMChanWaveListOrder( wList [ prefixFolder ] )
 	String prefixFolder
 
 	Variable icnt, jcnt, wcnt, found
-	String pf, wName, wName2, mList = ""
+	String pf, wName, newOrderWaveName, missingList = ""
 	
 	if ( ParamIsDefault( prefixFolder ) )
 		prefixFolder = CurrentNMPrefixFolder()
@@ -4938,37 +4938,37 @@ Function NMChanWaveListOrder( wList [ prefixFolder ] )
 	endif
 	
 	pf = prefixFolder
-	wName2 = "NewWaveOrder"
+	newOrderWaveName = "NewWaveOrder"
 	
-	if ( !WaveExists( $pf+wName2 ) )
-		NMDoAlert( "Abort NMChanWaveListOrder: missing wave " + wName2 )
+	if ( !WaveExists( $pf+newOrderWaveName ) )
+		NMDoAlert( "Abort NMChanWaveListOrder: missing wave " + newOrderWaveName )
 		return -1
 	endif
 	
-	wList = RemoveFromList( wName2, wList )
+	wList = RemoveFromList( newOrderWaveName, wList )
 	
 	if ( ItemsInList( wList ) == 0 )
 		NMDoAlert( "Abort NMChanWaveListOrder: no waves to order" )
 		return -1
 	endif
 	
-	Wave wtemp = $pf+wName2
+	Wave newOrder = $pf+newOrderWaveName
 	
-	for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+	for ( icnt = 0 ; icnt < numpnts( newOrder ) ; icnt += 1 )
 		found = 0
-		for ( jcnt = 0 ; jcnt < numpnts( wtemp ) ; jcnt += 1 )
-			if ( wtemp[ jcnt ] == icnt )
+		for ( jcnt = 0 ; jcnt < numpnts( newOrder ) ; jcnt += 1 )
+			if ( newOrder[ jcnt ] == icnt )
 				found = 1
 				break
 			endif
 		endfor
 		if ( found == 0 )
-			mList += num2istr( icnt ) + ";"
+			missingList += num2istr( icnt ) + ";"
 		endif
 	endfor
 	
-	if ( ItemsInList( mList ) > 0 )
-		NMDoAlert( "Abort NMChanWaveListOrder: " + wName2 + ": missing episode #: " + mList )
+	if ( ItemsInList( missingList ) > 0 )
+		NMDoAlert( "Abort NMChanWaveListOrder: " + newOrderWaveName + ": missing episode #: " + missingList )
 		return -1
 	endif
 	
@@ -4981,16 +4981,16 @@ Function NMChanWaveListOrder( wList [ prefixFolder ] )
 			return -1
 		endif
 		
-		if ( ( numpnts( $pf+wName ) != numpnts( $pf+wName2 ) ) )
-			NMDoAlert( "Abort NMChanWaveListOrder: wave point mismatch: " + wName + ", " + wName2 )
+		if ( ( numpnts( $pf+wName ) != numpnts( $pf+newOrderWaveName ) ) )
+			NMDoAlert( "Abort NMChanWaveListOrder: wave point mismatch: " + wName + ", " + newOrderWaveName )
 			return -1
 		endif
 		
-		Sort $pf+wName2, $pf+wName
+		Sort $pf+newOrderWaveName, $pf+wName
 		
 	endfor
 	
-	wtemp = x // reset order
+	newOrder = x // reset order
 	
 	NMChanWaves2WaveList( prefixFolder = prefixFolder )
 
