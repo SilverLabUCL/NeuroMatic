@@ -77,7 +77,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingGamma,n:5;f:NMCircle,n:2;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingChi,n:4;f:NMCircle,n:2;"
 
 //****************************************************************
 //****************************************************************
@@ -1865,10 +1865,10 @@ Function NMFitFunctionSet( fxn [ update ] )
 			pList = "X0;STDVx;T;Theta"
 			eq = "Keiding(x0,stdv,T,theta)"
 			break
-		case "NMKeidingGamma":
-			sfxn = "KeidingGamma"
-			pList = "X0;Alpha;Beta;T;Theta"
-			eq = "Keiding(x0,alpha,beta,T,theta)"
+		case "NMKeidingChi":
+			sfxn = "KeidingChi"
+			pList = "F;Beta;T;Theta"
+			eq = "Keiding(f,beta,T,theta)"
 			break
 		case "NMCircle":
 			sfxn = "Circle"
@@ -2306,6 +2306,10 @@ Function /S NMFitAll( [ chanSelectList, waveSelectList, startWaveNum, pause, his
 				
 				fitError = NMFitWave()
 				
+				if ( numtype( fitError ) == 2 )
+					break // fatal error
+				endif
+				
 				DoUpdate
 				
 				if ( pause < 0 )
@@ -2402,7 +2406,7 @@ Function NMFitWave( [ history ] )
 	String D_dest = "/D", R_resid = "", X_xwave = "", I_weight = "", W_weightwave = "", C_constraints = ""
 	
 	if ( NMExecutionAlert() )
-		return -1
+		return NaN
 	endif
 	
 	Variable currentChan = CurrentNMChannel()
@@ -2702,6 +2706,11 @@ Function NMFitWave( [ history ] )
 		case "Poly":
 		case "Poly_XOffset":
 			fxn += " " + num2istr( numParams ) + ","
+			break
+			
+		case "NMKeidingGauss":
+		case "NMKeidingChi":
+			SetNMvar( NMFitDF + "NMKeidingXmax", rightx( $currentWaveName ) )
 			break
 	
 	endswitch
@@ -3223,8 +3232,8 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 		case "NMKeidingGauss":
 			fit = NMKeidingGauss2( w, x )
 			break
-		case "NMKeidingGamma":
-			fit = NMKeidingGamma2( w, x )
+		case "NMKeidingChi":
+			fit = NMKeidingChi2( w, x )
 			break
 		case "NMCircle":
 			fit = NMCircle( w, x )
@@ -3591,21 +3600,20 @@ Function NMFitGuess()
 			break
 		case "NMKeidingGauss":
 			if ( ( numpnts( FT_guess ) == 4 ) && ( numpnts( FT_hold ) == 4 ) )
-				FT_guess[0] = xbgn // X0
-				FT_guess[1] = 3 // STDVx
+				FT_guess[0] = 45 // X0
+				FT_guess[1] = 4 // STDVx
 				FT_guess[2] = 60 // T 
-				FT_guess[3] = 1 // Theta
+				FT_guess[3] = 60 // phi
 				FT_hold[2] = 1
 			endif
 			break
-		case "NMKeidingGamma":
-			if ( ( numpnts( FT_guess ) == 5 ) && ( numpnts( FT_hold ) == 5 ) )
-				FT_guess[0] = xbgn // X0
-				FT_guess[1] = 5 // Alpha
-				FT_guess[2] = 1 // Beta
-				FT_guess[3] = 60 // T 
-				FT_guess[4] = 1 // Theta
-				FT_hold[3] = 1
+		case "NMKeidingChi":
+			if ( ( numpnts( FT_guess ) == 4 ) && ( numpnts( FT_hold ) == 4 ) )
+				FT_guess[0] = 80 // f
+				FT_guess[1] = 25 // beta
+				FT_guess[2] = 60 // T 
+				FT_guess[3] = 60 // phi
+				FT_hold[2] = 1
 			endif
 			break
 		case "NMCircle": // 2
@@ -5631,8 +5639,8 @@ End
 //****************************************************************
 //****************************************************************
 
-// replace with new NMKeidingGamma(w,x)
-Function NMKeidingGamma2(w,x) : FitFunc
+// replace with new NMKeidingChi(w,x)
+Function NMKeidingChi2(w,x) : FitFunc
 	Wave w
 	Variable x
 End
