@@ -2960,17 +2960,18 @@ End // NMImportWavesCall
 //****************************************************************
 //****************************************************************
 
-Function /S NMImportWaves( folder, folderPath, fileList [ usePrefixDF, history ] )
+Function /S NMImportWaves( folder, folderPath, fileList [ fileType, usePrefixDF, history ] )
 	String folder // folder name, ( "" ) for current folder
 	String folderPath // external folder path
 	String fileList // list of external file names, or "ALL" for all files inside folderPath
+	String fileType // see NMImportWaveTypeGet
 	Variable usePrefixDF // ( 0 ) no ( 1 ) yes, begin wave prefix with "DF0", "DF1", etc
 	Variable history
 	
 	Variable fcnt, wcnt, dcnt, DFnum, selectNewData, itemNum
 	String file, folder2, returnFolderList = ""
 	String prefixList, wavePrefix, wavePrefix2, wList, wList2, wName
-	String ext, extList = "", fileType, fileTypeList = "", vlist = ""
+	String ext, extList = "", fileTypeList = "", vlist = ""
 	
 	String tempFolder = "root:NM_Import_Temp:"
 	String prefixDF = NMFoldersWavePrePrefix
@@ -2985,6 +2986,10 @@ Function /S NMImportWaves( folder, folderPath, fileList [ usePrefixDF, history ]
 	vList = NMCmdStr( folder, vList )
 	vList = NMCmdStr( folderPath, vList )
 	vList = NMCmdStr( fileList, vList )
+	
+	if ( ParamIsDefault( fileType ) )
+		fileType = ""
+	endif
 	
 	if ( ParamIsDefault( usePrefixDF ) )
 		usePrefixDF = 1
@@ -3076,7 +3081,9 @@ Function /S NMImportWaves( folder, folderPath, fileList [ usePrefixDF, history ]
 				
 			else
 			
-				fileType = NMImportWaveTypeGet( file )
+				if ( strlen( fileType ) == 0 )
+					fileType = NMImportWaveTypeGet( file )
+				endif
 				
 				if ( strlen( fileType ) > 0 )
 					extList = AddListItem( ext, extList, ";", inf )

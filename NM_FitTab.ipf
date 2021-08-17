@@ -77,7 +77,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingChi,n:4;f:NMCircle,n:2;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingChi,n:4;f:NMCircle,n:3;"
 
 //****************************************************************
 //****************************************************************
@@ -1872,8 +1872,8 @@ Function NMFitFunctionSet( fxn [ update ] )
 			break
 		case "NMCircle":
 			sfxn = "Circle"
-			pList = "X0;R;"
-			eq = "(R^2-(x-X0)^2)^0.5"
+			pList = "X0;DX;R;"
+			eq = "sqrt(R^2-(x·DX-X0)^2)"
 			break
 		default:
 			sfxn = fxn
@@ -2569,6 +2569,10 @@ Function NMFitWave( [ history ] )
 	Wave FT_sigma = $NMFitWavePath( "sigma" )
 	Wave FT_hold = $NMFitWavePath( "hold" )
 	
+	if ( StringMatch( fxn, "NMKeidingGauss" ) && ( exists("NMKeidingGuess") == 6 ) )
+		Execute /Q/Z "NMKeidingGuess()"
+	endif
+	
 	FT_sigma = Nan
 	
 	if ( WhichListItem( fxn, NMFitIgorListShort() ) < 0 )
@@ -2763,11 +2767,11 @@ Function NMFitWave( [ history ] )
 		
 	endif
 	
-	if ( maxIter != 40 )
+	if ( ( maxIter != 40 ) || ( exists( "V_FitMaxIters" ) == 2 ) )
 		Variable /G V_FitMaxIters = maxIter
 	endif
 	
-	if ( tolerance != 0.001 )
+	if ( ( tolerance != 0.001 ) || ( exists( "V_FitTol" ) == 2 ) )
 		Variable /G V_FitTol = tolerance
 	endif
 	
@@ -2819,6 +2823,9 @@ Function NMFitWave( [ history ] )
 	SetNMvar( NMFitDF + "V_endRow", V_endRow )
 	SetNMvar( NMFitDF + "V_FitQuitReason", V_FitQuitReason )
 	SetNMstr( NMFitDF + "S_Info", S_Info )
+	
+	SetNMvar( "V_FitQuitReason", V_FitQuitReason )
+	SetNMstr( "S_Info", S_Info )
 	
 	fitWaveName = StringByKey( "AUTODESTWAVE", S_Info, "=" )
 	
@@ -3616,10 +3623,12 @@ Function NMFitGuess()
 				FT_hold[2] = 1
 			endif
 			break
-		case "NMCircle": // 2
-			if ( numpnts( FT_guess ) == 2 )
+		case "NMCircle":
+			if ( numpnts( FT_guess ) == 3 )
 				FT_guess[0] = 0 // X0
-				FT_guess[1] = 1 // R
+				FT_guess[1] = 1 // DX
+				FT_guess[2] = 1 // R
+				FT_hold[1] = 1
 			endif
 			break
 	endswitch
@@ -5610,18 +5619,23 @@ Function NMCircle( w,x ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = (R^2 - (x - x0)^2)^0.5
+	//CurveFitDialog/ f(x) = (R^2 - (x * dx)^2)^0.5
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
-	//CurveFitDialog/ Coefficients 4
+	//CurveFitDialog/ Coefficients 3
 	//CurveFitDialog/ w[0] = x0
-	//CurveFitDialog/ w[1] = R
+	//CurveFitDialog/ w[1] = dx
+	//CurveFitDialog/ w[2] = R
 	
 	// R^2 = x^2 + y^2
-	// y = (R^2 - x^2)^0.5
+	// y = sqrt(R^2 - x^2)
 	
-	return (w[1]^2 - (x - w[0])^2)^0.5
+	if ( numtype( x ) > 0  )
+		return 0
+	endif
+	
+	return sqrt(w[2]^2 - (x * w[1] - w[0])^2)
 
 End // NMCircle
 

@@ -183,18 +183,22 @@ Function NMKSTest( [ folder, wName1, wName2, noGraph, history ] )
 	//ST_KSd = ((round(ST_KSd*(10^(pres)))/(10^(pres))))
 	//ST_KSprob=((round(prob*(10^(pres)))/(10^(pres))))
 	
-	if (ST_KSprob <= 0.05)
-		message="The two data sets are probably from different populations"
-	else
-		message="The two data sets are probably from the same population"
-	endif
+	if ( history )
 	
-	//NMHistory( "Kolmogorov-Smirnov Test" )
-	//NMHistory( "wave #1 = " + folder + wName1 )
-	//NMHistory( "wave #2 = " + folder + wName2 )
-	NMHistory( "Difference = " + num2str( ST_KSd ) )
-	NMHistory( "Probability = " + num2str( ST_KSprob ) )
-	NMHistory( message )
+		if (ST_KSprob <= 0.05)
+			message = "The two data sets are probably from different populations"
+		else
+			message = "The two data sets are probably from the same population"
+		endif
+		
+		//NMHistory( "Kolmogorov-Smirnov Test" )
+		//NMHistory( "wave #1 = " + folder + wName1 )
+		//NMHistory( "wave #2 = " + folder + wName2 )
+		NMHistory( "Difference = " + num2str( ST_KSd ) )
+		NMHistory( "Probability = " + num2str( ST_KSprob ) )
+		NMHistory( message )
+	
+	endif
 	
 	if ( !noGraph )
 		KSPlotCumulatives( folder + wName1, folder + wName2 )
