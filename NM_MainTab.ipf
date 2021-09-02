@@ -814,7 +814,6 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 			returnStr = NMScalePanel()
 			break
 		
-		case "Scale":
 		case "Scale By Num":
 		case "Scale By Number":
 			returnStr = NMScalePanel( mode = "value" )

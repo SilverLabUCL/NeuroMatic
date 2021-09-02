@@ -837,30 +837,26 @@ Function /S CheckAxoUnits(df, strlabel) // autoscale of units
 	strswitch(units)
 	
 		case "(s)":
-		case "(S)":
 		case "(sec)":
 		case "(seconds)":
 			tLabel = title + "(msec)"
 			scale = 1000
 			break
-			
-		case "(v)":
-		case "(V)": // volts
+
+		case "(v)": // volts
 			tLabel = title + "(mV)"
 			scale = 1e3;
 			break
-			
-		case "(a)":
-		case "(A)": // amps
+
+		case "(a)": // amps
 			tLabel = title + "(pA)"
 			scale = 1e12
 			break
-			
-		case "(s)":
-		case "(S)": // siemens
-			tLabel = title + "(nS)"
-			scale = 1e9
-			break
+
+		//case "(s)": // siemens
+		//	tLabel = title + "(nS)"
+		//	scale = 1e9
+		//	break
 			
 	endswitch
 	
