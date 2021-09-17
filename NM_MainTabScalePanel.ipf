@@ -45,7 +45,7 @@ Function /S NMScalePanel( [ mode, align ] )
 	String mode // "value" or "wave of values" or "wave point-by-point"
 	Variable align // ( 0 ) scale panel ( 1 ) align panel
 	
-	Variable fs, xPixels, x1, x2, y1, y2, width = 800, height = 400
+	Variable fs, xpixels, x1, x2, y1, y2, width = 800, height = 400
 	Variable x0 = 20, y0 = 20, yinc = 40
 	Variable w0, w1, w2, w3, w4
 	String title, paramList = ""
@@ -93,8 +93,8 @@ Function /S NMScalePanel( [ mode, align ] )
 	SetNMvar( NMMainDF + "ScalezEditCells", 0 )
 	CheckNMvar( NMMainDF + "ScalezWaveLengthFormat", 1 )
 	
-	xPixels = NMComputerPixelsX()
-	x1 = ( xPixels - width ) / 2
+	xpixels = NMScreenPixelsX()
+	x1 = ( xpixels - width ) / 2
 	y1 = 140
 	x2 = x1 + width
 	y2 = y1 + height
@@ -177,7 +177,7 @@ Function /S NMScalePanel( [ mode, align ] )
 	
 	w0 = 20; w1 = 100; w2 = 20; w3 = 100; w4 = 0
 
-	ListBox MD_ScaleInputs, title="Input Parameters", pos={x0,y0}, size={width,height}, fsize=fs, win=$NMScalePanelName
+	ListBox MD_ScaleInputs, pos={x0,y0}, size={width,height}, fsize=fs, win=$NMScalePanelName
 	ListBox MD_ScaleInputs, listWave=$wNameLB, selWave=$wNameLBS, colorWave=$wNameLBC, win=$NMScalePanelName
 	ListBox MD_ScaleInputs, mode=1, proc=NMScalePanelListBoxInput, win=$NMScalePanelName
 	ListBox MD_ScaleInputs, selRow=-1, editStyle=1, userColumnResize=1, win=$NMScalePanelName
@@ -842,6 +842,13 @@ Function NMScalePanelListBoxInput( ctrlName, row, col, event ) : ListboxControl
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
 	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable value
 	String scaleMode, dimLabel, op, opList, valueStr, wName

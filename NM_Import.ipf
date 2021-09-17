@@ -398,7 +398,7 @@ Function NMImportPanel()
 	Variable x1, x2, y1, y2, yinc, height = 330, width = 280
 	String df = ImportDF()
 	
-	Variable xPixels = NMComputerPixelsX()
+	Variable xpixels = NMScreenPixelsX()
 	Variable waveEnd = NumVarOrDefault( df+"WaveEnd", 0 )
 	Variable concat = NumVarOrDefault( df+"ConcatWaves", 0 )
 	String acqmode = StrVarOrDefault( df+"AcqMode", "" )
@@ -407,7 +407,7 @@ Function NMImportPanel()
 	
 	String fileType = StrVarOrDefault( df+"DataFileType", "UNKNOWN" )
 	
-	x1 = ( xPixels - width ) / 2
+	x1 = ( xpixels - width ) / 2
 	y1 = 200
 	x2 = x1 + width
 	y2 = y1 + height

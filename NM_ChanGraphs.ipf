@@ -38,7 +38,7 @@
 
 Static StrConstant NMChanGraphPrefix = "Chan"
 StrConstant NMChanPopupList = "Overlay;Grid;Drag;Errors;XLabel;YLabel;FreezeX;FreezeY;To Front;Reset Position;Off;"
-StrConstant NMChanTransformList = "Baseline;Normalize;dF/Fo;Invert;Differentiate;Double Differentiate;Phase Plane;Integrate;FFT;Running Average;Histogram;Clip Events;"
+StrConstant NMChanTransformList = "Baseline;Normalize;dF/Fo;Z-score;Rs Correction;Invert;Differentiate;Double Differentiate;Integrate;Phase Plane;FFT;Log;Ln;Running Average;Histogram;Clip Events;"
 StrConstant NMChanFFTList = "real;magnitude;magnitude square;phase;"
 StrConstant NMFilterList = "binomial;boxcar;low-pass;high-pass;"
 
@@ -158,11 +158,29 @@ End // IsChanGraph
 //****************************************************************
 //****************************************************************
 
+Function /S NMChanDisplayWaveNameX( chanDisplayWaveName )
+	String chanDisplayWaveName
+	
+	if ( strlen( chanDisplayWaveName ) == 0 )
+		return ""
+	endif
+	
+	String df = NMParent( chanDisplayWaveName )
+	String wName = NMChild( chanDisplayWaveName )
+	
+	return df + "xScale_" + wName
+	
+End // NMChanDisplayWaveNameX
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Function /S ChanDisplayWave( channel )
 	Variable channel // ( -1 ) for current channel
-	
+
 	return ChanDisplayWaveName( 1, channel, 0 )
-	
+
 End // ChanDisplayWave
 
 //****************************************************************
@@ -173,6 +191,7 @@ Function /S ChanDisplayWaveName( directory, channel, wavNum )
 	Variable directory // ( 0 ) no directory ( 1 ) include directory
 	Variable channel // ( -1 ) for current channel
 	Variable wavNum
+	Variable xwave // ( 1 ) for x-wave name
 	
 	String df = ""
 	
@@ -338,7 +357,7 @@ Function NMChanGraphMake( [ channel, waveNum, image ] ) // create channel displa
 
 	Variable scale, tMode, tMarker, tLineStyle, tLineSize, grid, y0 = 8
 	Variable gx0, gy0, gx1, gy1
-	String tColor, gColor, cdf, xdName
+	String tColor, gColor, cdf, xdName = ""
 	
 	STRUCT NMRGB c
 	
@@ -360,9 +379,7 @@ Function NMChanGraphMake( [ channel, waveNum, image ] ) // create channel displa
 	String xWave = NMXwave( waveNum = waveNum )
 	
 	if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
-		xdName = NMDF + "xScale_" + dNameShort
-	else
-		xdName = ""
+		xdName = NMChanDisplayWaveNameX( dName )
 	endif
 	
 	CheckChanSubfolder( channel )
@@ -489,12 +506,12 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 	Variable waveNum
 	Variable makeChanWave // ( 0 ) no ( 1 ) yes
 	
-	Variable autoscale, count, grid, dualDisplay, errorsOn, noErrorCheck, md, image, npnts, dx
+	Variable autoscale, count, grid, dualDisplay, errorsOn, noErrorCheck, xwaveOn = 0
+	Variable md, image, npnts, dx, phaseplane = 0
 	Variable tMode, tMarker, tLineStyle, tLineSize
 	String sName, dName, dNameShort, xdName = "", errorName, gName
 	String transformList, transform, info, gColor, gColorCurrent, tColor, tColorCurrent, cdf
 	String axisName, histoName, histoNameX, histoNameXshort, wList, xWave
-	String phasePlaneName, phasePlaneNameX, phasePlaneNameShort
 	
 	STRUCT NMRGB c
 	
@@ -515,13 +532,13 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 	gName = ChanGraphName( channel )
 	dName = ChanDisplayWave( channel )
 	dNameShort = NMChild( dName )
+	xdName = NMChanDisplayWaveNameX( dName )
 	sName = NMChanWaveName( channel, waveNum ) // source wave
 	
-	xWave = NMXwave( waveNum = waveNum )
+	transformList = NMChanTransformGet( channel, itemNum = 0, errorAlert = 1 )
+	transform = StringFromList( 0, transformList, "," )
 	
-	if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
-		xdName = NMDF + "xScale_" + dNameShort
-	endif
+	xWave = NMXwave( waveNum = waveNum )
 	
 	CheckChanSubfolder( channel )
 	
@@ -576,9 +593,48 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 		DoWindow /T $gName, "Ch " + ChanNum2Char( channel ) + " : " + sName
 	endif
 	
+	if ( !image && ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
+		xwaveOn = 1
+	endif
+	
+	if ( !image && StringMatch( transform, "Phase Plane" ) )
+		phaseplane = 1
+		xwaveOn = 1
+	endif
+	
+	if ( makeChanWave ) // moved here 9 March 2020
+	
+		if ( ChanWaveMake( channel, sName, dName, xWave = xWave ) < 0 )
+			// error, display wave is copy of source
+			if ( WaveExists( $sName ) )
+				Duplicate /O $sName $dName
+				Wave wtemp = $dName
+				wtemp = NaN
+			endif
+		endif
+		
+		if ( xwaveOn && !phaseplane )
+			Duplicate /O $xWave $xdName
+		endif
+	
+	endif
+	
 	if ( !image )
 	
 		wList = TraceNameList( gName, ";", 1 )
+		
+		if ( xwaveOn )
+			if ( WaveExists( $xdName ) && ( strlen( XWaveName( gName, dNameShort ) ) == 0 ) )
+				RemoveFromGraph /W=$gName /Z $dNameShort // force AppendToGraph with x-wave
+				wList = ""
+			endif
+		else
+			if ( strlen( XWaveName( gName, dNameShort ) ) > 0 )
+				RemoveFromGraph /W=$gName /Z $dNameShort // force AppendToGraph without x-wave
+				wList = ""
+			endif
+			KillWaves /Z $xdName
+		endif
 		
 		if ( WhichListItem( dNameShort, wList ) < 0 )
 			if ( WaveExists( $xdName ) )
@@ -608,21 +664,22 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 		ChanOverlayUpdate( channel, xWave = xWave )
 	endif
 	
-	if ( makeChanWave )
+	//if ( makeChanWave )
 	
-		if ( ChanWaveMake( channel, sName, dName, xWave = xWave ) < 0 )
-			if ( WaveExists( $sName ) )
-				Duplicate /O $sName $dName
-				Wave wtemp = $dName
-				wtemp = NaN
-			endif
-		endif
+		//if ( ChanWaveMake( channel, sName, dName, xWave = xWave ) < 0 )
+			// error, display wave is copy of source
+			//if ( WaveExists( $sName ) )
+				//Duplicate /O $sName $dName
+				//Wave wtemp = $dName
+				//wtemp = NaN
+			//endif
+		//endif
 		
-		if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
-			Duplicate /O $xWave $xdName
-		endif
+		//if ( ( strlen( xWave ) > 0 ) && WaveExists( $xWave ) )
+			//Duplicate /O $xWave $xdName
+		//endif
 	
-	endif
+	//endif
 	
 	//ChanGraphControlsUpdate( channel )
 	
@@ -666,9 +723,6 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 	
 	info = AxisInfo( gName, "bottom" )
 	
-	transformList = NMChanTransformGet( channel, itemNum = 0, errorAlert = 1 )
-	transform = StringFromList( 0, transformList, "," )
-	
 	histoName = dName + "_histo"
 	histoNameX = dName + "_histoX"
 	histoNameXshort = NMChild( histoNameX )
@@ -687,30 +741,6 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 		RemoveFromGraph /W=$gName /Z $histoNameXshort
 		
 		KillWaves /Z $histoName, $histoNameX
-		
-	endif
-	
-	phasePlaneName = dName + "_diff"
-	phasePlaneNameX = dName + "_diffX"
-	phasePlaneNameShort = NMChild( phasePlaneName )
-	
-	if ( !image && StringMatch( transform, "Phase Plane" ) )
-	
-		wList = TraceNameList( gName, ";", 1 )
-		
-		if ( WhichListItem( phasePlaneNameShort, wList ) < 0 )
-			AppendToGraph /W=$gName $phasePlaneName vs $phasePlaneNameX
-		endif
-		
-		RemoveFromGraph /W=$gName /Z $dNameShort
-		
-		noErrorCheck = 1
-		
-	else
-	
-		RemoveFromGraph /W=$gName /Z $phasePlaneNameShort
-		
-		KillWaves /Z $phasePlaneName, $phasePlaneNameX
 		
 	endif
 	
@@ -780,6 +810,18 @@ Function /S NMChanGraphUpdate( [ channel, waveNum, makeChanWave ] ) // update ch
 				
 			case "dF/Fo":
 				axisName = "dF/Fo"
+				break
+				
+			case "Z-score":
+				axisName = "Z-score"
+				break
+				
+			case "Log":
+				axisName = "Log"
+				break
+				
+			case "Ln":
+				axisName = "Ln"
 				break
 				
 			case "Histogram":
@@ -1167,7 +1209,7 @@ Function ChanGraphAppendDisplayWave( channel [ waveNum ] )
 		xWave = NMXWave( waveNum = waveNum )
 	
 		if ( WaveExists( $xWave ) )
-			xdName = NMDF + "xScale_" + dNameShort
+			xdName = NMChanDisplayWaveNameX( dName )
 			Duplicate /O $xWave $xdName
 			AppendToGraph /W=$gName $dName vs $xdName
 		else
@@ -1639,8 +1681,10 @@ End // ChanGraphsSetCoordinates
 Function ChanGraphSetCoordinates( channel ) // set default channel graph position
 	Variable channel // ( -1 ) for current channel
 	
-	Variable yinc, width, height, ccnt, where
-	Variable xoffset, yoffset // default offsets
+	Variable yinc, width, height, ccnt, counter
+	Variable xextra, yextra, yextra2, heightPcnt
+	
+	Variable widthPcnt = 0.7
 	
 	if ( channel == -1 )
 		channel = CurrentNMChannel()
@@ -1657,9 +1701,9 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 	Variable x1 = NumVarOrDefault( cdf + "GX1", Nan )
 	Variable y1 = NumVarOrDefault( cdf + "GY1", Nan )
 	
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
-	String Computer = NMComputerType()
+	Variable xpoints = NMScreenPointsX(igorFrame=1)
+	Variable ypoints = NMScreenPointsY(igorFrame=1)
+	String computer = NMComputerType()
 	
 	Variable numChannels = NMNumChannels()
 	
@@ -1673,6 +1717,16 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 		
 	endfor
 	
+	if ( numChannels <= 0 )
+		return -1
+	elseif ( numChannels == 1 )
+		heightPcnt = 0.5
+	elseif ( numChannels == 2 )
+		heightPcnt = 0.8
+	else
+		heightPcnt = 0.9
+	endif
+	
 	for ( ccnt = 0; ccnt < channel; ccnt+=1 )
 		
 		cdf = ChanDF( ccnt )
@@ -1682,33 +1736,35 @@ Function ChanGraphSetCoordinates( channel ) // set default channel graph positio
 		endif
 		
 		if ( NumVarOrDefault( cdf + "On", 1 ) )
-			where += 1
+			counter += 1
 		endif
 		
 	endfor
 	
 	cdf = ChanDF( channel )
 	
-	if ( numtype( x0 * y0 * x1 * y1 ) > 0 ) // compute graph coordinates
+	if ( numtype( x0 * y0 * x1 * y1 ) > 0 )
 	
-		width = xPixels / 2
-		height = yPixels / ( numChannels + 2 )
-	
-		strswitch( Computer )
+		strswitch( computer )
 			case "pc":
-				x0 = 5
-				y0 = 42
-				yinc = height + 26
+				xextra = 5 // extra, adjusted by hand
+				yextra = 40.25 // 42 // extra (menu bar), adjusted by hand
+				yextra2 = 26 // top of graph
+				//yinc = height + 26
 				break
 			default:
-				x0 = 10
-				y0 = 44
-				yinc = height + 25
+				xextra = 10
+				yextra = 44
+				yextra2 = 25
+				//yinc = height + 25
 				break
 		endswitch
 		
-		x0 += xoffset
-		y0 += yoffset + yinc*where
+		width = ( xpoints - 2 * xextra) * widthPcnt
+		height = ( ypoints - yextra2 * numChannels) * heightPcnt / numChannels
+		
+		x0 = xextra
+		y0 = yextra + ( height + yextra2 ) * counter
 		x1 = x0 + width
 		y1 = y0 + height
 		
@@ -1844,16 +1900,7 @@ Function NMChannelGraphDisable( [ channel, filter, transform, autoscale, popMenu
 		return 0 // nothing to do
 	endif
 	
-	if ( !ParamIsDefault( all ) )
-	
-		all = BinaryCheck( all )
-		
-		z_filter = all
-		z_transform = all
-		z_autoscale = all
-		z_popMenu = all
-		
-	else
+	if ( ParamIsDefault( all ) )
 	
 		if ( !ParamIsDefault( filter ) )
 			z_filter = binarycheck( filter )
@@ -1870,6 +1917,16 @@ Function NMChannelGraphDisable( [ channel, filter, transform, autoscale, popMenu
 		if ( !ParamIsDefault( popMenu ) )
 			z_popMenu = binarycheck( popMenu )
 		endif
+	
+	
+	else
+	
+		all = BinaryCheck( all )
+		
+		z_filter = all
+		z_transform = all
+		z_autoscale = all
+		z_popMenu = all
 		
 	endif
 	
@@ -2043,8 +2100,8 @@ Function ChanOverlayUpdate( channel [ xWave ] )
 	Duplicate /O $dName $odName
 	
 	if ( WaveExists( $xWave ) )
-		xdName = NMDF + "xScale_" + dNameShort
-		xodName = NMDF + "xScale_" + odNameShort
+		xdName = NMChanDisplayWaveNameX( dName )
+		xodName = NMChanDisplayWaveNameX( odName )
 		Duplicate /O $xdName $xodName
 	endif
 	
@@ -2073,7 +2130,7 @@ Function ChanOverlayUpdate( channel [ xWave ] )
 		RemoveFromGraph /W=$gName/Z $odNameShort
 		
 		if ( WaveExists( $xWave ) )
-			xodName = NMDF + "xScale_" + odNameShort
+			xodName = NMChanDisplayWaveNameX( odName )
 			//AppendToGraph /W=$gName $odName vs $xWave
 			AppendToGraph /W=$gName $odName vs $xodName
 		else
@@ -3262,6 +3319,7 @@ Function NMChanTransformCheck( transformList )
 		
 			case "dF/Fo":
 			case "Baseline":
+			case "Z-score":
 			
 				xbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
 				xend = str2num( StringByKey("xend", tList, "=", ",") )
@@ -3303,6 +3361,38 @@ Function NMChanTransformCheck( transformList )
 				endif
 				
 				return 0
+				
+			case "Rs Correction":
+			
+				STRUCT NMRsCorrParams rc
+				
+				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
+				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
+				rc.Rs = str2num( StringByKey("Rs", tList, "=", ",") )
+				rc.Cm = str2num( StringByKey("Cm", tList, "=", ",") )
+				rc.Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
+				rc.Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
+				rc.Fc = str2num( StringByKey("Fc", tList, "=", ",") )
+				rc.dataUnitsX = StringByKey("dataUnitsX", tList, "=", ",")
+				rc.dataUnitsY = StringByKey("dataUnitsY", tList, "=", ",")
+				
+				if ( NMRsCorrError( rc ) == 0 )
+					return 0 // OK
+				endif
+			
+				return 1
+				
+			case "Integrate":
+			
+				Variable method = str2num( StringByKey("method", tList, "=", ",") )
+				
+				switch( method )
+					case 0:
+					case 1:
+						return 0
+				endswitch
+				
+				return 1
 				 
 			case "FFT":
 			
@@ -3411,13 +3501,17 @@ Function /S NMChanTransformCall( channel, on )
 		case "Differentiate":
 		case "Double Differentiate":
 		case "Phase Plane":
-		case "Integrate":
-		case "Invert":		
+		case "Invert":
+		case "Log":
+		case "Ln":
 			return NMChannelTransformSet( channel = channel, transform = transform, history = 1 ) // simple transforms
 		
 		case "Normalize":
 		case "dF/Fo":
 		case "Baseline":
+		case "Rs Correction":
+		case "Z-score":
+		case "Integrate":
 		case "FFT":
 		case "Running Average":
 		case "Histogram":
@@ -3464,6 +3558,15 @@ Function /S NMChanTransformAsk( channel ) // request channel transform function
 			break
 		case "Baseline":
 			transform = NMChanTransformBaselineCall( channel )
+			break
+		case "Rs Correction":
+			transform = NMChanTransformRsCorrCall( channel )
+			break
+		case "Z-score":
+			transform = NMChanTransformZscoreCall( channel )
+			break
+		case "Integrate":
+			transform = NMChanTransformIntegrateCall( channel )
 			break
 		case "FFT":
 			transform = NMChanTransformFFTCall( channel )
@@ -3532,8 +3635,9 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 		case "Differentiate":
 		case "Double Differentiate":
 		case "Phase Plane":
-		case "Integrate":
 		case "Invert":
+		case "Log":
+		case "Ln":
 			break
 			
 		case "Normalize":
@@ -3546,6 +3650,18 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 			
 		case "Baseline":
 			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformBaseline" ) + " for this channel transformation." )
+			return ""
+			
+		case "Rs Correction":
+			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformRsCorrection" ) + " for this channel transformation." )
+			return ""
+			
+		case "Z-score":
+			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformZscore" ) + " for this channel transformation." )
+			return ""
+			
+		case "Integrate":
+			NMDoAlert( thisfxn + " Error: please use " + NMQuotes( "NMChanTransformIntegrate" ) + " for this channel transformation." )
 			return ""
 			
 		case "FFT":
@@ -3582,7 +3698,188 @@ Function /S NMChannelTransformSet( [ prefixFolder, channel, transform, history ]
 	
 	return transform
 
-End // NMChanTransform
+End // NMChannelTransformSet
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformRSCorrCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable dx
+	String promptStr, xLabel, yLabel, wName
+	
+	String currentPrefix = CurrentNMWavePrefix()
+	
+	STRUCT NMRsCorrParams rc
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	String cdf = NMChanTransformDF( channel ) 
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	xLabel = NMChanLabelX( channel=channel )
+	yLabel = NMChanLabelY( channel=channel )
+	wName = ChanDisplayWave( channel )
+	
+	dx = deltax( $wName )
+	
+	promptStr = currentPrefix + " : " + ChanNum2Char( channel )
+	
+	if ( NMRsCorrectionCall( cdf, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, rc=rc ) == 0 )
+		return NMChanTransformRsCorrect( channel=channel, rc=rc, history=1 )
+	endif
+	
+	return ""
+
+End // NMChanTransformRSCorrCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformRsCorrect( [ prefixFolder, channel, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, FC, dataUnitsX, dataUnitsY, rc, history ] )
+	String prefixFolder // prefix folder, pass nothing for current
+	Variable channel // pass nothing for current channel
+	
+	Variable Vhold // mV
+	Variable Vrev // mV
+	Variable Rs // MOhms
+	Variable Cm // pF
+	Variable Vcomp // fraction 0 - 1
+	Variable Ccomp // fraction 0 - 1
+	Variable Fc // kHz
+	String dataUnitsX // s, ms, us
+	String dataUnitsY // A, mA, uA, nA, pA
+	
+	STRUCT NMRsCorrParams &rc // or pass this structure instead
+	
+	Variable history
+	
+	String cdf, transformList, paramList = ""
+	
+	STRUCT NMRsCorrParams rc2
+	
+	if ( ParamIsDefault( prefixFolder ) )
+		prefixFolder = CurrentNMPrefixFolder()
+	else
+		paramList = NMCmdStrOptional( "prefixFolder", prefixFolder, paramList )
+	endif
+	
+	prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
+	
+	if ( strlen( prefixFolder ) == 0 )
+		return ""
+	endif
+	
+	if ( ParamIsDefault( channel ) || ( channel == -1 ) )
+		channel = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	endif
+	
+	cdf = NMChanTransformDF( channel, prefixFolder = prefixFolder )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	paramList = NMCmdNumOptional( "channel", channel, paramList )
+	
+	if ( ParamIsDefault( rc ) )
+	
+		if ( ParamIsDefault( Vhold ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Vrev ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Rs ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Cm ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Vcomp ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( Ccomp ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( dataUnitsX ) )
+			return ""
+		endif
+		
+		if ( ParamIsDefault( dataUnitsY ) )
+			return ""
+		endif
+		
+		rc2.Vhold = Vhold
+		rc2.Vrev = Vrev
+		rc2.Rs = Rs
+		rc2.Cm = Cm
+		rc2.Vcomp = Vcomp
+		rc2.Ccomp = Ccomp
+		rc2.Fc = Fc
+		rc2.dataUnitsX = dataUnitsX
+		rc2.dataUnitsY = dataUnitsY
+	
+	else
+	
+		rc2 = rc
+		
+		Vhold = rc.Vhold
+		Vrev = rc.Vrev
+		Rs = rc.Rs
+		Cm = rc.Cm
+		Vcomp = rc.Vcomp
+		Ccomp = rc.Ccomp
+		Fc = rc.Fc
+		dataUnitsX = rc.dataUnitsX
+		dataUnitsY = rc.dataUnitsY
+		
+	endif
+	
+	if ( NMRsCorrError( rc2 ) != 0 )
+		return "" // error
+	endif
+	
+	paramList = NMCmdNumOptional( "Vhold", Vhold, paramList )
+	paramList = NMCmdNumOptional( "Vrev", Vrev, paramList )
+	paramList = NMCmdNumOptional( "Rs", Rs, paramList )
+	paramList = NMCmdNumOptional( "Cm", Cm, paramList )
+	paramList = NMCmdNumOptional( "Vcomp", Vcomp, paramList )
+	paramList = NMCmdNumOptional( "Ccomp", Ccomp, paramList )
+	paramList = NMCmdNumOptional( "Fc", Fc, paramList )
+	paramList = NMCmdStrOptional( "dataUnitsX", dataUnitsX, paramList )
+	paramList = NMCmdStrOptional( "dataUnitsY", dataUnitsY, paramList )
+	
+	if ( history )
+		NMCommandHistory( paramList )
+	endif
+	
+	String p1List = "Vhold=" + num2str( Vhold ) + ",Vrev=" + num2str( Vrev ) + ",Rs=" + num2str( Rs ) + ",Cm=" + num2str( Cm ) + ","
+	String p2List = "Vcomp=" + num2str( Vcomp ) + ",Ccomp=" + num2str( Ccomp ) + ",Fc=" + num2str( Fc ) + ",dataUnitsX=" + dataUnitsX + "," + ",dataUnitsY=" + dataUnitsY + ","
+	
+	transformList = "Rs Correction," + p1List + p2List + ";"
+	SetNMstr( cdf + "TransformStr", transformList )
+	
+	ChanGraphsUpdate()
+	NMAutoTabCall()
+	
+	return transformList
+	
+End // NMChanTransformRsCorrect
 
 //****************************************************************
 //****************************************************************
@@ -3967,6 +4264,213 @@ Function /S NMChanTransformBaseline( channel, xbgn, xend [ prefixFolder, history
 	return transformList
 	
 End // NMChanTransformBaseline
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformZscoreCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable xbgn, xend
+	String cdf, mdf = NMMainDF
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	cdf = NMChanTransformDF( channel )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	xbgn = NumVarOrDefault( mdf+"Bsln_Bgn", NMBaselineXbgn )
+	xend = NumVarOrDefault( mdf+"Bsln_End", NMBaselineXend )
+	
+	xbgn = NumVarOrDefault( cdf + "ZscoreBgn", xbgn )
+	xend = NumVarOrDefault( cdf + "ZscoreEnd", xend )
+	
+	Prompt xbgn, NMPromptAddUnitsX( "compute mean/stdv from" )
+	Prompt xend, NMPromptAddUnitsX( "compute mean/stdv to" )
+	
+	DoPrompt "Z-score", xbgn, xend
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	SetNMvar( cdf + "ZscoreBgn", xbgn )
+	SetNMvar( cdf + "ZscoreEnd", xend )
+	
+	return NMChanTransformZscore( channel, xbgn, xend, history = 1 )
+
+End // NMChanTransformZscoreCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformZscore( channel, xbgn, xend [ prefixFolder, history ] )
+	Variable channel // ( -1 ) for current channel
+	Variable xbgn, xend // x-axis begin and end, use ( -inf, inf ) for all
+	String prefixFolder
+	Variable history
+	
+	String transformList, vlist = "", cdf
+	
+	vList = NMCmdNum( channel, vList, integer = 1 )
+	vList = NMCmdNum( xbgn, vList )
+	vList = NMCmdNum( xend, vList )
+	
+	if ( ParamIsDefault( prefixFolder ) )
+		prefixFolder = CurrentNMPrefixFolder()
+	else
+		vlist = NMCmdStrOptional( "prefixFolder", prefixFolder, vlist )
+	endif
+	
+	prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
+	
+	if ( strlen( prefixFolder ) == 0 )
+		return ""
+	endif
+	
+	if ( history )
+		NMCommandHistory( vlist )
+	endif
+	
+	if ( channel == -1 )
+		channel = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	endif
+	
+	cdf = NMChanTransformDF( channel, prefixFolder = prefixFolder )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	if ( numtype( xbgn ) > 0 )
+		xbgn = -inf
+	endif
+	
+	if ( numtype( xend ) > 0 )
+		xend = inf
+	endif
+	
+	transformList = "Z-score,xbgn=" + num2str( xbgn ) + ",xend=" + num2str( xend ) + "," + ";"
+	SetNMstr( cdf + "TransformStr", transformList )
+	
+	ChanGraphsUpdate()
+	NMAutoTabCall()
+	
+	return transformList
+	
+End // NMChanTransformZscore
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformIntegrateCall( channel )
+	Variable channel // ( -1 ) for current channel
+	
+	Variable method
+	String cdf
+	
+	if ( channel == -1 )
+		channel = CurrentNMChannel()
+	endif
+	
+	cdf = NMChanTransformDF( channel )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	method = NumVarOrDefault( cdf + "IntegrateMethod", 1 )
+	
+	method += 1
+	
+	Prompt method, "select integration method:", popup "rectangular;trapezoid;"
+	
+	DoPrompt "Integrate", method
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	method -= 1
+	
+	SetNMvar( cdf + "IntegrateMethod", method )
+	
+	return NMChanTransformIntegrate( channel, method = method, history = 1 )
+
+End // NMChanTransformIntegrateCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMChanTransformIntegrate( channel [ prefixFolder, method, history ] )
+	Variable channel // ( -1 ) for current channel
+	String prefixFolder
+	Variable method // ( 0 ) rectangular ( 1 ) trapezoid
+	Variable history
+	
+	String transformList, cdf, vlist = ""
+	
+	vList = NMCmdNum( channel, vList, integer = 1 )
+	
+	if ( ParamIsDefault( prefixFolder ) )
+		prefixFolder = CurrentNMPrefixFolder()
+	else
+		vlist = NMCmdStrOptional( "prefixFolder", prefixFolder, vlist )
+	endif
+	
+	prefixFolder = CheckNMPrefixFolderPath( prefixFolder )
+	
+	if ( strlen( prefixFolder ) == 0 )
+		return ""
+	endif
+	
+	if ( !ParamIsDefault( method ) )
+		vlist = NMCmdNumOptional( "method", method, vlist )
+	endif
+	
+	if ( history )
+		NMCommandHistory( vlist )
+	endif
+	
+	if ( channel == -1 )
+		channel = NumVarOrDefault( prefixFolder + "CurrentChan", 0 )
+	endif
+	
+	cdf = NMChanTransformDF( channel, prefixFolder = prefixFolder )
+	
+	if ( strlen( cdf ) == 0 )
+		return ""
+	endif
+	
+	switch( method )
+	
+		case 0: // rectangular
+		case 1: // trapezoid
+			break
+	
+		default:
+			return ""
+
+	endswitch
+	
+	transformList = "Integrate,method=" + num2istr( method ) + "," + ";"
+	SetNMstr( cdf + "TransformStr", transformList )
+	
+	ChanGraphsUpdate()
+	NMAutoTabCall()
+	
+	return transformList
+	
+End // NMChanTransformIntegrate
 
 //****************************************************************
 //****************************************************************
@@ -4938,9 +5442,9 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 	
 	Variable icnt, wcnt, xbgn1, xend1, xbgn2, xend2
 	Variable outputNum, minValue, maxValue, negone = -1
-	Variable sfreq, fratio, numWaves, numAvgWaves, wrap, bbgn, bend, dx, offset, npnts
+	Variable sfreq, fratio, numWaves, numAvgWaves, wrap, bbgn, bend, dx, offset, npnts, method
 	
-	String fxn1, fxn2, wName, wName2, tList, transform, output, mdf = NMMainDF
+	String fxn1, fxn2, wName, wName2, dNameX, tList, transform, output, mdf = NMMainDF
 	
 	String avgList = "" // running avg wave list
 	String avgList2 = "" // for filtering
@@ -5152,20 +5656,28 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 			case "Phase Plane":
 			
-				String phasePlaneName = dstName + "_diff"
-				String phasePlaneNameX = dstName + "_diffX"
+				dNameX = NMChanDisplayWaveNameX( dstName )
 				
-				Duplicate /O $dstName $phasePlaneName, $phasePlaneNameX
-				Differentiate $phasePlaneName
+				Duplicate /O $dstName $dNameX // y-wave becomes x-wave
+				
+				if ( WaveExists( $xWave ) )
+					Differentiate $dstName /X=$xWave
+				else
+					Differentiate $dstName
+				endif
 				
 				break
 				
 			case "Integrate":
+				
+				method = str2num( StringByKey("method", tList, "=", ",") )
+				
 				if ( WaveExists( $xWave ) )
-					Integrate $dstName /X=$xWave
+					Integrate /Meth=( method ) $dstName /X=$xWave
 				else
-					Integrate $dstName
+					Integrate /Meth=( method ) $dstName
 				endif
+				
 				break
 				
 			case "FFT":
@@ -5228,15 +5740,6 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 				break
 				
-			case "dF/Fo":
-			
-				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
-				bend = str2num( StringByKey("xend", tList, "=", ",") )
-				
-				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, DFOF = 1 )
-				
-				break
-				
 			case "Baseline":
 			
 				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
@@ -5246,11 +5749,69 @@ Function ChanWaveMake( channel, srcName, dstName [ prefixFolder, filterAlg, filt
 				
 				break
 				
+			case "dF/Fo":
+			
+				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
+				bend = str2num( StringByKey("xend", tList, "=", ",") )
+				
+				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, DFOF = 1 )
+				
+				break
+				
+			case "Rs Correction":
+			
+				STRUCT NMRsCorrParams rc
+				
+				rc.Vhold = str2num( StringByKey("Vhold", tList, "=", ",") )
+				rc.Vrev = str2num( StringByKey("Vrev", tList, "=", ",") )
+				rc.Rs = str2num( StringByKey("Rs", tList, "=", ",") )
+				rc.Cm = str2num( StringByKey("Cm", tList, "=", ",") )
+				rc.Vcomp = str2num( StringByKey("Vcomp", tList, "=", ",") )
+				rc.Ccomp = str2num( StringByKey("Ccomp", tList, "=", ",") )
+				rc.Fc = str2num( StringByKey("Fc", tList, "=", ",") )
+				rc.dataUnitsX = StringByKey("dataUnitsX", tList, "=", ",")
+				rc.dataUnitsY = StringByKey("dataUnitsY", tList, "=", ",")
+				
+				STRUCT NMParams nm
+				
+				NMParamsNull( nm )
+				nm.folder = NMParent( dstName )
+				nm.wList = NMChild( dstName )
+				
+				NMRsCorrection( nm, rc )
+				
+				break
+				
+			case "Z-score":
+			
+				bbgn = str2num( StringByKey("xbgn", tList, "=", ",") )
+				bend = str2num( StringByKey("xend", tList, "=", ",") )
+				
+				NMBaseline( dstName, xbgn = bbgn, xend = bend, xWave = xWave, Zscore = 1 )
+				
+				break
+				
 			case "Invert":
 			
 				Wave wtemp = $dstName
 				
 				MatrixOp /O wtemp = wtemp * negone
+				
+				break
+				
+			case "Log":
+			
+				Wave wtemp = $dstName
+				
+				wtemp = log( wtemp )
+				
+				break
+				
+			case "Ln":
+			
+				Wave wtemp = $dstName
+				
+				wtemp = ln( wtemp )
 				
 				break
 				
@@ -5624,14 +6185,19 @@ End // NMDragVariableSet
 //****************************************************************
 //****************************************************************
 
-Function NMDragTrigger( offsetStr )
+Function NMDragTrigger( offsetStr [ callAutoTab ] )
 	String offsetStr
+	Variable callAutoTab
 	
 	Variable tt, offset, pnt
 	String gName, wName, xNamePath, yNamePath, graphMinMax, waveVarName, varName
 	
 	if ( strlen( offsetStr ) == 0 )
 		return -1
+	endif
+	
+	if ( ParamIsDefault( callAutoTab ) )
+		callAutoTab = 1
 	endif
 	
 	gname = StringByKey( "GRAPH", offsetStr )
@@ -5686,7 +6252,9 @@ Function NMDragTrigger( offsetStr )
 	
 	SetNMvar( NMDF+"AutoDoUpdate", 0 ) // prevent DoUpdate in Tab Auto functions
 	
-	NMAutoTabCall()
+	if ( callAutoTab )
+		NMAutoTabCall()
+	endif
 	
 	SetNMvar( NMDF+"AutoDoUpdate", 1 ) // reset update flag
 	

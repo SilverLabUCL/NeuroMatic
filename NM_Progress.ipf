@@ -34,32 +34,13 @@
 Constant NMProgWinWidth = 260 // pixels
 Constant NMProgWinHeight = 100 // pixels
 
-Constant NMProgButtonX0 = 90
-Constant NMProgButtonY0 = 70
-Constant NMProgButtonXwidth = 80
-Constant NMProgButtonYwidth = 20
+Static Constant NMProgButtonX0 = 90
+Static Constant NMProgButtonY0 = 70
+Static Constant NMProgButtonXwidth = 80
+Static Constant NMProgButtonYwidth = 20
 
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function NMProgressXY( xpixels, ypixels )
-	Variable xpixels, ypixels
-	
-	if ( ( numtype( xPixels ) > 0 ) || ( xPixels < 0 ) )
-		xPixels = NaN
-	endif
-	
-	if ( ( numtype( yPixels ) > 0 ) || ( yPixels < 0 ) )
-		yPixels = NaN
-	endif
-	
-	SetNMvar( NMDF+"xProgress", xpixels )
-	SetNMvar( NMDF+"yProgress", ypixels )
-	
-	return 0
-
-End // NMProgressXY
+Static Constant NMProgPopupX0 = 240
+Static Constant NMProgPopupY0 = 70
 
 //****************************************************************
 //****************************************************************
@@ -67,17 +48,18 @@ End // NMProgressXY
 
 Function NMProgressX()
 
-	Variable xProgress = NMVarGet( "xProgress" )
-	Variable xLimit = NMComputerPixelsX() - NMProgWinWidth
+	Variable xprogress = NMVarGet( "xProgress" )
+	Variable xpixels = NMScreenPixelsX(igorFrame=1)
+	Variable xlimit = xpixels - NMProgWinWidth
 	
-	if ( numtype( xProgress ) > 0 )
-		xProgress = ( NMComputerPixelsX() - 2 * NMProgWinWidth ) / 2
-	else
-		xProgress = max( xProgress, 0 )
-		xProgress = min( xProgress, xLimit )
+	if ( numtype( xprogress ) > 0 )
+		xprogress = ( xpixels - NMProgWinWidth ) * 0.5
 	endif
 	
-	return xProgress
+	xprogress = max( xprogress, 0 )
+	xprogress = min( xprogress, xlimit )
+	
+	return xprogress
 	
 End // NMProgressX
 
@@ -87,17 +69,18 @@ End // NMProgressX
 
 Function NMProgressY()
 	
-	Variable yProgress = NMVarGet( "yProgress" )
-	Variable yLimit = NMComputerPixelsY() - NMProgWinHeight
+	Variable yprogress = NMVarGet( "yProgress" )
+	Variable ypixels = NMScreenPixelsY(igorFrame=1)
+	Variable ylimit = ypixels - NMProgWinHeight
 	
-	if ( numtype( yProgress ) > 0 )
-		yProgress = 0.5 * NMComputerPixelsY()
-	else
-		yProgress = max( yProgress, 0 )
-		yProgress = min( yProgress, yLimit )
+	if ( numtype( yprogress ) > 0 )
+		yprogress = 0.7 * ypixels
 	endif
 	
-	return yProgress
+	yprogress = max( yprogress, 0 )
+	yprogress = min( yprogress, ylimit )
+	
+	return yprogress
 
 End // NMProgressY
 
@@ -405,14 +388,27 @@ End // NMProgWinXOPCancel
 //****************************************************************
 //****************************************************************
 
-Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
+Function NMProgWin61( fraction, progressStr [ buttonNameList, buttonFxn ] ) // Igor Progress Window
 	Variable fraction
 	String progressStr
+	String buttonNameList
+	String buttonFxn
 	
 	// fraction of progress between 0 and 1, where ( 0 ) creates and ( 1 ) kills progress window
 	// candy ( -1 ) create candy ( -2 ) spin candy ( 1 ) kill candy
 	
-	Variable xProgress, yProgress, x0
+	Variable xProgress, yProgress, pheight, icnt
+	Variable x0, y0, x1, y1, xw
+	Variable fs = 12
+	String bname, btitle
+	
+	if ( ParamIsDefault( buttonNameList ) )
+		buttonNameList = ""
+	endif
+	
+	if ( ParamIsDefault( buttonFxn ) )
+		buttonFxn = ""
+	endif
 	
 	if ( numtype( fraction ) > 0 )
 		return -1
@@ -421,6 +417,8 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 	if ( IgorVersion() < 6.1 )
 		return -1 // not available
 	endif
+	
+	pheight = NMProgWinHeight + 30 * ItemsInList( buttonNameList ) // extra buttons
 		
 	if ( fraction >= 1 ) // kill progress display
 	
@@ -437,31 +435,54 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 		xProgress = NMProgressX()
 		yProgress = NMProgressY()
 		
-		x0 = NMProgWinWidth - 10
-	
-		NewPanel /FLT/K=1/N=NMProgressPanel /W=(xProgress,yProgress,xProgress+NMProgWinWidth,yProgress+NMProgWinHeight) as "NM Progress"
+		xw = NMProgWinWidth - 10
 		
-		TitleBox /Z NM_ProgWinTitle, pos={5,10}, size={x0,18}, fsize=9, fixedSize=1, win=NMProgressPanel
+		x0 = xProgress
+		y0 = yProgress
+		x1 = xProgress + NMProgWinWidth
+		y1 = yProgress + pheight
+		
+		NewPanel /FLT/K=1/N=NMProgressPanel /W=(x0,y0,x1,y1) as "NM Progress"
+		
+		TitleBox /Z NM_ProgWinTitle, pos={5,10}, size={xw,18}, fsize=fs, fixedSize=1, win=NMProgressPanel
 		TitleBox /Z NM_ProgWinTitle, frame=0, title=progressStr, anchor=MC, win=NMProgressPanel
 	
-		ValDisplay NM_ProgWinValDisplay, pos={5,40}, size={x0,18}, limits={0,1,0}, barmisc={0,0}, win=NMProgressPanel
-		ValDisplay NM_ProgWinValDisplay, highColor=(1,34817,52428), win=NMProgressPanel // green
+		ValDisplay /Z NM_ProgWinValDisplay, pos={5,40}, size={xw,18}, limits={0,1,0}, barmisc={0,0}, win=NMProgressPanel
+		ValDisplay /Z NM_ProgWinValDisplay, highColor=(1,34817,52428), win=NMProgressPanel // green
 		
 		if ( fraction == -1 )
-			ValDisplay NM_ProgWinValDisplay, mode=4, value= _NUM:0, win=NMProgressPanel // candy stripe
+			ValDisplay /Z NM_ProgWinValDisplay, mode=4, value= _NUM:0, win=NMProgressPanel // candy stripe
 		else
-			ValDisplay NM_ProgWinValDisplay, mode=3, value= _NUM:0, win=NMProgressPanel // bar with no fractional part
+			ValDisplay /Z NM_ProgWinValDisplay, mode=3, value= _NUM:0, win=NMProgressPanel // bar with no fractional part
 		endif
 		
-		x0 = NMProgWinWidth / 2 - 40
+		x0 = NMProgButtonX0
+		y0 = NMProgButtonY0
 	
-		Button NM_ProgWinButtonStop, pos={NMProgButtonX0,NMProgButtonY0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, title="Cancel", win=NMProgressPanel, proc=NMProgWin61Button
+		Button NM_ProgWinButtonCancel, pos={x0,y0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, fsize=fs, title="Cancel", win=NMProgressPanel, proc=NMProgWin61Button
 	
+		if ( ( ItemsInList( buttonNameList ) > 0 ) && ( exists( buttonFxn ) == 6 ) )
+		
+			for ( icnt = 0 ; icnt < ItemsInList( buttonNameList ) ; icnt += 1 )
+			
+				bname = "NM_ProgWinButton" + num2istr( icnt )
+				btitle = StringFromList( icnt, buttonNameList )
+				
+				y0 += 30
+				
+				Button $bname, pos={x0,y0}, size={NMProgButtonXwidth,NMProgButtonYwidth}, fsize=fs, title=btitle, win=NMProgressPanel, proc=$buttonFxn
+			
+			endfor
+			
+		endif
+		
 		SetActiveSubwindow _endfloat_
 		
 		DoUpdate /W=NMProgressPanel /E=1 // mark this as our progress window
 		
-		SetWindow NMProgressPanel, hook(nmprogwin61)=NMProgWin61Hook
+		if ( WinType( "NMProgressPanel" ) == 7 ) // need if-statement to prevent Igor error
+			SetWindow NMProgressPanel, hook(nmprogwin61)=NMProgWin61Hook
+		endif
 		
 		SetNMvar( NMDF+"NMProgressCancel", 0 )
 		
@@ -481,14 +502,10 @@ Function NMProgWin61( fraction, progressStr ) // Igor Progress Window
 		TitleBox /Z NM_ProgWinTitle, title=progressStr, win=NMProgressPanel
 		DoUpdate /W=NMProgressPanel
 		
-		if ( WinType( "NMProgressPanel" ) == 7 )
-		
-			if ( fraction > 0 )
-				ValDisplay NM_ProgWinValDisplay,mode=3,value= _NUM:fraction,win=NMProgressPanel // update bar fraction
-			elseif ( fraction < 0 )
-				ValDisplay NM_ProgWinValDisplay,mode=4,value= _NUM:1,win=NMProgressPanel // update candy
-			endif
-		
+		if ( fraction > 0 )
+			ValDisplay /Z NM_ProgWinValDisplay,mode=3,value= _NUM:fraction,win=NMProgressPanel // update bar fraction
+		elseif ( fraction < 0 )
+			ValDisplay /Z NM_ProgWinValDisplay,mode=4,value= _NUM:1,win=NMProgressPanel // update candy
 		endif
 	
 	endif
@@ -503,16 +520,23 @@ End // NMProgWin61
 
 Function NMProgWin61Kill()
 
+	Variable x, y, scale = 1
+
 	if ( WinType( "NMProgressPanel" ) == 0 )
 		return 0
 	endif
 	
+	if ( NMProgressFlag() == 2 )
+		scale = 1 / NMPointsPerPixel()
+	endif
+	
 	GetWindow NMProgressPanel, wsize
 	
-	Variable scale = ScreenResolution / PanelResolution( "" )
+	x = round( V_left * scale )
+	y = round( V_top * scale )
 	
-	SetNMvar( NMDF+"xProgress", V_left * scale )
-	SetNMvar( NMDF+"yProgress", V_top * scale ) // save progress window position
+	SetNMvar( NMDF + "xProgress", x )
+	SetNMvar( NMDF + "yProgress", y ) // save progress window position
 	
 	KillWindow NMProgressPanel
 
@@ -538,7 +562,7 @@ Function NMProgWin61Hook(s)
 		
 		if ( ( s.mouseLoc.h >= NMProgButtonX0 ) && ( s.mouseLoc.h <= NMProgButtonX0 + NMProgButtonXwidth ) )
 			if ( ( s.mouseLoc.v >= NMProgButtonY0 ) && ( s.mouseLoc.v <= NMProgButtonY0 + NMProgButtonYwidth ) )
-				SetNMvar( NMDF+"NMProgressCancel", 1 )
+				SetNMvar( NMDF + "NMProgressCancel", 1 )
 				return 1
 			endif
 		endif
@@ -556,11 +580,45 @@ End //NMProgWin61Hook
 Function NMProgWin61Button( ctrlName ) : ButtonControl // DOES NOT ALWAYS WORK
 	String ctrlName
 	
-	SetNMvar( NMDF+"NMProgressCancel", 1 )
+	strswitch( ctrlName )
 	
-	KillWindow NMProgressPanel
+		case "NM_ProgWinButtonCancel":
+			SetNMvar( NMDF + "NMProgressCancel", 1 )
+			//KillWindow NMProgressPanel
+			break
+			
+		case "NM_ProgWinButton0":
+			//print "Button0"
+			//NMNotesAddNote("Button0")
+			break
+	
+	
+	endswitch
+	
+	return 0
 
 End // NMProgWin61Button
+
+//****************************************************************
+//****************************************************************
+
+Function NMProgWin61Popup(ctrlName, popNum, popStr) : PopupMenuControl
+	String ctrlName; Variable popNum; String popStr
+	
+	PopupMenu NM_ProgWinPopup, mode=1, win=NMProgressPanel
+	
+	strswitch( popStr )
+	
+		case " ":
+			return 0 // nothing
+	
+		default:
+
+			Print popStr
+			
+	endswitch
+
+End // NMProgWin61Popup
 
 //****************************************************************
 //****************************************************************
@@ -596,7 +654,7 @@ Function NMProgressXYButton( ctrlName ) : ButtonControl
 	Variable x, y, scale = 1
 	
 	if ( NMProgressFlag() == 2 )
-		scale = ScreenResolution / PanelResolution( "" )
+		scale = 1 / NMPointsPerPixel()
 	endif
 	
 	GetWindow NMProgressPanel, wsize
@@ -647,6 +705,28 @@ Function NMProgressTest( candy )
 	return 0
 
 End // NMProgressTest
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMProgressXY( xpixels, ypixels ) // NOT USED
+	Variable xpixels, ypixels
+	
+	if ( ( numtype( xpixels ) > 0 ) || ( xpixels < 0 ) )
+		xpixels = NaN
+	endif
+	
+	if ( ( numtype( ypixels ) > 0 ) || ( ypixels < 0 ) )
+		ypixels = NaN
+	endif
+	
+	SetNMvar( NMDF+"xProgress", xpixels )
+	SetNMvar( NMDF+"yProgress", ypixels )
+	
+	return 0
+
+End // NMProgressXY
 
 //****************************************************************
 //****************************************************************

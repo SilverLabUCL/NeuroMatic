@@ -163,21 +163,67 @@ End // NMStimAcqModeStr
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalGet(sdf, boardNum)
+Function NMStimSampleInterval( sdf [ DAC ] )
 	String sdf // stim data folder path
-	Variable boardNum
+	Variable DAC // ( 1 ) for DAC waveform generation (allows upsampling)
+	
+	Variable upsamples
+	
+	sdf = CheckStimDF( sdf )
+	
+	Variable intvl = NumVarOrDefault( sdf + "SampleInterval", NaN )
+
+	if ( NMStimDACUpSamplingOK() && DAC )
+	
+		upsamples = round( NumVarOrDefault( sdf + "DACUpsamples", 1 ) )
+		
+		if ( upsamples > 1 )
+			intvl /= upsamples
+		endif
+		
+	endif
+	
+	//return ( floor( 1e6 * intvl ) / 1e6 )
+	return intvl
+
+End // NMStimSampleInterval
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMStimDACUpSamplingOK()
+
+	String acqBoard = StrVarOrDefault( NMClampDF + "AcqBoard", "" )
+
+	if ( StringMatch( acqBoard, "NIDAQ" ) )
+		return 1 // only OK with NIDAQ boards
+	else
+		return 0
+		//return 1 // for testing
+	endif
+
+End // NMStimDACUpSamplingOK
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function StimIntervalGet_DEPRECATED1(sdf, boardNum)
+	String sdf // stim data folder path
+	Variable boardNum // NOT USED
 	
 	sdf = CheckStimDF(sdf)
 	
-	return StimIntervalCheck(NumVarOrDefault(sdf+"SampleInterval", 1))
+	return NumVarOrDefault(sdf+"SampleInterval", 1)
 		
-End // StimIntervalGet
+End // StimIntervalGet_DEPRECATED1
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalGet_DEPRECATED(sdf, boardNum)
+Function StimIntervalGet_DEPRECATED2(sdf, boardNum)
 	String sdf // stim data folder path
 	Variable boardNum
 	
@@ -194,20 +240,20 @@ Function StimIntervalGet_DEPRECATED(sdf, boardNum)
 		sampleInterval = NumVarOrDefault(varName, sampleInterval)
 	endif
 	
-	return StimIntervalCheck(sampleInterval)
+	return sampleInterval
 		
-End // StimIntervalGet_DEPRECATED
+End // StimIntervalGet_DEPRECATED2
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function StimIntervalCheck(intvl)
+Function StimIntervalCheck_DEPRECATED( intvl )
 	Variable intvl
 	
-	return (round(1e6*intvl)/1e6)
+	return ( floor( 1e6 * intvl ) / 1e6 )
 	
-End // StimIntervalCheck
+End // StimIntervalCheck_DEPRECATED
 
 //****************************************************************
 //****************************************************************
@@ -223,10 +269,14 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 	String sdf // stim data folder
 	Variable forceUpdate
 
-	Variable icnt, items, config, npnts, new, numWaves
-	String io, wName, wPrefix, klist, plist, ulist, wList = ""
+	Variable icnt, jcnt, wcnt, items, config, npnts, dt
+	Variable pgoff, new, numWaves, foundMyWave
+	String stimName, io, preFxnList, interFxnList
+	String wPrefix, wSuffix, wName, wName2, myName
+	String kList, pList, uList, wList = ""
 	
 	Variable zeroDACLastPoints = NumVarOrDefault( NMClampDF + "ZeroDACLastPoints", 1 )
+	Variable forceEvenPoints = NumVarOrDefault( NMClampDF + "ForceEvenPoints", 0 )
 	
 	sdf = CheckStimDF(sdf)
 	
@@ -234,9 +284,13 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 		return ""
 	endif
 	
+	pgOff = NumVarOrDefault(sdf+"PulseGenOff", 0)
+	
+	stimName = NMChild( sdf )
+	
 	numWaves = NumVarOrDefault(sdf+"NumStimWaves", 0)
 	
-	plist = StimPrefixListAll(sdf)
+	pList = StimPrefixListAll(sdf)
 	
 	wList = NMFolderWaveList( sdf, "*_pulse", ";", "", 0 )
 	
@@ -245,61 +299,160 @@ Function /S StimWavesCheck(sdf, forceUpdate)
 		NMStimWavesPulseUpdate( sdf, wName )
 	endfor
 	
-	for (icnt = 0; icnt < ItemsInList(plist); icnt += 1)
+	for (icnt = 0; icnt < ItemsInList(pList); icnt += 1)
 	
-		wPrefix = StringFromList(icnt, plist)
+		wPrefix = StringFromList(icnt, pList)
 		io = StimPrefix(wPrefix)
 		config = StimConfigNum(wPrefix)
 		
 		wList = NMFolderWaveList(sdf, wPrefix + "*", ";", "",0)
-		ulist = NMFolderWaveList(sdf, "u"+wPrefix + "*", ";", "",0) // unscaled waves for display
-		
-		if (ItemsInLIst(ulist) == 0)
-			ulist = NMFolderWaveList(sdf, "My"+wPrefix + "*", ";", "",0) // try "My" waves
-		endif
-		
 		wList = RemoveFromList(wPrefix + "_pulse", wList)
 		
-		if ((forceUpdate) || (ItemsInList(wList) < numWaves) || (ItemsInList(ulist) < numWaves))
-			wList += StimWavesMake(sdf, io, config, NaN)
-			new = 1
+		uList = NMFolderWaveList(sdf, "u"+wPrefix + "*", ";", "",0) // unscaled waves for display
+		
+		if (ItemsInLIst(uList) == 0)
+			uList = NMFolderWaveList(sdf, "My"+wPrefix + "*", ";", "",0) // try "My" waves
 		endif
 		
+		if (forceUpdate || (ItemsInList(wList) < numWaves) || (ItemsInList(uList) < numWaves))
+			//wList += StimWavesMake(sdf, io, config, NaN)
+			wList = StimWavesMake(sdf, io, config, NaN)
+			new = 1
+		endif
+	
+		items = ItemsInList( wList )
+		
+		if ( forceEvenPoints && ( items > 0 ) )
+		
+			for ( wcnt = 0 ; wcnt < items ; wcnt += 1 )
+			
+				wName = StringFromList( wcnt, wList )
+				
+				npnts = numpnts( $sdf + wName )
+				
+				if ( mod( npnts, 2 ) == 0 )
+					continue // OK, even
+				endif
+				
+				npnts += 1
+				
+				Redimension /N=( npnts ) $sdf + wName
+				
+			endfor
+			
+		endif
+		
+		if ( zeroDACLastPoints && ( items > 0 ) )
+		
+			jcnt = items - 1 // does this for last wave in list
+			
+			wName = StringFromList( jcnt, wList )
+				
+			if ( WaveExists( $sdf + wName ) )
+			
+				Wave wtemp = $sdf + wName
+				
+				npnts = numpnts( wtemp )
+				
+				wtemp[ npnts - 1 ] = 0 // make sure last 2 points are 0
+				wtemp[ npnts - 2 ] = 0
+			
+			endif
+		
+		endif
+	
 	endfor
 	
-	items = ItemsInList(wList)
+	if ( pgOff ) // if "My" waves exist, check waves have matching npnts and dt
 	
-	if ( zeroDACLastPoints )
-	
-		for (icnt = 0; icnt < items; icnt += 1)
+		for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 		
-			wName = StringFromList(icnt, wList)
+			foundMyWave = 0
+		
+			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
 			
-			if (WaveExists($sdf+wName) == 0)
-				continue
+				wPrefix = StringFromList( icnt, pList )
+				wName = wPrefix + "_" + num2istr( wcnt ) // e.g. DAC_0_0 (copy of MyDAC)
+				myName = "My" + wPrefix + "_" + num2istr( wcnt ) // e.g. MyDAC_0_0
+				
+				if ( WaveExists( $sdf + myName ) )
+					foundMyWave = 1
+					break
+				endif
+			
+			endfor
+		
+			if ( !foundMyWave )
+				break
 			endif
 			
-			Wave wtemp = $sdf+wName
+			npnts = numpnts( $sdf + wName )
+			dt = deltax( $sdf + wName )
 			
-			npnts = numpnts(wtemp)
+			for ( icnt = 0; icnt < ItemsInList( pList ); icnt += 1 )
 			
-			if ( icnt == items - 1 )
-				wtemp[npnts-1] = 0 // make sure last points are set to zero in last wave
-				wtemp[npnts-2] = 0
-			endif
+				wPrefix = StringFromList( icnt, pList )
+				wName2 = wPrefix + "_" + num2istr( wcnt ) // DAC/TTL waves
+				
+				if ( WaveExists( $sdf + wName2 ) )
+				
+					if ( numpnts( $sdf + wName2 ) != npnts )
+						Redimension /N=( npnts ) $sdf + wName2
+					endif
+					
+					if ( deltax( $sdf + wName2 ) != dt )
+						Setscale /P x 0, dt, $sdf + wName2
+					endif
+					
+				endif
+				
+				wName2 = "u" + wName2 // uDAC/uTTL waves
+				
+				if ( WaveExists( $sdf + wName2 ) )
+				
+					if ( numpnts( $sdf + wName2 ) != npnts )
+						Redimension /N=( npnts ) $sdf + wName2
+					endif
+					
+					if ( deltax( $sdf + wName2 ) != dt )
+						Setscale /P x 0, dt, $sdf + wName2
+					endif
+					
+				endif
+			
+			endfor
 			
 		endfor
 	
 	endif
 	
-	if (new == 1)
+	if ( new )
 	
-		klist = NMFolderWaveList(sdf, "ITCoutWave*", ";", "",0)
+		kList = NMFolderWaveList(sdf, "ITCoutWave*", ";", "",0)
 		
-		for (icnt = 0; icnt < ItemsInList(klist); icnt += 1)
-			KillWaves /Z $StringFromList(icnt, klist)
+		for (icnt = 0; icnt < ItemsInList(kList); icnt += 1)
+			KillWaves /Z $StringFromList(icnt, kList)
 		endfor
 		
+	endif
+	
+	preFxnList = StrVarOrDefault( sdf + "PreStimFxnList", "" )
+	
+	if ( WhichListItem( "RandomOrder", preFxnList ) >= 0 ) // move RandomOrder to InterStimFxnList
+	
+		interFxnList = StrVarOrDefault( sdf + "InterStimFxnList", "" )
+		
+		if ( WhichListItem( "RandomOrder", interFxnList ) < 0 )
+			interFxnList = AddListItem( "RandomOrder", interFxnList, ";", inf )
+			SetNMstr( sdf + "InterStimFxnList", interFxnList )
+		endif
+		
+		preFxnList = RemoveFromList( "RandomOrder", preFxnList )
+		
+		SetNMstr( sdf + "PreStimFxnList", preFxnList )
+		
+		NMHistory( "Clamp Stim " + stimName + " : RandomOrder moved to " + NMQuotes( "during" ) + " acquisition macro list." )
+	
 	endif
 	
 	return wList
@@ -383,8 +536,8 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	Variable config // config number
 	Variable xTTL // not used anymore
 	
-	Variable wcnt, dt, scale, alert
-	String pName, wPrefix, wName, wList = "", wList2, ioUnits
+	Variable ccnt, wcnt, dt, scale, alert
+	String pName, wPrefix, wName, wName2, wList = "", wList2, ioUnits
 	String bdf = NMStimBoardDF(sdf)
 	
 	STRUCT NMParams nm
@@ -429,7 +582,7 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	
 	scale = 1 / OUTscale[config]
 	
-	dt = StimIntervalGet(sdf, OUTboard[config])
+	dt = NMStimSampleInterval( sdf, DAC = 1 )
 	
 	wPrefix = StimWaveName(io, config, -1)
 	
@@ -445,13 +598,13 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 	
 	wList2 = wList
 	
-	if (pgOff == 1) // use "My" waves, such as MyDAC_0_0, MyDac_0_1, etc.
+	if ( pgOff ) // use "My" waves, such as MyDAC_0_0, MyDac_0_1, etc.
 	
 		for (wcnt = 0; wcnt < ItemsInList(wList); wcnt += 1)
 		
 			wName = StringFromList(wcnt, wList)
 			
-			if (WaveExists($sdf+"My"+wName) == 1)
+			if ( WaveExists( $sdf + "My" + wName ) )
 			
 				//if ((deltax($sdf+"My"+wName) != dt) && (alert == 0))
 					//NMDoAlert("Error: encountered incorrect sample interval for wave: " + sdf + "My" + wName + " : " + num2str(deltax($sdf+"My"+wName)) + " , " + num2str(dt)
@@ -475,6 +628,10 @@ Function /S StimWavesMake(sdf, io, config, xTTL)
 			
 		endfor
 		
+	endif
+	
+	if ( ItemsInList( wList2 ) == 0 )
+		return wList // finished
 	endif
 	
 	nm.folder = sdf
@@ -643,10 +800,10 @@ Function /S StimTable(sdf, pName, df, prefix [ tableName ] )
 	
 	Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) $(pName) as title
 	
-	Execute /Z "ModifyTable title(Point)= " + NMQuotes( "Config" )
-	Execute /Z "ModifyTable alignment=0"
-	Execute /Z "ModifyTable width=400"
-	Execute /Z "ModifyTable width( Point )=40"
+	ModifyTable /W=$tableName title(Point)="Config"
+	ModifyTable /W=$tableName alignment=0
+	ModifyTable /W=$tableName width=400
+	ModifyTable /W=$tableName width(Point)=40
 	
 	return tableName
 
@@ -693,8 +850,7 @@ Function NMStimBoardConfigTable(sdf, io, wList, hook)
 	NMWinCascadeRect( w )
 	
 	Edit /N=$tName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
-	
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Config" )
+	ModifyTable /W=$tName title(Point)="Config"
 	
 	if (hook == 1)
 		SetWindow $tName
@@ -709,7 +865,7 @@ Function NMStimBoardConfigTable(sdf, io, wList, hook)
 		endif
 		
 		if (WaveExists($wName) == 1)
-			AppendToTable $wName
+			AppendToTable /W=$tName $wName
 		endif
 	
 	endfor

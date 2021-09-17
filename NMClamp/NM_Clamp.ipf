@@ -110,13 +110,15 @@ End // NMTabPrefix_Clamp
 
 Function NMClampTab( enable )
 	Variable enable // ( 0 ) disable ( 1 ) enable
+	
+	Variable clampExists = DataFolderExists( NMStimsDF )
 
 	if ( enable == 1 )
-	
+
 		CheckNMPackage( "Stats", 1 ) // necessary for auto-stats
 		CheckNMPackage( "Spike", 1 ) // necessary for auto-spike
 		CheckNMPackage( "Clamp", 1 ) // create clamp global variables
-		CheckNMPackage( "Notes", 1 ) // create Notes folder
+		CheckNMPackageNotes()
 		
 		//LogParentCheck()
 		CheckNMStimsDF()
@@ -132,6 +134,10 @@ Function NMClampTab( enable )
 		
 		NMGroupsSet( on = 1 )
 		
+		if ( !clampExists )
+			NMNotesClearFileVars() // clear file note vars at start
+		endif
+		
 	else
 	
 		ClampStats( 0 )
@@ -144,6 +150,35 @@ Function NMClampTab( enable )
 	NMStimCurrentChanSet( "", CurrentNMChannel() ) // update current channel
 
 End // NMClampTab
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function CheckNMPackageNotes()
+
+	String df, oldDF, newDF
+	String newName = "ClampNotes"
+	
+	df = "root:Packages:NeuroMatic:"
+	oldDF = df + "Notes:"
+	newDF = df + newName + ":"
+	
+	if ( DataFolderExists( oldDF ) && !DataFolderExists( newDF ) )
+		RenameDataFolder $oldDF, $newName
+	endif
+	
+	df = "root:Packages:NeuroMatic:Configurations:"
+	oldDF = df + "Notes:"
+	newDF = df + newName + ":"
+	
+	if ( DataFolderExists( oldDf ) && !DataFolderExists( newDF ) )
+		RenameDataFolder $oldDf, $newName
+	endif
+	
+	CheckNMPackage( newName, 1 )
+
+End // CheckNMPackageNotes
 
 //****************************************************************
 //****************************************************************
@@ -235,8 +270,8 @@ Function NMClampCheck()
 	CheckNMstr( cdf+"OpenStimList", "All" )			// external stim files to open
 	CheckNMstr( cdf+"CurrentStim", "" ) 				// current stimulus protocol
 	CheckNMvar( cdf+"ZeroDACLastPoints", 1 )			// zero last points in DAC waves ( 0 ) no ( 1 ) yes
+	CheckNMvar( cdf+"ForceEvenPoints", 0 )			// force even number of sample points ( 0 ) no ( 1 ) yes
 	
-	CheckNMvar( cdf+"PulseEditByPrompt", 1 )		// edit pulse listbox configs via user prompts ( 0 ) no ( 1 ) yes
 	CheckNMvar( cdf+"PulsePromptBinomial", 0 )
 	CheckNMvar( cdf+"PulsePromptSTDV", 0 )
 	CheckNMvar( cdf+"PulsePromptCV", 0 )
@@ -255,7 +290,7 @@ End // NMClampCheck
 
 Function NMClampConfigEdit() // called from NM_Configurations
 
-	NMConfigEdit( "Notes" )
+	//NMConfigEdit( "ClampNotes" )
 
 End // NMClampConfigEdit
 
@@ -294,7 +329,8 @@ Function NMClampConfigs()
 	NMConfigVar( fname, "MultiClamp700Save", 0, "save MultiClamp 700 Commander variables", "boolean" )
 	
 	NMConfigVar( fname, "ZeroDACLastPoints", 1, "zero last points in DAC waves", "boolean" )
-	NMConfigVar( fname, "PulseEditByPrompt", 1, "edit pulse listbox configs via user prompts", "boolean" )
+	NMConfigVar( fname, "ForceEvenPoints", 0, "force even number of sample points", "boolean" )
+	
 	NMConfigVar( fname, "PulsePromptBinomial", 0, "prompt for binomial pulses", "boolean" )
 	NMConfigVar( fname, "PulsePromptPlasticity", 0, "prompt for plasticity of pulse trains", "boolean" )
 	NMConfigStr( fname, "PulsePromptTypeDSC", "delta", "prompt for \"delta\" or \"stdv\" or \"cv\" of pulse parameters", "delta;stdv;cv;" )
@@ -307,7 +343,7 @@ Function NMClampConfigs()
 	
 	ClampBoardConfigs()
 	
-	CheckNMConfig( "Notes" )
+	CheckNMConfig( "ClampNotes" )
 
 End // NMClampConfigs
 
@@ -379,22 +415,26 @@ Function /S ClampConfigBoard()
 	
 	Variable driver = NumVarOrDefault( cdf+"BoardDriver", 0 )
 	
-	Execute /Z "NidaqBoardList()"
+	if ( exists( "NidaqBoardList" ) == 6 )
 	
-	if ( V_flag == 0 )
+		Execute /Z "NidaqBoardList()"
 	
-		blist = StrVarOrDefault( cdf+"BoardList", "" )
+		if ( V_flag == 0 )
 		
-		if ( ItemsInList( blist ) > 0 )
-			demoMode = 0
-			board = "NIDAQ"
-			driver = ClampBoardDriverPrompt()
-			Print "NeuroMatic configured for NIDAQ acquisition"
+			blist = StrVarOrDefault( cdf+"BoardList", "" )
+			
+			if ( ItemsInList( blist ) > 0 )
+				demoMode = 0
+				board = "NIDAQ"
+				driver = ClampBoardDriverPrompt()
+				Print "NeuroMatic configured for NIDAQ acquisition"
+			endif
+			
 		endif
 		
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "ITC16stopacq" ) == 4 ) )
 	
 		Execute /Z "ITC16stopacq"
 		
@@ -408,7 +448,7 @@ Function /S ClampConfigBoard()
 		
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "ITC18stopacq" ) == 4 ) )
 		
 		Execute /Z "ITC18stopacq"
 
@@ -422,7 +462,26 @@ Function /S ClampConfigBoard()
 	
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "NM_LIH_InitInterfaceName" ) == 6 ) )
+		
+		Execute /Z "NM_LIH_InitInterfaceName()"
+		
+		if ( V_flag == 0 )
+		
+			blist = StrVarOrDefault( cdf+"BoardList", "" )
+			
+			if ( ItemsInList( blist ) > 0 )
+				demoMode = 0
+				board = blist
+				driver = 0
+				Print "NeuroMatic configured for " + board + " acquisition"
+			endif
+			
+		endif
+	
+	endif
+	
+	if ( ( strlen( blist ) == 0 ) && ( exists( "NMAlembicBoardList" ) == 6 ) )
 	
 		Execute /Z "NMAlembicBoardList()"
 		
@@ -441,7 +500,7 @@ Function /S ClampConfigBoard()
 	
 	endif
 	
-	if ( strlen( blist ) == 0 )
+	if ( ( strlen( blist ) == 0 ) && ( exists( "NMClampDemoBoardList" ) == 6 ) )
 	
 		Execute /Z "NMClampDemoBoardList()"
 		
@@ -558,42 +617,26 @@ End // ClampPathSet
 //****************************************************************
 //****************************************************************
 
-Function /S ClampDateNameOLD()
-
-	String name = "", d = Date()
-	
-	Variable icnt, ascii
-	
-	for ( icnt = 0; icnt < strlen( d ); icnt += 1 )
-	
-		ascii = char2num( d[ icnt, icnt ] )
-		
-		if ( ( ascii < 48 ) || ( ( ascii > 57 ) && ( ascii < 65 ) ) || ( ( ascii > 90 ) && ( ascii < 97 ) ) || ( ascii > 127 ) )
-			continue
-		endif
-	
-		name += d[ icnt, icnt ]
-		
-	endfor
-
-	if ( numtype( str2num( name[ 0, 0 ] ) ) == 0 )
-		name = "nm" + name // cannot have folder name starting with number
-	endif
-	
-	return name
-
-End // ClampDateNameOLD
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function /S ClampDateName()
+Function /S ClampDateName( [ promptFormat ] )
+	Variable promptFormat
 
 	Variable month, useMonthName = 0
 	String findSepStr, sepStr = ""
 	
 	String format = StrVarOrDefault( NMClampDF + "FolderNameDateFormat", DateFormat )
+	
+	if ( promptFormat )
+	
+		Prompt format, "choose date format:", popup DateFormatList
+		DoPrompt "NM Clamp Data Folder Name Prefix", format
+		
+		if ( V_flag == 1 )
+			//return "" // cancel not allowed here
+		endif
+		
+		SetNMstr( NMClampDF + "FolderNameDateFormat", format )
+	
+	endif
 
 	String dateList = Secs2Date( DateTime, -2 , ";" )
 	
@@ -718,7 +761,7 @@ Function /S ClampFileNamePrefixSet( prefix )
 	String prefix
 	
 	if ( strlen( prefix ) == 0 )
-		prefix = ClampDateName()
+		prefix = ClampDateName( promptFormat = 1 )
 	endif
 	
 	prefix = NMCheckStringName( prefix )
@@ -799,14 +842,9 @@ End // ClampError
 Function ClampProgressInit() // use ProgWin XOP display to allow cancel of acquisition
 
 	Variable pflag = NMVarGet( "ProgFlag" )
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
 	
-	Variable xProgress = NMProgressX()
-	Variable yProgress = NMProgressY()
-	
-	String txt = "Alert: Clamp Tab requires ProgWin XOP to cancel acquisition."
-	txt += "Download from ftp site www.wavemetrics.com/Support/ftpinfo.html ( IgorPro/User_Contributions/ )."
+	//String txt = "Alert: Clamp Tab requires ProgWin XOP to cancel acquisition."
+	//txt += "Download from ftp site www.wavemetrics.com/Support/ftpinfo.html ( IgorPro/User_Contributions/ )."
 	
 	if ( pflag != 1 )
 	
@@ -818,13 +856,15 @@ Function ClampProgressInit() // use ProgWin XOP display to allow cancel of acqui
 		//	NMDoAlert( txt )
 		//endif
 		
+		pflag = 1
+		
 		SetNMvar( NMDF+"ProgFlag", 1 )
 	
 	endif
 	
-	if ( ( pflag == 1 ) && ( ( xProgress < 0 ) || ( yProgress < 0 ) ) )
-		SetNMvar( NMDF+"xProgress", xPixels - 500 )
-		SetNMvar( NMDF+"yProgress", yPixels/2 )
+	if ( ( pflag == 1 ) && ( ( NMProgressX() < 0 ) || ( NMProgressY() < 0 ) ) )
+		SetNMvar( NMDF+"xProgress", ( NMScreenPixelsX() - NMProgWinWidth ) * 0.5 )
+		SetNMvar( NMDF+"yProgress", NMScreenPixelsY(igorFrame=1) * 0.7 )
 	endif
 
 End // ClampProgress

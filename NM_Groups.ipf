@@ -1651,7 +1651,7 @@ Function NMGroupsPanel( [ history ] )
 		return -1
 	endif
 	
-	Variable xPixels = NMComputerPixelsX()
+	Variable xpixels = NMScreenPixelsX()
 	Variable fs = NMPanelFsize
 	
 	String tname = NMGroupsPanelName + "Table"
@@ -1672,7 +1672,7 @@ Function NMGroupsPanel( [ history ] )
 	
 	NMGroupsPanelDefaults()
 	
-	x1 = 20 + ( xPixels - width ) / 2
+	x1 = 20 + ( xpixels - width ) / 2
 	y1 = 140 + 40
 	x2 = x1 + width
 	y2 = y1 + height

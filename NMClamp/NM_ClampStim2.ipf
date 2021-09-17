@@ -38,9 +38,12 @@
 //
 //****************************************************************
 //****************************************************************
-//
-//	Stim Globals Functions
-//
+//****************************************************************
+
+Constant NMStimWaveLength = 100 // ms // default
+Constant NMStimSampleInterval = 0.2 // ms
+Constant NMStimInterStimTime = 900 // ms
+
 //****************************************************************
 //****************************************************************
 //****************************************************************
@@ -52,53 +55,56 @@ Function CheckNMStim(dp, sname) // declare stim global variables
 	String sdf = LastPathColon(dp, 1) + sname + ":"
 	String cdf = NMClampDF
 	
-	Variable numStimWaves = 1
-	Variable waveLength = 100
-	Variable sampleInterval = 0.2
-	Variable interStimTime = 900
-	Variable interRepTime = 0
-	Variable stimRate = 1000 / (waveLength + interStimTime)
-	Variable repRate = 1000 / (interRepTime + numStimWaves * (waveLength + interStimTime))
-	Variable samplesPerWave = floor(waveLength/sampleInterval)
+	// default values
+	
+	Variable nStimWaves = 1
+	Variable stimRate = 1000 / ( NMStimWaveLength + NMStimInterStimTime ) // Hz
+	Variable nReps = 1
+	Variable interRepT = 0
+	Variable repRate = 1000 / ( interRepT + nStimWaves * ( NMStimWaveLength + NMStimInterStimTime ) )
+	Variable totalTime = nReps / repRate
 	
 	if (DataFolderExists(sdf) == 0)
-		NewDataFolder $RemoveEnding( sdf, ":" ) 			// make new stim folder
+		NewDataFolder $RemoveEnding( sdf, ":" ) // make new stim folder
 	endif
 	
-	CheckNMstr(sdf+"FileType", "NMStim")					// type of data file
+	CheckNMstr(sdf+"FileType", "NMStim") // type of data file
 	
 	CheckNMvar(sdf+"Version", NMVersionNum() )
 	CheckNMstr(sdf+"VersionStr", NMVersionStr )
 	
-	CheckNMstr(sdf+"StimTag", "")							// stimulus file suffix tag
+	CheckNMstr(sdf+"StimTag", "") // stimulus file suffix tag
 	
-	CheckNMstr(sdf+"WavePrefix", NMStrGet( "WavePrefix" ))		// wave prefix name
+	CheckNMstr(sdf+"WavePrefix", NMStrGet( "WavePrefix" )) // wave prefix name
 	
-	CheckNMvar(sdf+"AcqMode", 0)						// acquisition mode (0) epic precise (1) continuous (2) episodic (3) epic triggered (4) continuous triggered
+	CheckNMvar(sdf+"AcqMode", 0) // acquisition mode (0) epic precise (1) continuous (2) episodic (3) epic triggered (4) continuous triggered
 	
-	CheckNMvar(sdf+"CurrentChan", 0)						// channel select
+	CheckNMvar(sdf+"CurrentChan", 0) // channel select
 	
-	CheckNMvar(sdf+"WaveLength", waveLength)			// wave length (ms)
-	CheckNMvar(sdf+"SampleInterval", sampleInterval)		// time sample interval (ms)
-	CheckNMvar(sdf+"SamplesPerWave", samplesPerWave)
+	CheckNMvar(sdf+"NumStimWaves", nStimWaves) // stim waves per channel
+	CheckNMvar(sdf+"WaveLength", NMStimWaveLength) // ms
 	
-	CheckNMvar(sdf+"NumStimWaves", numStimWaves)		// stim waves per channel
-	CheckNMvar(sdf+"InterStimTime", interStimTime)			// time between stim waves (ms)
-	CheckNMvar(sdf+"NumStimReps", 1)					// repitions of stimulus
-	CheckNMvar(sdf+"InterRepTime", interRepTime)			// time between stimulus repititions (ms)
-	CheckNMvar(sdf+"StimRate", stimRate)
-	CheckNMvar(sdf+"RepRate", repRate)
-	CheckNMvar(sdf+"TotalTime", 1/repRate)
+	CheckNMvar(sdf+"SampleInterval", NMStimSampleInterval) // ms
+	CheckNMvar(sdf+"SamplesPerWave", floor( NMStimWaveLength / NMStimSampleInterval ))
 	
-	CheckNMvar(sdf+"NumPulseVar", 12)					// number of variables in pulse waves
+	CheckNMvar(sdf+"InterStimTime", NMStimInterStimTime) // time between stim waves (ms)
+	CheckNMvar(sdf+"StimRate", stimRate) // Hz
 	
-	CheckNMstr(sdf+"InterStimFxnList", "")					// during acquisition run function list
-	CheckNMstr(sdf+"PreStimFxnList", "")					// pre-acquisition run function list
-	CheckNMstr(sdf+"PostStimFxnList", "")					// post-acquisition run function list
+	CheckNMvar(sdf+"NumStimReps", nReps) // repitions of stimulus
+	CheckNMvar(sdf+"TotalTime", totalTime) // seconds
+	
+	CheckNMvar(sdf+"InterRepTime", interRepT) // time between stimulus repititions (ms)
+	CheckNMvar(sdf+"RepRate", repRate) // Hz
+	
+	CheckNMvar(sdf+"NumPulseVar", 12) // number of variables in pulse waves
+	
+	CheckNMstr(sdf+"InterStimFxnList", "") // during acquisition run function list
+	CheckNMstr(sdf+"PreStimFxnList", "") // pre-acquisition run function list
+	CheckNMstr(sdf+"PostStimFxnList", "") // post-acquisition run function list
 	
 	// IO Channels
 	
-	CheckNMvar(sdf+"UseGlobalBoardConfigs", 1)			// use global board configs (0) no (1) yes
+	CheckNMvar(sdf+"UseGlobalBoardConfigs", 1) // use global board configs (0) no (1) yes
 	
 	NMStimBoardWavesCheckAll(sdf)
 	
@@ -139,33 +145,33 @@ End // NMStimWavePrefix
 //****************************************************************
 //****************************************************************
 
-Function NMStimWaveLength(sdf, waveNum)
+Function NMStimWaveLength( sdf, waveNum )
 	String sdf
 	Variable waveNum
 	
 	Variable icnt
 	String wname
 	
-	sdf = CheckStimDF(sdf)
+	sdf = CheckStimDF( sdf )
 	
-	Variable waveLength = NumVarOrDefault(sdf+"WaveLength", 100)
-	Variable pgOff = NumVarOrDefault(sdf+"PulseGenOff", 0)
+	Variable pgOff = NumVarOrDefault( sdf + "PulseGenOff", 0 )
 	
-	if (pgOff == 1)
+	if ( pgOff )
 	
 		for (icnt = 0; icnt < 50; icnt += 1)
 		
-			wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			//wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			wname = sdf + "DAC_" + num2istr(icnt) + "_" + num2istr(waveNum) // changed to "DAC" to allow RandomOrder
 			
-			if (WaveExists($wname) == 1)
-				return rightx($wname)
+			if ( WaveExists( $wname ) )
+				return rightx( $wname )
 			endif
 		
 		endfor
 		
 	endif
 	
-	return waveLength
+	return NumVarOrDefault( sdf + "WaveLength", NaN )
 
 End // NMStimWaveLength
 
@@ -173,33 +179,36 @@ End // NMStimWaveLength
 //****************************************************************
 //****************************************************************
 
-Function NMStimWavePoints(sdf, waveNum)
+Function NMStimWavePoints( sdf, waveNum )
 	String sdf
 	Variable waveNum
 	
-	Variable icnt
+	Variable icnt, wLength, sInterval
 	String wname
 	
-	sdf = CheckStimDF(sdf)
+	sdf = CheckStimDF( sdf ) 
 	
-	Variable waveLength = NumVarOrDefault(sdf+"SamplesPerWave", 100)
-	Variable pgOff = NumVarOrDefault(sdf+"PulseGenOff", 0)
+	Variable pgOff = NumVarOrDefault( sdf + "PulseGenOff", 0 )
 	
-	if (pgOff == 1)
+	if ( pgOff )
 	
-		for (icnt = 0; icnt < 50; icnt += 1)
+		for ( icnt = 0; icnt < 50; icnt += 1 )
 		
-			wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			//wname = sdf + "MyDAC_" + num2istr(icnt) + "_" + num2istr(waveNum)
+			wname = sdf + "DAC_" + num2istr( icnt ) + "_" + num2istr( waveNum ) // changed to "DAC" to allow RandomOrder
 			
-			if (WaveExists($wname) == 1)
-				return numpnts($wname)
+			if ( WaveExists($wname) )
+				return numpnts( $wname )
 			endif
 		
 		endfor
 		
 	endif
 	
-	return waveLength
+	sInterval = NumVarOrDefault( sdf + "SampleInterval", NaN )
+	wLength = NumVarOrDefault( sdf + "WaveLength", NaN )
+	
+	return floor( wLength / sInterval )
 
 End // NMStimWavePoints
 
@@ -216,7 +225,7 @@ Function NMStimNumStimWaves(sdf)
 		return -1
 	endif
 	
-	return NumVarOrDefault(sdf+"NumStimWaves", 0)
+	return NumVarOrDefault(sdf+"NumStimWaves", 1)
 	
 End // NMStimNumStimWaves
 
@@ -250,7 +259,7 @@ Function NMStimNumWavesTotal(sdf)
 		return -1
 	endif
 
-	return NumVarOrDefault(sdf+"NumStimWaves", 0) * NumVarOrDefault(sdf+"NumStimReps", 0)
+	return NumVarOrDefault(sdf+"NumStimWaves", 1) * NumVarOrDefault(sdf+"NumStimReps", 0)
 
 End // NMStimNumWavesTotal
 
@@ -287,7 +296,7 @@ Function NMStimAcqMode(sdf)
 		return -1
 	endif
 	
-	return NumVarOrDefault(sdf+"AcqMode", 0)
+	return NumVarOrDefault( sdf + "AcqMode", 0 )
 	
 End // NMStimAcqMode
 
@@ -324,6 +333,8 @@ Function NMStimAcqModeSet(sdf, select)
 		case "continuous triggered":
 			mode = 4
 			break
+		default:
+			return -1
 	endswitch
 	
 	SetNMvar(sdf+"AcqMode", mode)
@@ -336,22 +347,200 @@ End // NMStimAcqModeSet
 //****************************************************************
 //****************************************************************
 
-Function NMStimIntervalSet(sdf, boardNum, boardDriver, sampleInterval)
-	String sdf // stim data folder bath
-	Variable boardNum, boardDriver, sampleInterval
+Function NMStimTauCheck( sdf ) // check/update time variables
+	String sdf
+
+	sdf = CheckStimDF( sdf )
 	
-	Variable bcnt, driverSampleInterval
-	String varName, boards, cdf = NMClampDF
-	
-	sdf = CheckStimDF(sdf)
-	
-	if (strlen(sdf) == 0)
+	if ( strlen( sdf ) == 0 )
 		return -1
 	endif
 	
-	SetNMvar(sdf+"SampleInterval", sampleInterval)
+	Variable acqMode = NumVarOrDefault( sdf + "AcqMode", NaN )
 	
-	return sampleInterval
+	Variable nStimWaves = NumVarOrDefault( sdf + "NumStimWaves", NaN )
+	Variable wLength = NumVarOrDefault( sdf + "WaveLength", NaN )
+	
+	Variable sInterval = NumVarOrDefault( sdf + "SampleInterval", NaN )
+	
+	Variable interStimT = NumVarOrDefault( sdf + "InterStimTime", NaN )
+	Variable stimRate //= NumVarOrDefault( sdf + "StimRate", NaN )
+	
+	Variable nStimReps = NumVarOrDefault( sdf + "NumStimReps", NaN )
+	
+	Variable interRepT = NumVarOrDefault( sdf + "InterRepTime", NaN )
+	Variable repRate //= NumVarOrDefault( sdf + "RepRate", NaN )
+	
+	String acqBoard = StrVarOrDefault( NMClampDF + "AcqBoard", "" )
+	
+	switch( acqMode )
+		case 0: // epic precise
+		case 2: // episodic
+		case 3: // episodic triggered
+		case 1: // continuous
+		case 4: // continuous triggered
+			break
+		default:
+			ClampError( 1, "Unknown acquisition mode: " + num2str( acqMode ) )
+			SetNMvar( sdf + "AcqMode", 0 )
+	endswitch
+	
+	if ( ( numtype( nStimWaves ) > 0 ) || ( nStimWaves <= 0 ) )
+		ClampError( 1, "bad number of waves: " + num2str( nStimWaves ) )
+		nStimWaves = 1
+		SetNMvar( "NumStimWaves", 1 )
+	endif
+	
+	SetNMvar( "NumGrps", round( nStimWaves ) )
+	
+	if ( ( numtype( wLength ) > 0 ) || ( wLength <= 0 ) )
+		ClampError( 1, "bad wave length: " + num2str( wLength ) )
+		wLength = NMStimWaveLength
+		SetNMvar( "WaveLength", NMStimWaveLength )
+	endif
+	
+	if ( ( numtype( sInterval ) > 0 ) || ( sInterval <= 0 ) )
+		ClampError( 1, "bad sample interval: " + num2str( sInterval ) )
+		sInterval = NMStimSampleInterval
+	endif
+	
+	//sInterval = ( floor( 1e6 * sInterval ) / 1e6 ) // round off
+	SetNMvar( sdf + "SampleInterval", sInterval )
+	
+	SetNMvar( sdf + "SamplesPerWave", floor( wLength / sInterval ) )
+	
+	switch( acqMode )
+	
+		case 0: // epic precise
+		case 2: // episodic
+		case 3: // episodic triggered
+		
+			if ( ( numtype( interStimT ) > 0 ) || ( interStimT < 0 ) )
+				ClampError( 1, "bad stimulus interlude time: " + num2str( interStimT ) )
+				interStimT = NMStimInterStimTime
+				SetNMvar( sdf + "InterStimTime", NMStimInterStimTime )
+			endif
+		
+			if ( interStimT == 0 )
+				ClampError( 1, "InterStimTime = 0 not allowed with episodic acquisition." )
+				interStimT = NMStimInterStimTime
+				SetNMvar( sdf + "InterStimTime", NMStimInterStimTime )
+			endif
+			
+			break
+			
+		case 1: // continuous
+		case 4: // continuous triggered
+		
+			if ( StringMatch( acqBoard, "NIDAQ" ) && ( nStimWaves > 1 ) )
+				ClampError( 1, "only one stimulus wave is allowed with continuous acquisition." )
+				nStimWaves = 1
+				SetNMvar( "NumStimWaves", 1 )
+			endif
+			
+			interStimT = 0 // no time between episodes
+			SetNMvar( sdf + "InterStimTime", 0 )
+	
+	endswitch
+	
+	stimRate = 1000 / ( wLength + interStimT ) // Hz
+	SetNMvar( sdf + "StimRate", stimRate )
+	
+	if ( ( numtype( nStimReps ) > 0 ) || ( nStimReps <= 0 ) )
+		ClampError( 1, "bad number of stimulus repetitions: " + num2str( nStimReps ) )
+		nStimReps = 1
+		SetNMvar( sdf + "NumStimReps", 1 )
+	endif
+	
+	if ( ( numtype( interRepT ) > 0 ) || ( interRepT < 0 ) )
+		ClampError( 1, "bad repetition interlude: " + num2str( interRepT ) )
+		interRepT = 0
+		SetNMvar( sdf + "InterRepTime", 0 )
+	endif
+	
+	repRate = 1000 / ( interRepT + nStimWaves * ( wLength + interStimT ) ) // Hz
+	SetNMvar( sdf + "RepRate", repRate )
+	SetNMvar( sdf + "TotalTime", ( nStimReps / repRate ) )
+	
+	return 0
+
+End // NMStimTauCheck
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMStimDACUpSamplingCall( sdf )
+	String sdf // stim data folder bath
+	
+	Variable upsamples = NumVarOrDefault( sdf + "DACUpsamples", 1 )
+	
+	if ( !NMStimDACUpSamplingOK() )
+		return -1
+	endif
+	
+	Prompt upsamples, "integer scale factor for rate increase (1 for no increase):"
+	DoPrompt "DAC Upsampling ( n > 1 )", upsamples
+
+	if (V_flag == 1)
+		return 0
+	endif
+	
+	if ( ( numtype( upsamples ) > 0 ) || ( upsamples < 1 ) )
+		upsamples = 1
+	endif
+	
+	return NMStimDACUpSampling( sdf, upsamples )
+
+End // NMStimDACUpSamplingCall
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMStimDACUpSampling( sdf, upsamples )
+	String sdf // stim data folder bath
+	Variable upsamples // integer factor: ( 1 ) off, ( > 1 ) upsampling
+	
+	if ( !NMStimDACUpSamplingOK() )
+		return -1
+	endif
+	
+	if ( ( numtype( upsamples ) > 0 ) || ( upsamples < 1 ) )
+		upsamples = 1
+	endif
+	
+	SetNMvar( sdf + "DACUpsamples", round( upsamples ) )
+	
+	StimWavesCheck( sdf, 1 )
+	
+	return 0
+	
+End // NMStimDACUpSampling
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMStimIntervalSet( sdf, intvl )
+	String sdf // stim data folder bath
+	Variable intvl
+	
+	sdf = CheckStimDF(sdf)
+	
+	if ( strlen( sdf ) == 0 )
+		return -1
+	endif
+	
+	if ( ( numtype( intvl ) > 0 ) || ( intvl <= 0 ) )
+		return -1
+	endif
+	
+	//intvl = ( floor( 1e6 * intvl ) / 1e6 ) // round off
+	
+	SetNMvar( sdf + "SampleInterval", intvl )
+	
+	return intvl
 	
 End // NMStimIntervalSet
 
@@ -359,11 +548,11 @@ End // NMStimIntervalSet
 //****************************************************************
 //****************************************************************
 
-Function NMStimIntervalSet_OLD(sdf, boardNum, boardDriver, sampleInterval)
+Function NMStimIntervalSet_DEPRECATED(sdf, boardNum, boardDriver, intvl)
 	String sdf // stim data folder bath
-	Variable boardNum, boardDriver, sampleInterval
+	Variable boardNum, boardDriver, intvl
 	
-	Variable bcnt, driverSampleInterval
+	Variable bcnt, driverIntvl
 	String varName, boards, cdf = NMClampDF
 	
 	sdf = CheckStimDF(sdf)
@@ -372,22 +561,22 @@ Function NMStimIntervalSet_OLD(sdf, boardNum, boardDriver, sampleInterval)
 		return -1
 	endif
 	
-	driverSampleInterval = NumVarOrDefault(sdf+"SampleInterval", 1)
+	driverIntvl = NumVarOrDefault(sdf+"SampleInterval", NMStimSampleInterval)
 	boards = StrVarOrDefault(cdf+"BoardList", "")
 	
 	varName = sdf + "SampleInterval_" + num2istr(boardNum)
 	
 	if (boardNum == boardDriver)
-		SetNMvar(sdf+"SampleInterval", sampleInterval)
-	elseif (sampleInterval == driverSampleInterval)
+		SetNMvar(sdf+"SampleInterval", intvl)
+	elseif (intvl == driverIntvl)
 		KillVariables /Z $varName // no longer need variable
 	else
-		SetNMvar(varName, sampleInterval) // create new sample interval variable
+		SetNMvar(varName, intvl) // create new sample interval variable
 	endif
 	
-	return sampleInterval
+	return intvl
 	
-End // NMStimIntervalSet_OLD
+End // NMStimIntervalSet_DEPRECATED
 
 //****************************************************************
 //****************************************************************
@@ -466,7 +655,7 @@ Function /S NMStimChainEdit(sdf)
 	String sdf
 	Variable npnts = -1
 
-	String tableName = StimCurrent() + "Chain"
+	String tName = StimCurrent() + "Chain"
 	String tableTitle = StimCurrent() + " Acquisition Table"
 	
 	STRUCT Rect w
@@ -484,14 +673,14 @@ Function /S NMStimChainEdit(sdf)
 	CheckNMtwave(sdf+"Stim_Name", npnts, "")
 	CheckNMwave(sdf+"Stim_Wait", npnts, 0)
 	
-	if (WinType(tableName) == 0)
+	if (WinType(tName) == 0)
 		NMWinCascadeRect( w )
-		Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) $(sdf+"Stim_Name"), $(sdf+"Stim_Wait") as tableTitle
+		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) $(sdf+"Stim_Name"), $(sdf+"Stim_Wait") as tableTitle
 	else
-		DoWindow /F $tableName
+		DoWindow /F $tName
 	endif
 	
-	return tableName
+	return tName
 
 End // NMStimChainEdit
 
@@ -2507,7 +2696,7 @@ Function /S NMStimBoardNamesTable(sdf, hook)
 	String sdf // stim data folder path
 	Variable hook // (0) no update (1) updateNM
 	
-	String wName, tableName, title, bdf
+	String wName, tName, title, bdf
 	
 	STRUCT Rect w
 	
@@ -2520,44 +2709,44 @@ Function /S NMStimBoardNamesTable(sdf, hook)
 		return ""
 	endif
 	
-	tableName = NMCheckStringName(stim + "_config_names")
+	tName = NMCheckStringName(stim + "_config_names")
 	
-	if (WinType(tableName) == 2)
-		DoWindow /F $tableName
-		return tableName
+	if (WinType(tName) == 2)
+		DoWindow /F $tName
+		return tName
 	endif
 	
 	title = "Stim config names : " + stim
 	
 	NMWinCascadeRect( w )
 	
-	DoWindow /K $tableName
-	Edit /N=$tableName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Config" )
+	DoWindow /K $tName
+	Edit /N=$tName/W=(w.left,w.top,w.right,w.bottom)/K=1 as title[0,30]
+	ModifyTable /W=$tName title(Point)="Config"
 	
 	if (hook == 1)
-		SetWindow $tableName hook=NMStimBoardNamesTableHook
+		SetWindow $tName hook=NMStimBoardNamesTableHook
 	endif
 	
 	wName = bdf + "ADCname"
 	
 	if (WaveExists($wName) == 1)
-		AppendToTable $wName
+		AppendToTable /W=$tName $wName
 	endif
 	
 	wName = bdf + "DACname"
 	
 	if (WaveExists($wName) == 1)
-		AppendToTable $wName
+		AppendToTable /W=$tName $wName
 	endif
 	
 	wName = bdf + "TTLname"
 	
 	if (WaveExists($wName) == 1)
-		AppendToTable $wName
+		AppendToTable /W=$tName $wName
 	endif
 	
-	return tableName
+	return tName
 
 End // NMStimBoardNamesTable
 

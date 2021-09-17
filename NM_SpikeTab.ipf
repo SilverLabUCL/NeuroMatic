@@ -633,7 +633,7 @@ Function NMSpikeMake( force ) // create Spike tab controls
 	Button SP_Raster, title="Raster Plot", pos={x0,y0+2*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
 	Button SP_Table, title = "Table", pos={x0+xinc,y0+2*yinc}, size={100,20}, proc = NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
 	Button SP_PSTH, title="PST Histo", pos={x0,y0+3*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
-	Button SP_Rate, title="Avg Rate", pos={x0+xinc,y0+3*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
+	Button SP_Rate, title="Count / Rate", pos={x0+xinc,y0+3*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
 	Button SP_ISIH, title="ISI Histo", pos={x0,y0+4*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
 	Button SP_Joint, title="Joint", pos={x0+xinc,y0+4*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
 	Button SP_2Waves, title="Spikes 2 Waves", pos={x0+xinc/2,y0+5*yinc}, size={100,20}, proc=NMSpikeAnalysisButton, fsize=fs, win=$NMPanelName
@@ -2089,6 +2089,10 @@ Function SpikeTmin( xRaster )
 	
 	xRaster = CheckNMSpikeRasterXPath( xRaster )
 	
+	if ( !WaveExists( $xRaster ) )
+		return 0
+	endif
+	
 	tmin = NMNoteVarByKey( xRaster, "Spike Tmin" )
 	
 	if ( numtype( tmin ) == 0 )
@@ -2122,6 +2126,10 @@ Function SpikeTmax( xRaster )
 	
 	xRaster = CheckNMSpikeRasterXPath( xRaster )
 	
+	if ( !WaveExists( $xRaster ) )
+		return 0
+	endif
+	
 	tmax = NMNoteVarByKey( xRaster, "Spike Tmax" )
 	
 	if ( numtype( tmax ) == 0 )
@@ -2140,10 +2148,14 @@ Function SpikeTmax( xRaster )
 		return tmax
 	endif
 	
-	WaveStats /Q $xRaster
+	if ( numpnts( $xRaster ) > 0 )
 	
-	if ( numtype( V_max ) == 0 )
-		return V_max
+		WaveStats /Q $xRaster
+		
+		if ( numtype( V_max ) == 0 )
+			return V_max
+		endif
+		
 	endif
 	
 	return rightx( $ChanDisplayWave( -1 ) )
@@ -3115,9 +3127,9 @@ End // zCall_NMSpikeSubfolderGet
 
 Static Function /S zCall_NMSpikeRasterPlot()
 	
-	String folder, xRasterList, promptStr = "Spike Raster Plot"
+	String folder, promptStr = "Spike Raster Plot"
 	
-	xRasterList = zCall_NMSpikeRasterListGet( promptStr )
+	String xRasterList = zCall_NMSpikeRasterListGet( promptStr )
 	
 	if ( ItemsInList( xRasterList) == 0 )
 		return NM2ErrorStr( 1, "xRasterList", xRasterList )
@@ -3356,11 +3368,12 @@ Static Function /S zCall_NMSpikePSTH()
 	Variable xend = NMSpikeAnalysisTend( xRasterList )
 	Variable binSize = NMSpikeVarGet( "PSTHdelta" )
 	String yUnits = NMSpikeStrGet( "PSTHyaxis" )
+	String xUnits = zCall_Xunits( xRasterList )
 	
 	Prompt xbgn, NMPromptAddUnitsX( "x-axis window begin" )
 	Prompt xend, NMPromptAddUnitsX( "x-axis window end" )
 	Prompt binSize, NMPromptAddUnitsX( "histogram bin size" )
-	Prompt yUnits, "y-axis dimensions:", popup "Spikes/bin;Spikes/sec;Probability;"
+	Prompt yUnits, "y-dimensions to compute:", popup "Spikes/bin;Spikes/s;Spikes/ms;Probability;"
 	DoPrompt promptStr, xbgn, xend, binSize, yUnits
 		
 	if ( V_flag == 1 )
@@ -3375,6 +3388,16 @@ Static Function /S zCall_NMSpikePSTH()
 	
 	xRasterList = NMChild( xRasterList )
 	
+	if ( StringMatch( yUnits, "Spikes/s" ) || StringMatch( yUnits, "Spikes/ms" ) )
+		xUnits = zCall_CheckXunits( xUnits )
+	else
+		xUnits = ""
+	endif
+	
+	if ( strlen( xUnits ) > 0 )
+		return NMSpikePSTH( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, xUnits = xUnits, yUnits = yUnits, history = 1 )
+	endif
+	
 	return NMSpikePSTH( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, yUnits = yUnits, history = 1 )
 
 End // zCall_NMSpikePSTH
@@ -3383,13 +3406,14 @@ End // zCall_NMSpikePSTH
 //****************************************************************
 //****************************************************************
 
-Function /S NMSpikePSTH( [ folder, xRasterList, yRasterList, xbgn, xend, binSize, yUnits, noGraph, history ] )
+Function /S NMSpikePSTH( [ folder, xRasterList, yRasterList, xbgn, xend, binSize, xUnits, yUnits, noGraph, history ] )
 	String folder // folder or subfolder, pass nothing for current folder
 	String xRasterList // x-raster wave list, pass nothing for current x-raster
 	String yRasterList // y-raster wave list, pass nothing for automatic search based on x-raster
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable binSize // histogram bin size
-	String yUnits // "Spikes/bin" or "Spikes/sec" or "Probability"
+	String xUnits // "ms" or "s" // use this to specify time units if they are not in notes of x-raster wave
+	String yUnits // "Spikes/bin" or "Spikes/s" or "Spikes/ms" or "Probability"
 	Variable noGraph // ( 0 ) create graph ( 1 ) no graph
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
@@ -3437,6 +3461,12 @@ Function /S NMSpikePSTH( [ folder, xRasterList, yRasterList, xbgn, xend, binSize
 		paramList = NMCmdNumOptional( "binSize", binSize, paramList )
 	endif
 	
+	if ( ParamIsDefault( xUnits ) )
+		xUnits = ""
+	else
+		paramList = NMCmdStrOptional( "xUnits", xUnits, paramList )
+	endif
+	
 	if ( ParamIsDefault( yUnits ) )
 		yUnits = "Spikes/bin"
 	else
@@ -3451,10 +3481,12 @@ Function /S NMSpikePSTH( [ folder, xRasterList, yRasterList, xbgn, xend, binSize
 		NMCommandHistory( paramList )
 	endif
 	
+	yUnits = zCall_CheckYunits( yUnits )
+	
 	strswitch( yUnits )
 		case "Probability":
-		case "Spikes / sec":
-		case "Spikes/sec":
+		case "Spikes/s":
+		case "Spikes/ms":
 			yMustExist = 1
 	endswitch
 	
@@ -3534,15 +3566,54 @@ Function /S NMSpikePSTH( [ folder, xRasterList, yRasterList, xbgn, xend, binSize
 		
 			break
 		
-		case "Spikes / sec":
-		case "Spikes/sec":
+		case "Spikes/s":
 			
 			reps = SpikeRasterCountReps( yRaster )
 			
 			if ( ( numtype( reps ) == 0 ) && ( reps > 0 ) )
-				PSTH /= reps * binSize * 0.001 // convert to seconds
+			
+				PSTH /= reps * binSize
+				
+				if ( strlen( xUnits ) == 0 )
+					xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+				endif
+				
+				strswitch( xUnits )
+					case "ms":
+					case "msec":
+					PSTH *= 1000 // time conversion
+				endswitch
+				
 			else
+			
 				yUnits = "Spikes/bin"
+				
+			endif
+			
+			break
+			
+		case "Spikes/ms":
+		
+			reps = SpikeRasterCountReps( yRaster )
+			
+			if ( ( numtype( reps ) == 0 ) && ( reps > 0 ) )
+			
+				PSTH /= reps * binSize
+				
+				if ( strlen( xUnits ) == 0 )
+					xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+				endif
+				
+				strswitch( xUnits )
+					case "s":
+					case "sec":
+					PSTH *= 0.001 // time conversion
+				endswitch
+				
+			else
+			
+				yUnits = "Spikes/bin"
+				
 			endif
 			
 			break
@@ -3592,7 +3663,7 @@ End // NMSpikePSTH
 Static Function /S zCall_NMSpikePSTHJoint()
 
 	Variable xbgn, xend, binSize
-	String xRasterList, folder, yUnits
+	String xRasterList, folder, xUnits, yUnits
 	
 	String xWaveOrFolder = CurrentNMSpikeRasterOrFolder()
 	String promptStr = "Joint Peri-Stimulus Time Histogram"
@@ -3619,11 +3690,12 @@ Static Function /S zCall_NMSpikePSTHJoint()
 	xend = NMSpikeAnalysisTend( xRasterList )
 	binSize = NMSpikeVarGet( "PSTHdelta" )
 	yUnits = NMSpikeStrGet( "PSTHyaxis" )
+	xUnits = zCall_Xunits( xRasterList )
 	
 	Prompt xbgn, NMPromptAddUnitsX( "x-axis window begin" )
 	Prompt xend, NMPromptAddUnitsX( "x-axis window end" )
 	Prompt binSize, NMPromptAddUnitsX( "histogram bin size" )
-	Prompt yUnits, "y-axis dimensions:", popup "Spikes/bin;Spikes/sec;Probability;"
+	Prompt yUnits, "y-dimensions to compute:", popup "Spikes/bin;Spikes/s;Spikes/ms;Probability;"
 	DoPrompt "Joint Peri-Stimulus Time Histogram", xbgn, xend, binSize, yUnits
 		
 	if ( V_flag == 1 )
@@ -3642,6 +3714,20 @@ Static Function /S zCall_NMSpikePSTHJoint()
 		folder = ""
 	endif
 	
+	if ( StringMatch( yUnits, "Spikes/s" ) || StringMatch( yUnits, "Spikes/ms" ) )
+		xUnits = zCall_CheckXunits( xUnits )
+	else
+		xUnits = ""
+	endif
+	
+	if ( strlen( xUnits ) > 0 )
+		if ( strlen( folder ) > 0 )
+			return NMSpikePSTHJoint( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, xUnits = xUnits, yUnits = yUnits, history = 1 )
+		else
+			return NMSpikePSTHJoint( xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, xUnits = xUnits, yUnits = yUnits, history = 1 )
+		endif
+	endif
+	
 	if ( strlen( folder ) > 0 )
 		return NMSpikePSTHJoint( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, yUnits = yUnits, history = 1 )
 	else
@@ -3654,13 +3740,14 @@ End // zCall_NMSpikePSTHJoint
 //****************************************************************
 //****************************************************************
 
-Function /S NMSpikePSTHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, binSize, yUnits, noGraph, history ] )
+Function /S NMSpikePSTHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, binSize, xUnits, yUnits, noGraph, history ] )
 	String folder // folder or subfolder, pass nothing for current folder
 	String xRasterList // x-raster wave list, pass nothing for current x-raster
 	String yRasterList // y-raster wave list, pass nothing for automatic search based on xRaster
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable binSize // histogram bin size
-	String yUnits // "Spikes/bin" or "Spikes/sec" or "Probability"
+	String xUnits // "ms" or "s" // use this to specify time units if they are not in notes of x-raster wave
+	String yUnits // "Spikes/bin" or "Spikes/s" or "Spikes/ms" or "Probability"
 	Variable noGraph // ( 0 ) create graph ( 1 ) no graph
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
@@ -3708,6 +3795,12 @@ Function /S NMSpikePSTHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, bi
 		paramList = NMCmdNumOptional( "binSize", binSize, paramList )
 	endif
 	
+	if ( ParamIsDefault( xUnits ) )
+		xUnits = ""
+	else
+		paramList = NMCmdStrOptional( "xUnits", xUnits, paramList )
+	endif
+	
 	if ( ParamIsDefault( yUnits ) )
 		yUnits = "Spikes/bin"
 	else
@@ -3722,10 +3815,12 @@ Function /S NMSpikePSTHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, bi
 		NMCommandHistory( paramList )
 	endif
 	
+	yUnits = zCall_CheckYunits( yUnits )
+	
 	strswitch( yUnits )
 		case "Probability":
-		case "Spikes / sec":
-		case "Spikes/sec":
+		case "Spikes/s":
+		case "Spikes/ms":
 			yMustExist = 1
 	endswitch
 	
@@ -3874,16 +3969,59 @@ Function /S NMSpikePSTHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, bi
 		
 			break
 		
-		case "Spikes / sec":
-		case "Spikes/sec":
+		case "Spikes/s":
 			
 			reps = SpikeRasterCountReps( yRaster1 )
 			
 			if ( ( numtype( reps ) == 0 ) && ( reps > 0 ) )
-				JPSTH /= reps * binSize * 0.001 // convert to seconds
-				JPSTH2 /= reps * binSize * 0.001 // convert to seconds
+			
+				JPSTH /= reps * binSize
+				JPSTH2 /= reps * binSize
+				
+				if ( strlen( xUnits ) == 0 )
+					xUnits = NMNoteLabel( "y", xRaster1, "time unit" )
+				endif
+				
+				strswitch( xUnits )
+					case "ms":
+					case "msec":
+						JPSTH *= 1000 // time conversion
+						JPSTH2 *= 1000
+				endswitch
+				
 			else
+			
 				yUnits = "Spikes/bin"
+				
+			endif
+			
+			break
+			
+		case "Spikes/ms":
+			
+			reps = SpikeRasterCountReps( yRaster1 )
+			
+			if ( ( numtype( reps ) == 0 ) && ( reps > 0 ) )
+			
+				JPSTH /= reps * binSize
+				JPSTH2 /= reps * binSize
+				
+				
+				if ( strlen( xUnits ) == 0 )
+					xUnits = NMNoteLabel( "y", xRaster1, "time unit" )
+				endif
+				
+				strswitch( xUnits )
+					case "s":
+					case "sec":
+						JPSTH *= 0.001 // time conversion
+						JPSTH2 *= 0.001
+				endswitch
+				
+			else
+			
+				yUnits = "Spikes/bin"
+				
 			endif
 			
 			break
@@ -3974,13 +4112,14 @@ Static Function /S zCall_NMSpikeISIH()
 	Variable maxInterval = inf
 	Variable binSize = NMSpikeVarGet( "ISIHdelta" )
 	String yUnits = NMSpikeStrGet( "ISIHyaxis" )
+	String xUnits = zCall_Xunits( xRasterList )
 	
 	Prompt xbgn, NMPromptAddUnitsX( "x-axis window begin" )
 	Prompt xend, NMPromptAddUnitsX( "x-axis window end" )
 	Prompt minInterval, "minimum allowed interval:"
 	Prompt maxInterval, "maximum allowed interval:"
 	Prompt binSize, NMPromptAddUnitsX( "histogram bin size" )
-	Prompt yUnits, "y-axis dimensions:", popup "Intervals/bin;Intervals/sec;"
+	Prompt yUnits, "y-dimensions to compute:", popup "Intervals/bin;Intervals/s;Intervals/ms;Probability"
 	
 	DoPrompt promptStr, xbgn, xend, binSize, yUnits
 		
@@ -4002,6 +4141,16 @@ Static Function /S zCall_NMSpikeISIH()
 	
 	xRasterList = NMChild( xRasterList )
 	
+	if ( StringMatch( yUnits, "Intervals/s" ) || StringMatch( yUnits, "Intervals/ms" ) )
+		xUnits = zCall_CheckXunits( xUnits )
+	else
+		xUnits = ""
+	endif
+	
+	if ( strlen( xUnits ) > 0 )
+		return NMSpikeISIH( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, minInterval = minInterval, maxInterval = maxInterval, binSize = binSize, xUnits = xUnits, yUnits = yUnits, history = 1 )
+	endif
+	
 	return NMSpikeISIH( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, minInterval = minInterval, maxInterval = maxInterval, binSize = binSize, yUnits = yUnits, history = 1 )
 
 End // zCall_NMSpikeISIH
@@ -4010,14 +4159,15 @@ End // zCall_NMSpikeISIH
 //****************************************************************
 //****************************************************************
 
-Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInterval, binSize, yUnits, noGraph, history ] )
+Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInterval, binSize, xUnits, yUnits, noGraph, history ] )
 	String folder // folder or subfolder, pass nothing for current folder
 	String xRasterList // x-raster wave, pass nothing for current x-raster
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable minInterval // minimum allowed interval ( 0 ) for no lower limit
 	Variable maxInterval // maximum allowed interval ( inf ) for no upper limit
 	Variable binSize // histogram bin size
-	String yUnits // "Intervals/bin" or "Intervals/sec"
+	String xUnits // "ms" or "s" // use this to specify time units if they are not in notes of x-raster wave
+	String yUnits // "Intervals/bin" or "Intervals/s" or "Intervals/ms" or "Probability"
 	Variable noGraph // ( 0 ) create graph ( 1 ) no graph
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
@@ -4070,6 +4220,12 @@ Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInte
 		paramList = NMCmdNumOptional( "binSize", binSize, paramList )
 	endif
 	
+	if ( ParamIsDefault( xUnits ) )
+		xUnits = ""
+	else
+		paramList = NMCmdStrOptional( "xUnits", xUnits, paramList )
+	endif
+	
 	if ( ParamIsDefault( yUnits ) )
 		yUnits = "Intervals/bin"
 	else
@@ -4091,7 +4247,6 @@ Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInte
 	endif
 	
 	xRaster = StringFromList( 0, xRasterList ) // implement loop here
-	
 	xRaster = CheckNMSpikeRasterXPath( xRaster )
 	
 	if ( !WaveExists( $xRaster ) )
@@ -4159,12 +4314,44 @@ Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInte
 	
 	Duplicate /O U_INTVLS $intvlsName
 	
+	yUnits = zCall_CheckYunits( yUnits )
+	
 	strswitch( yUnits )
 	
-		case "Intvls / sec":
-		case "intvls/sec":
-		case "intervals/sec":
-			ISIH /= binSize * 0.001
+		case "Probability":
+			ISIH /= events
+			break
+			
+		case "Intervals/s":
+		
+			ISIH /= binSize
+			
+			if ( strlen( xUnits ) == 0 )
+				xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+			endif
+			
+			strswitch( xUnits )
+				case "ms":
+				case "msec":
+					ISIH *= 1000 // time conversion
+			endswitch
+			
+			break
+			
+		case "Intervals/ms":
+		
+			ISIH /= binSize
+			
+			if ( strlen( xUnits ) == 0 )
+				xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+			endif
+			
+			strswitch( xUnits )
+				case "s":
+				case "sec":
+					ISIH *= 0.001 // time conversion
+			endswitch
+			
 			break
 	
 		default:
@@ -4248,11 +4435,12 @@ Static Function /S zCall_NMSpikeISIHJoint()
 	Variable xend = NMSpikeAnalysisTend( xRasterList )
 	Variable binSize = NMSpikeVarGet( "ISIHdelta" )
 	String yUnits = NMSpikeStrGet( "ISIHyaxis" )
+	String xUnits = zCall_Xunits( xRasterList )
 	
 	Prompt xbgn, NMPromptAddUnitsX( "x-axis window begin" )
 	Prompt xend, NMPromptAddUnitsX( "x-axis window end" )
 	Prompt binSize, NMPromptAddUnitsX( "histogram bin size" )
-	Prompt yUnits, "y-axis dimensions:", popup "Intervals/bin;Intervals/sec;"
+	Prompt yUnits, "y-dimensions to compute:", popup "Intervals/bin;Intervals/s;Intervals/ms;Probability;"
 	
 	DoPrompt promptStr, xbgn, xend, binSize, yUnits
 		
@@ -4272,6 +4460,20 @@ Static Function /S zCall_NMSpikeISIHJoint()
 		folder = ""
 	endif
 	
+	if ( StringMatch( yUnits, "Intervals/s" ) || StringMatch( yUnits, "Intervals/ms" ) )
+		xUnits = zCall_CheckXunits( xUnits )
+	else
+		xUnits = ""
+	endif
+	
+	if ( strlen( xUnits ) > 0 )
+		if ( strlen( folder ) > 0 )
+			return NMSpikeISIHJoint( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, xUnits = xUnits, yUnits = yUnits, history = 1 )
+		else
+			return NMSpikeISIHJoint( xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, xUnits = xUnits, yUnits = yUnits, history = 1 )
+		endif
+	endif
+	
 	if ( strlen( folder ) > 0 )
 		return NMSpikeISIHJoint( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, binSize = binSize, yUnits = yUnits, history = 1 )
 	else
@@ -4284,17 +4486,18 @@ End // zCall_NMSpikeISIHJoint
 //****************************************************************
 //****************************************************************
 
-Function /S NMSpikeISIHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, binSize, yUnits, noGraph, history ] )
+Function /S NMSpikeISIHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, binSize, xUnits, yUnits, noGraph, history ] )
 	String folder // folder or subfolder, pass nothing for current folder
 	String xRasterList // x-raster wave, pass nothing for current x-raster
 	String yRasterList // y-raster wave list, pass nothing for automatic search based on xRaster
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable binSize // histogram bin size
-	String yUnits // "Intervals/bin" or "Intervals/sec"
+	String xUnits // "ms" or "s" // use this to specify time units if they are not in notes of x-raster wave
+	String yUnits // "Intervals/bin" or "Intervals/s" or "Intervals/ms" or "Probability"
 	Variable noGraph // ( 0 ) create graph ( 1 ) no graph
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
-	Variable events, yMustExist = 1
+	Variable yMustExist = 1
 	Variable npnts, wcnt, wbgn, wend, icnt, jcnt, kcnt, interval
 	String xRaster1, yRaster1, xRaster2, yRaster2, wName, subfolder, paramList = ""
 	String ISIHname, intvlsName, gName, gTitle, xLabel, wNameShort
@@ -4338,6 +4541,12 @@ Function /S NMSpikeISIHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, bi
 		binSize = 1
 	else
 		paramList = NMCmdNumOptional( "binSize", binSize, paramList )
+	endif
+	
+	if ( ParamIsDefault( xUnits ) )
+		xUnits = ""
+	else
+		paramList = NMCmdStrOptional( "xUnits", xUnits, paramList )
 	endif
 	
 	if ( ParamIsDefault( yUnits ) )
@@ -4482,13 +4691,42 @@ Function /S NMSpikeISIHJoint( [ folder, xRasterList, yRasterList, xbgn, xend, bi
 	
 	Histogram /B={ V_min * 1.1, binSize, npnts } intvls, $ISIHname
 	
+	zCall_CheckYunits( yUnits )
+	
+	if ( strlen( xUnits ) == 0 )
+		xUnits = NMNoteLabel( "y", xRaster1, "time unit" )
+	endif
+	
+	Wave ISIH = $ISIHname
+	
 	strswitch( yUnits )
 	
-		case "Intvls / sec":
-		case "intvls/sec":
-		case "intervals/sec":
-			Wave ISIH = $ISIHname
-			ISIH /= binSize * 0.001
+		case "Intervals/s":
+		
+			ISIH /= binSize
+			
+			strswitch( xUnits )
+				case "ms":
+				case "msec":
+					ISIH *= 1000
+			endswitch
+			
+			break
+			
+		case "Intervals/ms":
+		
+			ISIH /= binSize
+			
+			strswitch( xUnits )
+				case "s":
+				case "sec":
+					ISIH *= 0.001
+			endswitch
+			
+			break
+			
+		case "Probability":
+			ISIH /= kcnt
 			break
 	
 		default:
@@ -4605,9 +4843,78 @@ End // NMSpikeHazard
 //****************************************************************
 //****************************************************************
 
+Static Function /S zCall_CheckYunits( yUnits )
+	String yUnits
+	
+	yUnits = ReplaceString( " ", yUnits, "" )
+	yUnits = ReplaceString( "intvls", yUnits, "Intervals" )
+	yUnits = ReplaceString( "/sec", yUnits, "/s" )
+	yUnits = ReplaceString( "/msec", yUnits, "/ms" )
+	
+	return yUnits
+
+End // zCall_Xunits
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Static Function /S zCall_Xunits( xRasterList )
+	String xRasterList
+
+	String xUnits, xRaster
+	
+	if ( ItemsInList( xRasterList) == 0 )
+		return ""
+	endif
+	
+	xRaster = StringFromList( 0, xRasterList )
+	xRaster = CheckNMSpikeRasterXPath( xRaster )
+	xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+	
+	return xUnits
+
+End // zCall_Xunits
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Static Function /S zCall_CheckXunits( xUnits )
+	String xUnits
+	
+	strswitch( xUnits )
+		case "s":
+		case "sec":
+		case "ms":
+		case "msec":
+			return "" // OK
+	endswitch
+
+	xUnits = StrVarOrDefault( NMSpikeDF + "SpikeXunits", "ms" )
+	
+	Prompt xUnits, "please specify time units of your data:", popup "s;ms;"
+	
+	DoPrompt "NM Spike Tab", xUnits
+
+	if ( V_flag == 1 )
+		return ""
+	endif
+	
+	SetNMstr( NMSpikeDF + "SpikeXunits", xUnits )
+	
+	return xUnits
+
+End // zCall_CheckXunits
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
 Static Function /S zCall_NMSpikeRate()
 
-	String folder, promptStr = "Spike Rate"
+	Variable xUnitsOK
+	String folder, promptStr = "Spike Count / Rate"
 	
 	String xRasterList = zCall_NMSpikeRasterListGet( promptStr )
 	
@@ -4617,40 +4924,58 @@ Static Function /S zCall_NMSpikeRate()
 	
 	Variable xbgn = NMSpikeAnalysisTbgn( xRasterList )
 	Variable xend = NMSpikeAnalysisTend( xRasterList )
+	String yUnits = StrVarOrDefault( NMSpikeDF + "RateYaxis", "Spikes/s" )
+	String xUnits = zCall_Xunits( xRasterList )
 	
 	Prompt xbgn, NMPromptAddUnitsX( "x-axis window begin" )
 	Prompt xend, NMPromptAddUnitsX( "x-axis window end" )
+	Prompt yUnits, "y-dimensions to compute:", popup "Spikes;Spikes/s;Spikes/ms;"
 	
-	DoPrompt "Spike Rate", xbgn, xend
+	DoPrompt promptStr, xbgn, xend, yUnits
 		
 	if ( V_flag == 1 )
 		return ""
 	endif
+	
+	SetNMstr( NMSpikeDF + "RateYaxis", yUnits )
 	
 	folder = StringFromList( 0, xRasterList )
 	folder = NMParent( folder, noPath = 1 )
 	
 	xRasterList = NMChild( xRasterList )
 	
-	return NMSpikeRate( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, history = 1 )
-
+	if ( StringMatch( yUnits, "Spikes/s" ) || StringMatch( yUnits, "Spikes/ms" ) )
+		xUnits = zCall_CheckXunits( xUnits )
+	else
+		xUnits = ""
+	endif
+	
+	if ( strlen( xUnits ) > 0 )
+		return NMSpikeRate( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, xUnits = xUnits, yUnits = yUnits, history = 1 )
+	endif
+	
+	return NMSpikeRate( folder = folder, xRasterList = xRasterList, xbgn = xbgn, xend = xend, yUnits = yUnits, history = 1 )
+	
 End // zCall_NMSpikeRate
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function /S NMSpikeRate( [ folder, xRasterList, yRasterList, xbgn, xend, noGraph, history ] )
+Function /S NMSpikeRate( [ folder, xRasterList, yRasterList, xbgn, xend, xUnits, yUnits, noGraph, history ] )
 	String folder // folder or subfolder, pass nothing for current folder
 	String xRasterList // x-raster wave, pass nothing for current x-raster
 	String yRasterList // y-raster wave, pass nothing for automatic search based on x-raster
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
+	String xUnits // "ms" or "s" // use this to specify time units if they are not in notes of x-raster wave
+	String yUnits // "Spikes" or "Spikes/s" or "Spikes/ms"
 	Variable noGraph // ( 0 ) create graph ( 1 ) no graph
 	Variable history // print function command to history ( 0 ) no ( 1 ) yes
 	
 	Variable icnt, jcnt, npnts, count, spikeX, yMustExist = 0
-	String xRaster, yRaster
-	String xLabel, yLabel, wName, subfolder, rateName, gName, gTitle, wavePrefix, paramList = ""
+	String xRaster, yRaster, yType
+	String xLabel, wName, subfolder, rateName
+	String gName, gTitle, wavePrefix, paramList = ""
 	
 	STRUCT Rect w
 	
@@ -4686,6 +5011,18 @@ Function /S NMSpikeRate( [ folder, xRasterList, yRasterList, xbgn, xend, noGraph
 		paramList = NMCmdNumOptional( "xend", xend, paramList )
 	endif
 	
+	if ( ParamIsDefault( xUnits ) )
+		xUnits = ""
+	else
+		paramList = NMCmdStrOptional( "xUnits", xUnits, paramList )
+	endif
+	
+	if ( ParamIsDefault( yUnits ) )
+		yUnits = "Spikes"
+	else
+		paramList = NMCmdStrOptional( "yUnits", yUnits, paramList )
+	endif
+	
 	if ( !ParamIsDefault( noGraph ) )
 		paramList = NMCmdNumOptional( "noGraph", noGraph, paramList, integer = 1 )
 	endif
@@ -4713,10 +5050,16 @@ Function /S NMSpikeRate( [ folder, xRasterList, yRasterList, xbgn, xend, noGraph
 	wName = NMChild( xRaster )
 	subfolder = NMParent( xRaster )
 	
-	if ( StringMatch( NMSpikeStrGet( "WaveNamingFormat" ), "suffix" ) )
-		rateName = wName + "_Rate"
+	if ( StringMatch( yUnits, "Spikes" ) )
+		yType = "Count"
 	else
-		rateName = "Rate_" + wName
+		yType = "Rate"
+	endif
+	
+	if ( StringMatch( NMSpikeStrGet( "WaveNamingFormat" ), "suffix" ) )
+		rateName = wName + "_" + yType
+	else
+		rateName = yType + "_" + wName
 	endif
 	
 	rateName = NMCheckStringName( rateName )
@@ -4830,12 +5173,45 @@ Function /S NMSpikeRate( [ folder, xRasterList, yRasterList, xbgn, xend, noGraph
 	
 	endif
 	
-	//wtemp *= 1000 / ( xend - xbgn ) // convert to rate
-	wtemp *= 1 / ( xend - xbgn ) // convert to rate
+	yUnits = zCall_CheckYunits( yUnits )
 	
-	yLabel = "Spikes/" + NMNoteLabel( "y", xRaster, "time unit" )
+	strswitch( yUnits )
+			
+		case "Spikes/s":
+		
+			wtemp /= xend - xbgn
+			
+			if ( strlen( xUnits ) == 0 )
+				xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+			endif
+			
+			strswitch( xUnits )
+				case "ms":
+				case "msec":
+				wtemp *= 1000 // time conversion
+			endswitch
+			
+			break
+			
+		case "Spikes/ms":
+		
+			wtemp /= xend - xbgn
+			
+			if ( strlen( xUnits ) == 0 )
+				xUnits = NMNoteLabel( "y", xRaster, "time unit" )
+			endif
+			
+			strswitch( xUnits )
+				case "s":
+				case "sec":
+				wtemp *= 0.001 // time conversion
+			endswitch
+			 
+			break
+			
+	endswitch
 	
-	NMNoteType( rateName, "Spike Rate", xLabel, yLabel, "_FXN_" )
+	NMNoteType( rateName, "Spike Rate", xLabel, yUnits, "_FXN_" )
 	Note $rateName, "Rate Xbgn:" + num2str( xbgn ) + ";Rate Xend:" + num2str( xend ) + ";"
 	Note $rateName, "Rate xRaster:" + xRaster
 	Note $rateName, "Rate yRaster:" + yRaster
@@ -4852,7 +5228,7 @@ Function /S NMSpikeRate( [ folder, xRasterList, yRasterList, xbgn, xend, noGraph
 	
 		ModifyGraph /W=$gName standoff=0, rgb=(65280,0,0), mode=4, marker=19
 		Label /W=$gName bottom xLabel
-		Label /W=$gName left yLabel
+		Label /W=$gName left yUnits
 	
 		WaveStats /Q/Z $rateName
 	

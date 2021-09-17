@@ -44,6 +44,77 @@ End
 //****************************************************************
 
 Function LoadNM()
+	// Opens procedure files that are in same disk location as NM_Loader.ipf
+	// NM_Loader.ipf should be located within NM folder on disk
+
+	Variable icnt
+	String flist, fileName, path = ""
+	String wName = "NM_Loader.ipf"
+	
+	GetWindow /Z $wName file
+	
+	if ( ItemsInList( S_value ) == 3 )
+		path = StringFromList( 1, S_value )
+	endif
+	
+	if ( strlen( path ) == 0 )
+		return -1
+	endif
+	
+	NewPath /O/Q NMPath, path
+	
+	PathInfo NMPath
+	
+	if ( V_flag == 0 )
+		return -1
+	endif
+	
+	flist = IndexedFile( NMPath, -1, "????" )
+	
+	for ( icnt = 0; icnt < ItemsInList( flist ); icnt += 1 )
+	
+		fileName = StringFromList( icnt, flist )
+		
+		if ( StrSearch( fileName, ".ipf", 0, 2 ) >= 0 )
+			Execute /P/Q/Z "OpenProc /P=NMPath/V=0 \"" + filename + "\""
+		endif
+		
+	endfor
+	
+	NewPath /O/Q NMClamp, path + "NMClamp:" // load IPF files from NMClamp subfolder
+	
+	PathInfo NMClamp
+	
+	if ( V_flag == 0 )
+		return -1
+	endif
+	
+	flist = IndexedFile( NMClamp, -1, "????" )
+	
+	for ( icnt = 0; icnt < ItemsInList( flist ); icnt += 1 )
+	
+		fileName = StringFromList( icnt, flist )
+		
+		if ( StrSearch( fileName, ".ipf", 0, 2 ) >= 0 )
+			Execute /P/Q/Z "OpenProc /P=NMClamp/V=0 \"" + filename + "\""
+		endif
+		
+	endfor
+	
+	Execute /P/Q/Z "COMPILEPROCEDURES "		// Note the space before final quote
+	
+	Execute /P/Q/Z "NMon( 1 )"
+	
+	Execute /P/Q/Z "KillPath NMClamp"
+
+End // LoadNM
+
+//****************************************************************
+//****************************************************************
+
+Function LoadNM2()
+	// To use this function procedure files need to be located in
+	// "User Procedures" folder
 
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_aMenu\""
 	Execute/P/Q/Z "INSERTINCLUDE \"NM_ChanGraphs\""
@@ -114,7 +185,7 @@ Function LoadNM()
 	
 	Execute/P/Q/Z "NMon( 1 )"
 	
-End // LoadNM
+End // LoadNM2
 
 //****************************************************************
 //****************************************************************

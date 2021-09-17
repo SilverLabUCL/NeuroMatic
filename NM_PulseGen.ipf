@@ -51,6 +51,7 @@ Static Constant refracDefault = 0
 
 Static StrConstant promptPrefix = "Prompt_"
 Static StrConstant paramWavePrefix = "PP_"
+Static StrConstant noDSCGList = "off;config;pulse;train;tbgn;tend;interval;refrac;"
 
 StrConstant NMPulseDF = "root:Packages:NeuroMatic:Pulse:"
 
@@ -233,10 +234,11 @@ End // NMPulseTest
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
+Function /S NMPulseAdd( wName, paramList [ df, udf, clear, DSCG, notes, s ] )
 	String wName // name of input wave to add pulse
 	String paramList // see above examples
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located
 	Variable clear // clear input wave before adding pulse
 	Variable DSCG
 	Variable notes
@@ -249,6 +251,10 @@ Function /S NMPulseAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( s ) )
@@ -266,7 +272,7 @@ Function /S NMPulseAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 	
 	else
 	
-		pList = NMPulse( wName, paramList, df = df, clear = clear, DSCG = DSCG, notes = notes, s = ss )
+		pList = NMPulse( wName, paramList, df=df, udf=udf, clear=clear, DSCG=DSCG, notes=notes, s=ss )
 	
 	endif
 	
@@ -277,16 +283,17 @@ End // NMPulseAdd
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
+Function /S NMPulse( wName, paramList [ df, udf, clear, DSCG, notes, s ] )
 	String wName // name of input wave to add pulse
 	String paramList // see above examples
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located
 	Variable clear // clear input wave before adding pulse
 	Variable DSCG
 	Variable notes
 	STRUCT NMPulseSaveToWaves &s
 	
-	Variable off, width, TTL, tpeak, normFactor, normalize, infWidth, numExps
+	Variable off, width, TTL, tpeak, normFactor, normalize, infWidth, numExps, userWave
 	Variable center, stdv
 	Variable pslope, Lvar
 	Variable pbgn, pend, ipnt
@@ -297,6 +304,10 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( s ) )
@@ -424,8 +435,9 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 			
 			if ( numtype( aa.tau * aow.onset ) == 0 )
 				
-				tpeak = aow.onset + abs( aa.tau )
-				normFactor = ( tpeak - aow.onset ) * exp( -( tpeak - aow.onset ) / abs( aa.tau ) )
+				//tpeak = aow.onset + abs( aa.tau )
+				//normFactor = ( tpeak - aow.onset ) * exp( -( tpeak - aow.onset ) / abs( aa.tau ) )
+				normFactor = abs( aa.tau ) * exp( -1 )
 				
 				wtemp = ( x - aow.onset ) * exp( -( x - aow.onset ) / abs( aa.tau ) ) / normFactor
 				
@@ -596,13 +608,18 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 			
 		default: // user-defined pulse wave
 		
-			if ( WaveExists( $df+pulse ) )
+			if ( WaveExists( $udf+pulse ) )
 			
-				Wave yourpulse = $df+pulse
-				
-				wtemp = yourpulse
+				Wave yourpulse = $udf+pulse
 				
 				ipnt = numpnts( yourpulse )
+				
+				ipnt = min( ipnt, numpnts( wtemp ) )
+				
+				if ( ipnt - 1 > 0 )
+					wtemp[ 0, ipnt-1] = yourpulse
+				endif
+				
 				ipnt += 1
 				
 				if ( ipnt < numpnts( wtemp ) )
@@ -611,9 +628,12 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 				
 				ipnt = aow.onset / deltax( wtemp )
 				
-				MatrixOp /O wtemp = shiftVector( wtemp, ipnt, 0 )
+				if ( ipnt > 0 )
+					MatrixOp /O wtemp = shiftVector( wtemp, ipnt, 0 )
+				endif
 				
 				normalize = 1
+				userWave = 1
 				
 			else
 			
@@ -668,7 +688,7 @@ Function /S NMPulse( wName, paramList [ df, clear, DSCG, notes, s ] )
 		
 		endif
 		
-	else
+	elseif ( !userWave )
 	
 		wtemp = 0
 	
@@ -697,12 +717,13 @@ End // NMPulse
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseBinomial( wName, paramList, binomialN, binomialP [ df, clear, DSCG, notes, s ] )
+Function /S NMPulseBinomial( wName, paramList, binomialN, binomialP [ df, udf, clear, DSCG, notes, s ] )
 	String wName // name of input wave to add pulse
 	String paramList // see above examples
 	Variable binomialN // number of trials (N)
 	Variable binomialP // probability of success (P)
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located
 	Variable clear // clear input wave before adding pulse
 	Variable DSCG // compute with delta or stdv or cv or gamma
 	Variable notes
@@ -715,6 +736,10 @@ Function /S NMPulseBinomial( wName, paramList, binomialN, binomialP [ df, clear,
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( s ) )
@@ -762,7 +787,7 @@ Function /S NMPulseBinomial( wName, paramList, binomialN, binomialP [ df, clear,
 		
 		ss.trial = trial
 		
-		outList += NMPulse( wName, paramList2, df = df, DSCG = DSCG, notes = notes, s = ss )
+		outList += NMPulse( wName, paramList2, df=df, udf=udf, DSCG=DSCG, notes=notes, s=ss )
 		
 	endfor
 	
@@ -870,10 +895,11 @@ End // NMPulseTrainParamList
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
+Function /S NMPulseTrainAdd( wName, paramList [ df, udf, clear, DSCG, notes, s ] )
 	String wName // name of input wave to add pulse train
 	String paramList // train parameter list
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located
 	Variable clear // clear wave before adding pulses
 	Variable DSCG // compute with delta or stdv or cv or gamma
 	Variable notes
@@ -882,6 +908,7 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 	Variable icnt, ipnt, trial, foundPulse, off, numPulses, fixed, stochastic, TTL
 	Variable amp, onset, interval
 	Variable binomialN, binomialP
+	Variable foundUserTrain
 	String pulse, paramList2
 	
 	String pName = "PU_PulseAddTemp2"
@@ -892,6 +919,10 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( s ) )
@@ -968,7 +999,7 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 	
 	if ( foundPulse && !stochastic )
 		Duplicate /O $( df + wName ) $( df + pName )
-		paramList2 = NMPulse( pName, paramList, df = df, clear = 1, DSCG = DSCG )
+		paramList2 = NMPulse( pName, paramList, df=df, udf=udf, clear=1, DSCG=DSCG )
 	endif
 	
 	if ( StringMatch( t.type, "fixed" ) )
@@ -983,9 +1014,10 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 		
 	else
 	
-		if ( WaveExists( $df + t.type ) )
-			Wave pTimes = $df + t.type // user wave should have pulse times
+		if ( WaveExists( $udf + t.type ) )
+			Wave pTimes = $udf + t.type // user wave should have pulse times
 			numPulses = numpnts( pTimes )
+			foundUserTrain = 1
 		else
 			KillWaves /Z $df + pName
 			KillWaves /Z $df + wNameTemp
@@ -1008,7 +1040,7 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 				
 			if ( fixed )
 				onset = t.tbgn + icnt * t.interval
-			elseif ( icnt < numpnts( pTimes ) )
+			elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 				onset = pTimes[ icnt ]
 			else
 				break
@@ -1024,7 +1056,7 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 			
 			if ( stochastic )
 				paramList2 = NMPulseNumReplace( "onset", paramList, onset )
-				paramList2 = NMPulse( wNameTemp, paramList2, df = df, DSCG = DSCG, s = ss )
+				paramList2 = NMPulse( wNameTemp, paramList2, df=df, udf=udf, DSCG=DSCG, s=ss )
 			else
 			
 				ipnt = x2pnt( wtemp, onset )
@@ -1057,7 +1089,7 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 				
 				if ( fixed )
 					onset = t.tbgn + icnt * t.interval
-				elseif ( icnt < numpnts( pTimes ) )
+				elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 					onset = pTimes[ icnt ]
 				else
 					break
@@ -1077,7 +1109,7 @@ Function /S NMPulseTrainAdd( wName, paramList [ df, clear, DSCG, notes, s ] )
 					paramList2 = NMPulseNumReplace( "amp", paramList2, NaN )
 				endif
 				
-				paramList2 = NMPulse( wNameTemp, paramList2, df = df, DSCG = DSCG, s = ss )
+				paramList2 = NMPulse( wNameTemp, paramList2, df=df, udf=udf , DSCG=DSCG, s=ss )
 				
 			endfor
 			
@@ -1221,10 +1253,11 @@ End // NMPulseTrainRPexists
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR, wNameP, s ] )
+Function /S NMPulseTrainRPadd( wName, paramList [ df, udf, clear, DSCG, notes, wNameR, wNameP, s ] )
 	String wName // name of input wave to add pulse train
 	String paramList // train parameter list
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located
 	Variable clear // clear wave before adding pulses
 	Variable DSCG // compute with delta or stdv or cv or gamma
 	Variable notes
@@ -1235,6 +1268,7 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 	Variable fixed, stochastic, successN, doConvolution
 	Variable amp, onset, interval, binomialN
 	Variable R, P, foundP, saveR, saveP
+	Variable foundUserTrain
 	String pulse, paramList2
 	
 	String pName = "PU_PulseAddTemp2"
@@ -1246,6 +1280,10 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( wNameR ) )
@@ -1331,7 +1369,7 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 	
 	if ( foundPulse && !stochastic )
 		Duplicate /O $( df + wName ) $( df + pName )
-		paramList2 = NMPulse( pName, paramList, df = df, clear = 1, DSCG = DSCG )
+		paramList2 = NMPulse( pName, paramList, df=df, udf=udf, clear=1, DSCG=DSCG )
 	endif
 	
 	if ( StringMatch( t.type, "fixed" ) )
@@ -1346,9 +1384,10 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 		
 	else
 	
-		if ( WaveExists( $df + t.type ) )
-			Wave pTimes = $df + t.type // user wave should have pulse times
+		if ( WaveExists( $udf + t.type ) )
+			Wave pTimes = $udf + t.type // user wave should have pulse times
 			numPulses = numpnts( pTimes )
+			foundUserTrain = 1
 		else
 			KillWaves /Z $df + pName
 			KillWaves /Z $df + wNameTemp
@@ -1401,7 +1440,7 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 			
 				onset = t.tbgn + icnt * interval
 				
-			elseif ( icnt < numpnts( pTimes ) )
+			elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 			
 				onset = pTimes[ icnt ]
 				
@@ -1429,7 +1468,7 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 					if ( stochastic )
 						paramList2 = NMPulseNumReplace( "onset", paramList, onset )
 						paramList2 = NMPulseNumReplace( "amp", paramList2, amp * R * P )
-						paramList2 = NMPulse( wNameTemp, paramList2, df = df, DSCG = DSCG, s = ss )
+						paramList2 = NMPulse( wNameTemp, paramList2, df=df, udf=udf, DSCG=DSCG, s=ss )
 					else
 						if ( ( xpnt2 >= 0 ) && ( xpnt2 < numpnts( wtemp ) ) )
 							wtemp[ xpnt2 ] += R * P
@@ -1495,7 +1534,7 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 				
 					onset = t.tbgn + icnt * interval
 					
-				elseif ( icnt < numpnts( pTimes ) )
+				elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 				
 					onset = pTimes[ icnt ]
 					
@@ -1522,7 +1561,7 @@ Function /S NMPulseTrainRPadd( wName, paramList [ df, clear, DSCG, notes, wNameR
 					
 						if ( stochastic )
 							paramList2 = NMPulseNumReplace( "onset", paramList, onset )
-							paramList2 = NMPulse( wNameTemp, paramList2, df = df, DSCG = DSCG, s = ss )
+							paramList2 = NMPulse( wNameTemp, paramList2, df=df, udf=udf, DSCG=DSCG, s=ss )
 						else
 							if ( ( xpnt2 >= 0 ) && ( xpnt2 < numpnts( wtemp ) ) )
 								wtemp[ xpnt2 ] += 1
@@ -1696,10 +1735,11 @@ End // NMPulseTrainDFexists
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD, wNameF, s ] )
+Function /S NMPulseTrainDFadd( wName, paramList [ df, udf, clear, DSCG, notes, wNameD, wNameF, s ] )
 	String wName // name of input wave to add pulse train
 	String paramList // train parameter list
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located
 	Variable clear // clear wave before adding pulses
 	Variable DSCG // compute with delta or stdv or cv or gamma
 	Variable notes
@@ -1710,6 +1750,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 	Variable stochastic, binomialN, successN
 	Variable amp, onset, interval
 	Variable D, F, foundD, foundF, saveD, saveF, xpnt1, xpnt2, xlast
+	Variable foundUserTrain
 	String pulse, wName2, paramList2
 	
 	String pName = "PU_PulseAddTemp2"
@@ -1721,6 +1762,10 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( s ) )
@@ -1805,7 +1850,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 	
 	if ( foundPulse && !stochastic )
 		Duplicate /O $( df + wName ) $( df + pName )
-		paramList2 = NMPulse( pName, paramList, df = df, clear = 1, DSCG = DSCG )
+		paramList2 = NMPulse( pName, paramList, df=df, udf=udf, clear=1, DSCG=DSCG )
 	endif
 	
 	if ( StringMatch( t.type, "fixed" ) )
@@ -1820,13 +1865,14 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 		
 	else
 	
-		if ( WaveExists( $df + t.type ) )
-			Wave pTimes = $df + t.type // user wave should have pulse times
+		if ( WaveExists( $udf + t.type ) )
+			Wave pTimes = $udf + t.type // user wave should have pulse times
 			numPulses = numpnts( pTimes )
+			foundUserTrain = 1
 		else
 			KillWaves /Z $df + pName
 			KillWaves /Z $df + wNameTemp
-			return ""
+			return "" // abort
 		endif
 	
 	endif
@@ -1875,7 +1921,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 			
 				onset = t.tbgn + icnt * interval
 				
-			elseif ( icnt < numpnts( pTimes ) )
+			elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 			
 				onset = pTimes[ icnt ]
 				
@@ -1905,7 +1951,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 					if ( stochastic )
 						paramList2 = NMPulseNumReplace( "onset", paramList, onset )
 						paramList2 = NMPulseNumReplace( "amp", paramList2, amp * D * F )
-						paramList2 = NMPulse( wNameTemp, paramList2, df = df, DSCG = DSCG, s = ss )
+						paramList2 = NMPulse( wNameTemp, paramList2, df=df, udf=udf, DSCG=DSCG, s=ss )
 					else
 						if ( ( xpnt2 >= 0 ) && ( xpnt2 < numpnts( wtemp ) ) )
 							wtemp[ xpnt2 ] += D * F
@@ -1973,7 +2019,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 				
 					onset = t.tbgn + icnt * interval
 					
-				elseif ( icnt < numpnts( pTimes ) )
+				elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 				
 					onset = pTimes[ icnt ]
 					
@@ -2002,7 +2048,7 @@ Function /S NMPulseTrainDFadd( wName, paramList [ df, clear, DSCG, notes, wNameD
 					
 						if ( stochastic )
 							paramList2 = NMPulseNumReplace( "onset", paramList, onset )
-							paramList2 = NMPulse( wNameTemp, paramList2, df = df, DSCG = DSCG, s = ss )
+							paramList2 = NMPulse( wNameTemp, paramList2, df=df, udf=udf, DSCG=DSCG, s=ss )
 						else
 							if ( ( xpnt2 >= 0 ) && ( xpnt2 < numpnts( wtemp ) ) )
 								wtemp[ xpnt2 ] += 1
@@ -2287,10 +2333,11 @@ End // NMPulseTrainDittmanExists
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, clear, DSCG, notes, wNameD, wNameF, wNameCaXD, wNameCaXF, s ] )
+Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, udf, clear, DSCG, notes, wNameD, wNameF, wNameCaXD, wNameCaXF, s ] )
 	String wName // name of input wave to add pulse train
 	String paramList // train parameter list
-	String df // data folder
+	String df // data folder where input wave is located
+	String udf // data folder where user waves are located 
 	Variable clear // clear wave before adding pulses
 	Variable DSCG // compute with delta or stdv or cv or gamma
 	Variable notes
@@ -2300,6 +2347,7 @@ Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, clear, DSCG, notes, w
 	Variable icnt, jcnt, foundPulse, off, numPulses, fixed, xpnts, dx
 	Variable amp, onset, interval
 	Variable foundF, saveD, saveF, saveCaXD, saveCaXF, xpnt1, xpnt2
+	Variable foundUserTrain
 	String pulse, paramList2, wName2
 	
 	String pName = "PU_PulseAddTemp2"
@@ -2311,6 +2359,10 @@ Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, clear, DSCG, notes, w
 	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	endif
+	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
 	endif
 	
 	if ( ParamIsDefault( wNameD ) || ( strlen( wNameD ) == 0 ) )
@@ -2394,7 +2446,7 @@ Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, clear, DSCG, notes, w
 	
 	if ( foundPulse )
 		Duplicate /O $( df + wName ) $( df + pName )
-		paramList2 = NMPulse( pName, paramList, df = df, clear = 1, DSCG = DSCG )
+		paramList2 = NMPulse( pName, paramList, df=df, udf=udf, clear=1, DSCG=DSCG )
 	endif
 	
 	if ( StringMatch( t.type, "fixed" ) )
@@ -2409,9 +2461,10 @@ Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, clear, DSCG, notes, w
 		
 	else
 	
-		if ( WaveExists( $df + t.type ) )
-			Wave pTimes = $df + t.type // user wave should have pulse times
+		if ( WaveExists( $udf + t.type ) )
+			Wave pTimes = $udf + t.type // user wave should have pulse times
 			numPulses = numpnts( pTimes )
+			foundUserTrain = 1
 		else
 			KillWaves /Z $df + pName
 			KillWaves /Z $df + wNameTemp
@@ -2475,7 +2528,7 @@ Function /S NMPulseTrainDittmanAdd( wName, paramList [ df, clear, DSCG, notes, w
 		
 			onset = t.tbgn + icnt * interval
 			
-		elseif ( icnt < numpnts( pTimes ) )
+		elseif ( foundUserTrain && ( icnt < numpnts( pTimes ) ) )
 		
 			onset = pTimes[ icnt ]
 			
@@ -2682,8 +2735,8 @@ End // NM_Dittman_DYDT
 //****************************************************************
 //****************************************************************
 
-Function NMPulseTrainRandomTimes( df, wName, paramList, timeLimit )
-	String df // data folder
+Function NMPulseTrainRandomTimes( udf, wName, paramList, timeLimit )
+	String udf // data folder where user waves are located
 	String wName // wave name
 	String paramList // "interval=10;tbgn=20;tend=1000;refrac=1;" // all in ms
 	Variable timeLimit
@@ -2752,9 +2805,9 @@ Function NMPulseTrainRandomTimes( df, wName, paramList, timeLimit )
 	
 	plimit = floor( 400 + ( ( tend - tbgn ) / intervalCorrected ) )
 	
-	Make /O/N=( plimit ) $df + wName = NaN
+	Make /O/N=( plimit ) $udf + wName = NaN
 	
-	Wave wtemp = $df + wName
+	Wave wtemp = $udf + wName
 		
 	do // compute random pulse times
 
@@ -2773,9 +2826,9 @@ Function NMPulseTrainRandomTimes( df, wName, paramList, timeLimit )
 	xLabel = "pulse number"
 	yLabel = NMXunits
 	
-	NMNoteType( df + wName, "NM Random Pulses", xLabel, yLabel, "_FXN_" )
+	NMNoteType( udf + wName, "NM Random Pulses", xLabel, yLabel, "_FXN_" )
 		
-	Note $df + wName, ReplaceString( "=", paramList, ":" )
+	Note $udf + wName, ReplaceString( "=", paramList, ":" )
 	
 	return pcnt
 			
@@ -2816,17 +2869,18 @@ End // NMPulseWavesMake
 
 Function /S NMPulseWavesMake2( pulseWaveName, nm, m [ scale, notes, savePlasticityWaves, s ] )
 	String pulseWaveName // text wave containing pulse configs
-	STRUCT NMParams &nm // uses nm.folder, nm.wList, nm.wavePrefix, nm.chanNum
+	STRUCT NMParams &nm // uses nm.folder, nm.wList for location of output waves
 	STRUCT NMMakeStruct &m
 	Variable scale // final scale factor
 	Variable notes // ( 0 ) no ( 1 ) yes
 	Variable savePlasticityWaves // ( 0 ) no ( 1 ) yes
 	STRUCT NMPulseSaveToWaves &s
 	
-	Variable wcnt, ccnt, numWaves, waveNum, wnum, delta, numConfigs
-	String valueStr, wName, outputName, paramList, paramList2
-	String train, wList, wList2, progressStr, noteStr = ""
+	Variable wcnt, ccnt, numWaves, wnum, numConfigs
+	String valueStr, wName, outputName, paramList, paramList2, waveNumList
+	String train, progressStr, noteStr = ""
 	String wNameD = "", wNameF = "", wNameCaXD = "", wNameCaXF = "", wNameR = "", wNameP = ""
+	String udf // data folder where user waves are located
 	
 	STRUCT NMPulseSaveToWaves ss
 	
@@ -2844,8 +2898,7 @@ Function /S NMPulseWavesMake2( pulseWaveName, nm, m [ scale, notes, savePlastici
 		//NMMake2( nm, m )
 	//endif
 	
-	wList = nm.wList
-	numWaves = ItemsInList( wList )
+	numWaves = ItemsInList( nm.wList )
 	
 	//if ( numWaves == 0 )
 		//wList = nm.newList
@@ -2857,18 +2910,20 @@ Function /S NMPulseWavesMake2( pulseWaveName, nm, m [ scale, notes, savePlastici
 	endif
 	
 	if ( ( strlen( pulseWaveName ) == 0 ) || !WaveExists( $pulseWaveName ) )
-		return wList
+		return nm.wList
 	endif
 	
 	if ( ( strlen( ss.sf ) > 0 ) && DataFolderExists( ss.sf ) )
 		ss.numWaves = numWaves
 	endif
 	
+	udf = NMParent( pulseWaveName ) // user data folder is where pulse config wave is located
+	
 	Wave /T pulse = $pulseWaveName
 	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 		
-		wName = StringFromList( wcnt, wList )
+		wName = StringFromList( wcnt, nm.wList )
 		
 		if ( strlen( wName ) == 0 )
 			continue
@@ -2899,22 +2954,21 @@ Function /S NMPulseWavesMake2( pulseWaveName, nm, m [ scale, notes, savePlastici
 			continue
 		endif
 		
-		waveNum = NMPulseWaveNum( paramList )
-		delta = NMPulseWaveDelta( paramList )
+		waveNumList = NMPulseWaveNumSeq( paramList, numWaves, convert2list = 1 )
 		
 		train = StringByKey( "train", paramList, "=" )
 		
-		if ( numtype( waveNum ) > 0 )
+		if ( ItemsInList( waveNumList ) == 0 )
 			continue
 		endif
 		
 		ss.pulseConfigNum = ccnt
 		
-		for ( wcnt = 0 ; wcnt < ItemsInList( wList ) ; wcnt += 1 )
+		for ( wcnt = 0 ; wcnt < ItemsInList( waveNumList ) ; wcnt += 1 )
 		
-			wnum = waveNum + wcnt * delta
+			wnum = str2num( StringFromList( wcnt, waveNumList ) )
 			
-			wName = StringFromList( wnum, wList )
+			wName = StringFromList( wnum, nm.wList )
 			
 			if ( ( strlen( wName ) == 0 ) || !WaveExists( $nm.folder + wName ) )
 				continue
@@ -2929,67 +2983,63 @@ Function /S NMPulseWavesMake2( pulseWaveName, nm, m [ scale, notes, savePlastici
 					ss.plasticity = 1
 					
 					if ( savePlasticityWaves )
-						wNameR = "PU_R_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
-						wNameP = "PU_P_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
+						wNameR = "PU_R_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
+						wNameP = "PU_P_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
 					endif
 					
-					NMPulseTrainRPadd( wName, paramList, df=nm.folder, DSCG=wcnt, notes=notes, wNameR=wNameR, wNameP=wNameP, s=ss )
+					NMPulseTrainRPadd( wName, paramList, df=nm.folder, udf=udf, DSCG=wcnt, notes=notes, wNameR=wNameR, wNameP=wNameP, s=ss )
 					
 				elseif ( NMPulseTrainDFexists( paramList ) )
 				
 					ss.plasticity = 1
 					
 					if ( savePlasticityWaves )
-						wNameD = "PU_D_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
-						wNameF = "PU_F_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
+						wNameD = "PU_D_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
+						wNameF = "PU_F_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
 					endif
 					
-					NMPulseTrainDFadd( wName, paramList, df=nm.folder, DSCG=wcnt, notes=notes, wNameD=wNameD, wNameF=wNameF, s=ss )
+					NMPulseTrainDFadd( wName, paramList, df=nm.folder, udf=udf, DSCG=wcnt, notes=notes, wNameD=wNameD, wNameF=wNameF, s=ss )
 					
 				elseif ( NMPulseTrainDittmanExists( paramList ) )
 				
 					ss.plasticity = 1
 					
 					if ( savePlasticityWaves )
-						wNameD = "PU_D_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
-						wNameF = "PU_F_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
-						wNameCaXD = "PU_CaXD_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
-						wNameCaXF = "PU_CaXF_c" + num2istr( ccnt ) + "w" + num2istr( wcnt )
+						wNameD = "PU_D_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
+						wNameF = "PU_F_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
+						wNameCaXD = "PU_CaXD_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
+						wNameCaXF = "PU_CaXF_c" + num2istr( ccnt ) + "w" + num2istr( wnum )
 					endif
 					
-					NMPulseTrainDittmanAdd( wName, paramList, df=nm.folder, DSCG=wcnt, notes=notes, wNameD=wNameD, wNameF=wNameF, wNameCaXD=wNameCaXD, wNameCaXF=wNameCaXF, s=ss )
+					NMPulseTrainDittmanAdd( wName, paramList, df=nm.folder, udf=udf, DSCG=wcnt, notes=notes, wNameD=wNameD, wNameF=wNameF, wNameCaXD=wNameCaXD, wNameCaXF=wNameCaXF, s=ss )
 					
 				else
 				
-					NMPulseTrainAdd( wName, paramList, df=nm.folder, DSCG=wcnt, notes=notes, s=ss )
+					NMPulseTrainAdd( wName, paramList, df=nm.folder, udf=udf, DSCG=wcnt, notes=notes, s=ss )
 					
 				endif
 				
 			else
 			
-				paramList2 = NMPulseAdd( wName, paramList, df=nm.folder, DSCG=wcnt, notes=notes, s=ss )
+				paramList2 = NMPulseAdd( wName, paramList, df=nm.folder, udf=udf, DSCG=wcnt, notes=notes, s=ss )
 				
-			endif
-			
-			if ( delta == 0 )
-				break
 			endif
 				
 		endfor
 		
 		if ( NMProgressCancel() == 1 )
-			return wList
+			return nm.wList
 		endif
 	
 	endfor
 	
 	if ( ( scale == 1 ) || ( scale == 0 ) || ( numtype( scale ) > 0 ) )
-		return wList
+		return nm.wList
 	endif
 	
-	for ( wcnt = 0 ; wcnt < ItemsInList( wList ) ; wcnt += 1 )
+	for ( wcnt = 0 ; wcnt < ItemsInList( nm.wList ) ; wcnt += 1 )
 		
-		wName = StringFromList( wcnt, wList )
+		wName = StringFromList( wcnt, nm.wList )
 		
 		if ( WaveExists( $nm.folder+wName ) )
 			
@@ -3001,7 +3051,7 @@ Function /S NMPulseWavesMake2( pulseWaveName, nm, m [ scale, notes, savePlastici
 		
 	endfor
 	
-	return wList
+	return nm.wList
 	
 End // NMPulseWavesMake2
 
@@ -3009,7 +3059,7 @@ End // NMPulseWavesMake2
 //****************************************************************
 
 Function PulseWavesKill(df, wPrefix)
-	String df // directory folder
+	String df // data folder
 	String wPrefix // wave prefix
 	
 	Variable icnt
@@ -3056,7 +3106,7 @@ Function NMPulseParamsInit( p, varName, paramList )
 	STRUCT NMPulseParams &p
 	String varName, paramList
 	
-	Variable items, icnt, value
+	Variable items, icnt, value, found = 0
 	String valueStr, str0, str1, stemp, select, select2
 	
 	p.value = NaN
@@ -3093,35 +3143,32 @@ Function NMPulseParamsInit( p, varName, paramList )
 		return 0 // finished
 	endif
 	
-	str1 = StringFromList( 1, valueStr, "," )
-	value = str2num( str1 )
-	
-	if ( numtype( value ) == 0 ) // old delta format
-		p.foundDelta = 1
-		p.delta = value
-		return 0 // finished
-	endif
-	
 	for ( icnt = 1 ; icnt < items ; icnt += 1 )
 	
 		stemp = StringFromList( icnt, valueStr, "," )
 		
 		if ( StringMatch( stemp[ 0, 4 ], "delta" ) )
+			found = 1
 			p.foundDelta = 1
 			p.delta = NumberByKey( "delta", stemp, "=", "," )
 		elseif ( StringMatch( stemp[ 0, 3 ], "stdv" ) )
+			found = 1
 			p.foundSTDV = 1
 			p.stdv = NumberByKey( "stdv", stemp, "=", "," )
 		elseif ( StringMatch( stemp[ 0, 1 ], "cv" ) )
+			found = 1
 			p.foundCV = 1
 			p.cv = NumberByKey( "cv", stemp, "=", "," )
 		elseif ( StringMatch( stemp[ 0, 5 ], "gammaA" ) )
+			found = 1
 			p.foundGamma = 1
 			p.gammaA = NumberByKey( "gammaA", stemp, "=", "," )
 		elseif ( StringMatch( stemp[ 0, 5 ], "gammaB" ) )
+			found = 1
 			p.foundGamma = 1
 			p.gammaB = NumberByKey( "gammaB", stemp, "=", "," )
 		elseif ( StringMatch( stemp, "FP" ) )
+			found = 1
 			p.fixPolarity = 1
 		endif
 	
@@ -3129,6 +3176,18 @@ Function NMPulseParamsInit( p, varName, paramList )
 	
 	if ( p.foundGamma && ( numtype( p.gammaA * p.gammaB ) > 0 ) )
 		p.foundGamma = 0
+	endif
+	
+	if ( !found ) // try old delta format
+	
+		str1 = StringFromList( 1, valueStr, "," )
+		value = str2num( str1 )
+		
+		if ( numtype( value ) == 0 ) // old delta format
+			p.foundDelta = 1
+			p.delta = value
+		endif
+	
 	endif
 	
 End // NMPulseParamsInit
@@ -3263,7 +3322,7 @@ Function NMPulseWaveNum( paramList )
 
 	String valueStr = StringByKey( "wave", paramList, "=" )
 		
-	if ( StringMatch( valueStr, "all" ) )
+	if ( strsearch( valueStr, "all", 0 ) == 0 )
 		return 0
 	else
 		return NMPulseNumByKey( "wave", paramList, NaN, positive = 1 )
@@ -3274,16 +3333,113 @@ End // NMPulseWaveNum
 //****************************************************************
 //****************************************************************
 
+Function /S NMPulseWaveNumSeq( paramList, numWaves [ convert2list ] )
+	String paramList
+	Variable numWaves
+	Variable convert2list // convert sequence (e.g. "1-3") to list (e.g. "1;2;3;")
+	
+	Variable icnt, jcnt, value, delta = 0
+	String seqStr, seqStr2, istr, istr2, valueStr, deltaStr = ""
+	
+	paramList = ReplaceString( " ", paramList, "" )
+	paramList = ReplaceString( ",delta,", paramList, ",delta=" )
+
+	valueStr = StringByKey( "wave", paramList, "=", ";" )
+	deltaStr = StringByKey( "delta", valueStr, "=", "," )
+	
+	if ( strlen( deltaStr ) > 0 )
+		
+		delta = round( str2num( deltaStr ) )
+		
+		if ( ( numtype( delta ) > 0 ) || ( delta < 0 ) )
+			delta = 0 // bad delta
+		endif
+		
+		icnt = strsearch( valueStr, ",delta", 0 )
+		
+		if ( icnt > 0 )
+			valueStr = valueStr[ 0, icnt - 1 ]
+		endif
+	
+	endif
+	
+	if ( !convert2list )
+		return valueStr
+	endif
+	
+	if ( strsearch( valueStr, "all", 0 ) >= 0 )
+	
+		valueStr = "0-" + num2istr( numWaves - 1 )
+		seqStr = RangeToSequenceStr( valueStr )
+		
+	else
+	
+		seqStr = ""
+	
+		for ( icnt = 0 ; icnt < ItemsInList( valueStr, "," ); icnt += 1 )
+		
+			istr = StringFromList( icnt, valueStr, "," )
+			istr2 = RangeToSequenceStr( istr )
+			
+			if ( strlen( istr2 ) > 0 )
+				seqStr += istr2 + ";" // found a seq
+				continue
+			endif
+			
+			value = str2num( istr )
+			
+			if ( ( numtype( value ) == 0 ) && ( value >= 0 ) && ( value < numWaves ) )
+				seqStr += istr + ";" // found a single value
+			endif
+			
+		endfor
+		
+		seqStr = ReplaceString( ";;", seqStr, ";" )
+		
+	endif
+	
+	if ( delta > 1 )
+	
+		seqStr2 = ""
+		
+		if ( ItemsInlist( seqStr ) == 1 )
+		
+			jcnt = str2num( StringFromList( 0, seqStr ) )
+		
+			for ( icnt = jcnt ; icnt < numWaves ; icnt += delta )
+				seqStr2 += num2istr( icnt ) + ";"
+			endfor
+		
+		elseif ( ItemsInlist( seqStr ) > 1 )
+		
+			for ( icnt = 0 ; icnt < ItemsInlist( seqStr ) ; icnt += delta )
+				seqStr2 += StringFromList( icnt, seqStr ) + ";"
+			endfor
+		
+		endif
+		
+		return seqStr2
+	
+	endif
+	
+	return seqStr
+
+End // NMPulseWaveNumSeq
+
+//****************************************************************
+//****************************************************************
+
 Function NMPulseWaveDelta( paramList )
 	String paramList
 
 	String valueStr = StringByKey( "wave", paramList, "=" )
+	String deltaStr = StringByKey( "delta", valueStr, "=", "," )
 		
-	if ( StringMatch( valueStr, "all" ) )
-		return 1
-	else
-		return NMPulseNumByKeyDSCG( "wave", paramList )
+	if ( strlen( deltaStr ) > 0 )
+		return round( str2num( deltaStr ) )
 	endif
+	
+	return 0
 
 End // NMPulseWaveDelta
 
@@ -3327,42 +3483,37 @@ End // PulseWaveName
 //****************************************************************
 //****************************************************************
 
-Function NMPulseConfigWaveSave( wName, paramList [ configNum ] )
-	String wName // full-path wave name
+Function NMPulseConfigWaveSave( pcwName, paramList [ configNum, history ] )
+	String pcwName // full-path wave name
 	String paramList
-	Variable configNum // pulse number
+	Variable configNum // NOT USED
+	Variable history
 	
-	Variable icnt, xpnts, foundEmpty
-	String parentFolder
+	Variable icnt, xpnts, foundEmpty, extraRows = 5
+	String fxn, cmd
 	
-	if ( WaveExists( $wName ) && ( WaveType( $wName, 1 ) != 2 ) )
-		return NM2Error( 1, "wName", wName )
+	String bullet = NMCmdHistoryBullet()
+	
+	Variable cmdhistory = NMVarGet( "CmdHistory" )
+	
+	if ( !WaveExists( $pcwName ) || ( WaveType( $pcwName, 1 ) != 2 ) )
+		return NM2Error( 1, "pcwName", pcwName )
 	endif
-
-	if ( !WaveExists( $wName ) )
 	
-		parentFolder = NMParent( wName )
+	if ( ItemsInList( paramList ) == 0 )
+		return -1
+	endif
 	
-		if ( DataFolderExists( parentFolder ) )
-			Make /N=( configNum + 1 )/T $wName
-		else
-			return NM2Error( 30, "parentFolder", parentFolder )
-		endif
+	if ( cmdhistory && history )
+	
+		fxn = GetRTStackInfo( 1 )
+		cmd = fxn + "( " + NMQuotes( pcwName ) + ", " + NMQuotes( paramList )  + " )"
+		
+		NMHistoryManager( bullet + cmd, -1 * cmdhistory )
 		
 	endif
 	
-	Wave /T pulses = $wName
-	
-	if ( !ParamIsDefault( configNum ) )
-	
-		if ( ( numtype( configNum ) == 0 ) && ( configNum >= 0 ) && ( configNum < numpnts( pulses ) ) )
-			pulses[ configNum ] = paramList
-			return 0
-		else
-			return NM2Error( 10, "configNum", num2str( configNum ) )
-		endif
-	
-	endif
+	Wave /T pulses = $pcwName
 	
 	for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
 	
@@ -3375,7 +3526,7 @@ Function NMPulseConfigWaveSave( wName, paramList [ configNum ] )
 	
 	if ( !foundEmpty )
 	
-		xpnts = numpnts( pulses ) + 5
+		xpnts = numpnts( pulses ) + extraRows
 		
 		Redimension /N=( xpnts ) pulses
 		
@@ -3401,81 +3552,103 @@ End // NMPulseConfigWaveSave
 //****************************************************************
 //****************************************************************
 
-Function NMPulseConfigWaveRemove( wName [ configNum, all, off ] )
-	String wName // full-path wave name
+Function NMPulseConfigWaveRemove( pcwName [ configNum, all, off, deleteTrain ] )
+	String pcwName // full-path wave name
 	Variable configNum // pulse config number
 	Variable all // all configs
 	Variable off // ( 0 ) turn on config ( 1 ) turn off config
+	Variable deleteTrain // delete wave of random pulse times ( 0 ) no ( 1 ) yes ( 2 ) user prompt
 	
-	Variable icnt, xpnts
+	Variable icnt, ibgn, iend, numPulses
+	String paramList, trainStr
 	
-	if ( !WaveExists( $wName ) || ( WaveType( $wName, 1 ) != 2 ) )
-		return NM2Error( 1, "wName", wName )
+	if ( !WaveExists( $pcwName ) || ( WaveType( $pcwName, 1 ) != 2 ) )
+		return NM2Error( 1, "pcwName", pcwName )
 	endif
 	
 	if ( ParamIsDefault( configNum ) )
 	
-		configNum = -1
-	
 		if ( !all )
 			return NM2Error( 10, "configNum", num2str( configNum ) )
 		endif
+		
+		configNum = -1
 	
-	else
+	elseif ( !all )
 	
-		if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $wName ) ) )
+		if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $pcwName ) ) )
 			return NM2Error( 10, "configNum", num2str( configNum ) )
 		endif
 	
 	endif
 	
 	if ( ParamIsDefault( off ) )
-		off = -1
+		off = -1 // delete
 	endif
 	
-	Wave /T pulses = $wName
+	Wave /T pulses = $pcwName
 	
-	xpnts = numpnts( pulses )
+	numPulses = numpnts( pulses )
 	
-	if ( xpnts == 0 )
+	if ( numPulses == 0 )
 		return 0
+	endif
+	
+	if ( all )
+		ibgn = 0
+		iend = numPulses - 1
+	else
+		ibgn = configNum
+		iend = configNum
 	endif
 	
 	if ( off == 1 ) // turn off
 	
-		if ( all )
-		
-			for ( icnt = 0 ; icnt <  xpnts ; icnt += 1 )
-				pulses[ icnt ] = "off=1;" + pulses[ icnt ]
-			endfor
-		
-		elseif ( ( configNum >= 0 ) && ( configNum <  xpnts ) )
-		
-			pulses[ configNum ] = "off=1;" + pulses[ configNum ]
-			
-		endif
+		for ( icnt = ibgn ; icnt <= iend ; icnt += 1 )
+			pulses[ icnt ] = "off=1;" + pulses[ icnt ]
+		endfor
 		
 	elseif ( off == 0 ) // turn on
-	
-		if ( all )
 		
-			for ( icnt = 0 ; icnt <  xpnts ; icnt += 1 )
-				pulses[ icnt ] = ReplaceString( "off=1;", pulses[ icnt ], "" )
-			endfor
-		
-		elseif ( ( configNum >= 0 ) && ( configNum <  xpnts ) )
-		
-			pulses[ configNum ] = ReplaceString( "off=1;", pulses[ configNum ], "" )
-			
-		endif
+		for ( icnt = ibgn ; icnt <= iend ; icnt += 1 )
+			pulses[ icnt ] = ReplaceString( "off=1;", pulses[ icnt ], "" )
+		endfor
 		
 	else // delete
-	
-		if ( all )
-			Redimension /N=0 pulses
-		elseif ( ( configNum >= 0 ) && ( configNum <  xpnts ) )
-			DeletePoints configNum, 1, pulses
-		endif
+		
+		for ( icnt = iend ; icnt >= ibgn ; icnt -= 1 )
+		
+			paramList = pulses[ icnt ]
+			
+			if ( ItemsInList( paramList ) > 1 )
+			
+				trainStr = StringByKey( "train", paramList, "=" )
+				
+				DeletePoints icnt, 1, pulses
+				
+				if ( ( deleteTrain > 0 ) && ( strlen( trainStr ) > 0 ) )
+					
+					if ( WaveExists( $trainStr ) )
+						
+						if ( deleteTrain == 2 )
+						
+							DoAlert 1, "Do you want to delete pulse wave " + NMQuotes( trainStr ) + "?"
+							
+							if ( V_flag == 2 )
+								continue // no
+							endif
+						
+						endif
+						
+						KillWaves /Z $trainStr
+						
+					endif
+				
+				endif
+				
+			endif
+			
+		endfor
 	
 	endif
 	
@@ -3751,8 +3924,9 @@ End // zPromptStr
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, configNum, titleEnding, binom, plasticity, DSC, ampUnits, timeUnits ] )
-	String df // data folder
+Function /S NMPulsePrompt( [ df, udf, pdf, numWaves, timeLimit, paramList, TTL, configNum, titleEnding, binom, plasticity, DSC, ampUnits, timeUnits ] )
+	String df // DEPRECATED, use udf instead
+	String udf // data folder where user waves are saved
 	String pdf // prompt data folder ( where prompt variables are saved )
 	Variable numWaves // total number of possible waves
 	Variable timeLimit // for random train
@@ -3767,7 +3941,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	String timeUnits // "ms"
 	
 	Variable waveNum, waveDelta, newPulse, train, pulseType
-	Variable binomYN, binomialN, binomialP, trainRP, trainDF, trainDittman
+	Variable binomialYN, binomialN, binomialP, trainRP, trainDF, trainDittman
 	String title, paramList1, paramList2, paramList3 = "", binomList = ""
 	String shape, waveNumStr, trainParamList, trainType = ""
 	
@@ -3775,8 +3949,14 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	STRUCT NMPulseTrainDF tDF
 	STRUCT NMPulseTrainDittman tDittman
 	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
+	endif
+	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	else
+		udf = df
 	endif
 	
 	if ( ParamIsDefault( pdf ) )
@@ -3830,23 +4010,23 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	if ( newPulse )
 	
 		pulseType = NumVarOrDefault( pdf + promptPrefix + "Type", 1 )
-		binomYN = 1 + NumVarOrDefault( pdf + promptPrefix + "Binomial", 0 )
+		binomialYN = 1 + NumVarOrDefault( pdf + promptPrefix + "Binomial", 0 )
 	
 		Prompt pulseType, "add:", popup "single pulse;fixed-interval pulse train;random-interval pulse train;user-defined pulse train;"
-		Prompt binomYN, "make binomial ( N * P ):", popup "no;yes;"
+		Prompt binomialYN, "make binomial ( N * P ):", popup "no;yes;"
 		
 		if ( binom )
 		
-			DoPrompt title, pulseType, binomYN
+			DoPrompt title, pulseType, binomialYN
 			
 			if ( V_flag == 1 )
 				return "" // cancel
 			endif
 			
-			binomYN -= 1
+			binomialYN -= 1
 			
 			SetNMvar( pdf + promptPrefix + "Type", pulseType )
-			SetNMvar( pdf + promptPrefix + "Binomial", binomYN )
+			SetNMvar( pdf + promptPrefix + "Binomial", binomialYN )
 		
 		else
 		
@@ -3858,7 +4038,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 			
 			SetNMvar( pdf + promptPrefix + "Type", pulseType )
 			
-			binomYN = 0
+			binomialYN = 0
 			
 		endif
 		
@@ -3876,31 +4056,39 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 			pulseType = 2
 		//elseif ( StringMatch( trainType[ 0, 5 ], "Random" ) )
 		//	pulseType = 3
-		elseif ( WaveExists( $df + trainType ) )
+		elseif ( WaveExists( $udf + trainType ) ) // user wave of train times
 			pulseType = 4
 		else
 			pulseType = 1
 		endif
 		
 		if ( strlen( StringByKey( "binomialN", paramList, "=" ) ) > 0 )
-			binomYN = 1
+			binomialYN = 1
 		endif
 		
 	endif
 	
-	if ( binomYN )
-		paramList1 = NMPulsePromptWaveAndShape( df, pdf, -1, paramList, title, TTL, pulseType, plasticity = plasticity )
+	if ( binomialYN )
+		paramList1 = "wave=all;"
 	else
-		paramList1 = NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL, pulseType, plasticity = plasticity )
+		paramList1 = NMPulsePromptWaveSeq( pdf, numWaves, paramList, title, pulseType )
 	endif
 	
 	if ( strlen( paramList1 ) == 0 )
 		return "" // cancel
 	endif
 	
+	paramList2 = NMPulsePromptShape( udf, pdf, paramList, title, TTL, pulseType, plasticity = plasticity )
+	
+	if ( strlen( paramList2 ) == 0 )
+		return "" // cancel
+	endif
+	
+	paramList1 += paramList2
+	
 	shape = StringByKey( "pulse", paramList1, "=" )
 	waveNumStr = StringByKey( "wave", paramList1, "=" )
-	waveDelta = NMPulseWaveDelta( paramList1 )
+	waveDelta = NMPulseWaveDelta( waveNumStr )
 	
 	trainRP = NMPulseTrainRPexists( paramList1 )
 	trainDF = NMPulseTrainDFexists( paramList1 )
@@ -3938,7 +4126,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 		
 			NMPulseTrainInit( t, pdf = pdf, paramList = paramList )
 		
-			trainParamList = NMPulsePromptTrainRandom( df, pdf = pdf, timeLimit = timeLimit, t = t )
+			trainParamList = NMPulsePromptTrainRandom( udf, pdf = pdf, timeLimit = timeLimit, t = t )
 			train = 1
 			
 			if ( strlen( trainParamList ) == 0 )
@@ -3949,7 +4137,7 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 			
 		case 4: // user-defined train
 		
-			trainParamList = NMPulsePromptTrainUser( df, paramList )
+			trainParamList = NMPulsePromptTrainUser( udf, paramList )
 			train = 1
 			
 			if ( strlen( trainParamList ) == 0 )
@@ -3964,61 +4152,28 @@ Function /S NMPulsePrompt( [ df, pdf, numWaves, timeLimit, paramList, TTL, confi
 	
 	endswitch
 	
-	if ( StringMatch( DSC, "delta" ) && ( waveDelta == 0 ) )
-		DSC = ""
+	if ( StringMatch( DSC, "delta" ) )
+		
+		paramList2 = NMPulseWaveNumSeq( paramList1, numWaves, convert2list = 1 )
+		
+		if ( ItemsInList( paramList2 ) <= 1 )
+			DSC = "" // need multiple waves to prompt for delta
+		endif
+		
 	endif
 	
-	paramList2 = NMPulsePromptPulseParams( shape, df = df, pdf = pdf, paramList = paramList, DSC = DSC, ampUnits = ampUnits, timeUnits = timeUnits, TTL = TTL, train = train )
+	paramList2 = NMPulsePromptPulseParams( shape, udf=udf, pdf=pdf, paramList=paramList, DSC=DSC, ampUnits=ampUnits, timeUnits=timeUnits, TTL=TTL, train=train )
 	
 	if ( strlen( paramList2 ) == 0 )
 		return "" // cancel
 	endif
 	
-	if ( binomYN )
+	if ( binomialYN )
 	
-		binomialN = NumVarOrDefault( pdf + promptPrefix + "BinomialN", 10 )
-		binomialP = NumVarOrDefault( pdf + promptPrefix + "BinomialP", 0.5 )
+		binomList = NMPulsePromptBinomial( pdf, paramList, trainDF, trainRP, title )
 		
-		binomialN = NMPulseNumByKey( "binomialN", paramList, binomialN, positive = 1 )
-		binomialP = NMPulseNumByKey( "binomialP", paramList, binomialP, positive = 1 )
-		
-		Prompt binomialN, "binomial N:"
-		Prompt binomialP, "binomial P:"
-	
-		if ( trainDF )
-		
-			NMDoAlert( "Alert: binomial N*P does not work for D*F plasticity train. You can use R*P plasticity model instead.", title = title )
-			binomYN = 0
-			
-		elseif ( trainRP )
-		
-			DoPrompt title, binomialN
-			
-			if ( V_flag == 1 )
-				return "" // cancel
-			endif
-			
-			binomialN = round( binomialN )
-			
-			SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
-			
-			binomList = "binomialN=" + num2istr( binomialN ) + ";"
-			
-		else
-		
-			DoPrompt title, binomialN, binomialP
-			
-			if ( V_flag == 1 )
-				return "" // cancel
-			endif
-			
-			binomialN = round( binomialN )
-			
-			SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
-			SetNMvar( pdf + promptPrefix + "BinomialP", binomialP )
-			
-			binomList = "binomialN=" + num2istr( binomialN ) + ";binomialP=" + num2str( binomialP ) + ";"
-		
+		if ( strlen( binomList ) == 0 )
+			return "" // cancel
 		endif
 	
 	endif
@@ -4030,70 +4185,203 @@ End // NMPulsePrompt
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL, pulseType [ plasticity ] )
-	String df
+Function /S NMPulsePromptBinomial( pdf, paramList, trainDF, trainRP, title )
+	String pdf
+	String paramList
+	Variable trainDF
+	Variable trainRP
+	String title
+	
+	String binomList = ""
+	
+	Variable binomialN = NumVarOrDefault( pdf + promptPrefix + "BinomialN", 10 )
+	Variable binomialP = NumVarOrDefault( pdf + promptPrefix + "BinomialP", 0.5 )
+	
+	binomialN = NMPulseNumByKey( "binomialN", paramList, binomialN, positive = 1 )
+	binomialP = NMPulseNumByKey( "binomialP", paramList, binomialP, positive = 1 )
+	
+	Prompt binomialN, "binomial N:"
+	Prompt binomialP, "binomial P:"
+
+	if ( trainDF )
+	
+		NMDoAlert( "Alert: binomial N*P does not work for D*F plasticity train. You can use R*P plasticity model instead.", title = title )
+		
+	elseif ( trainRP )
+	
+		DoPrompt title, binomialN
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		binomialN = round( binomialN )
+		
+		SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
+		
+		binomList = "binomialN=" + num2istr( binomialN ) + ";"
+		
+	else
+	
+		DoPrompt title, binomialN, binomialP
+		
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		binomialN = round( binomialN )
+		
+		SetNMvar( pdf + promptPrefix + "BinomialN", binomialN )
+		SetNMvar( pdf + promptPrefix + "BinomialP", binomialP )
+		
+		binomList = "binomialN=" + num2istr( binomialN ) + ";binomialP=" + num2str( binomialP ) + ";"
+	
+	endif
+	
+	return binomList
+	
+End // NMPulsePromptBinomial
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptWaveSeq( pdf, numWaves, paramList, title, pulseType [ noDelta ] )
 	String pdf
 	Variable numWaves
+	String paramList
+	String title
+	Variable pulseType
+	Variable noDelta
+	
+	Variable icnt, wnum, delta = 0
+	String waveNumStr = "", waveNumSeq = ""
+	String wNumList = " "
+	
+	if ( numWaves == 1 )
+		return "wave=0;"
+	endif
+	
+	if ( strlen( paramList ) > 0 )
+		waveNumSeq = NMPulseWaveNumSeq( paramList, numWaves )
+		delta = NMPulseWaveDelta( paramList )
+	endif
+	
+	for ( icnt = 0; icnt < numWaves; icnt += 1 )
+		wNumList = AddListItem( num2istr( icnt ), wNumList, ";", inf ) // list of wave #s
+	endfor
+	
+	if ( numWaves > 1 )
+		wNumList += "all;"
+	endif
+	
+	if ( strlen( waveNumSeq ) > 0 ) // existing sequence
+		
+		if ( ( strsearch( waveNumSeq, "-", 0 ) >= 0 ) || ( strsearch( waveNumSeq, ",", 0 ) >= 0 ) )
+		
+			waveNumStr = " "
+		
+		else
+		
+			wnum = str2num( waveNumSeq )
+			
+			if ( ( numtype( wnum ) == 0 ) && ( wnum >= 0 ) && ( wnum < numWaves ) )
+				waveNumStr = num2istr( wnum )
+			else
+				waveNumStr = "all"
+			endif
+			
+			waveNumSeq = ""
+		
+		endif
+	
+	else
+		
+		waveNumStr = "all"
+		
+	endif
+	
+	if ( pulseType > 1 )
+		Prompt waveNumStr, "add pulse train to output wave:", popup wNumList // train
+	else
+		Prompt waveNumStr, "add pulse to output wave:", popup wNumList // single pulse
+	endif
+	
+	Prompt waveNumSeq, "or enter a comma-delimited sequence (e.g. 1-5,7,9):"
+	Prompt delta, "optional wave increment ( > 1 ):"
+	
+	if ( noDelta )
+		DoPrompt title, waveNumStr, waveNumSeq
+		delta = 0
+	else
+		DoPrompt title, waveNumStr, waveNumSeq, delta
+	endif
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	if ( strlen( waveNumSeq ) > 0 )
+	
+		waveNumStr = NMPulseWaveNumSeq( "wave=" + waveNumSeq, numWaves, convert2list = 1 )
+		
+		if ( ItemsInList( waveNumStr ) > 0 )
+			waveNumStr = waveNumSeq
+		else
+			return "" // cancel // bad sequence
+		endif
+		
+	elseif ( StringMatch( waveNumStr, " " ) )
+		return "" // cancel // no wave number
+	endif
+	
+	if ( ( numtype( delta ) == 0 ) && ( delta > 1 ) )
+		return "wave=" + waveNumStr + ",delta=" + num2istr( delta ) + ";"
+	else
+		return "wave=" + waveNumStr + ";"
+	endif
+	
+End // NMPulsePromptWaveSeq
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptShape( udf, pdf, paramList, title, TTL, pulseType [ plasticity ] )
+	String udf // data folder where user waves are located
+	String pdf
 	String paramList
 	String title
 	Variable TTL
 	Variable pulseType
 	Variable plasticity
 	
-	Variable icnt, waveNum, delta
-	String shape, plasticityModel, waveNumStr, paramList2 = "", wList = ""
+	String shape, plasticityModel
+	String paramList2 = "", otherWave = ""
 	
 	if ( strlen( paramList ) > 0 )
 	
 		shape = StringByKey( "pulse", paramList, "=" )
 		
 		if ( WhichListItem( shape, NMPulseList, ";", 0, 0 ) == -1 )
-			shape = "square"
-		endif
 		
-		waveNum = NMPulseWaveNum( paramList )
-		delta = NMPulseWaveDelta( paramList )
-		
-		if ( ( waveNum == 0 ) && ( delta == 1 ) )
-			waveNum = -1 // all waves
+			if ( WaveExists( $udf+shape ) )
+				otherWave = shape
+				shape = "other"
+			else
+				shape = "square"
+			endif
+			
 		endif
 		
 	else
 	
 		shape = StrVarOrDefault( pdf + promptPrefix + "Shape", "square" )
-		waveNum = NumVarOrDefault( pdf + promptPrefix + "WaveN", -1 )
-		delta = NumVarOrDefault( pdf + promptPrefix + "WaveND", 0 )
 	
 	endif
 	
 	plasticityModel = StrVarOrDefault( pdf + promptPrefix + "Plasticity", "none" )
 	
-	for ( icnt = 0; icnt < numWaves; icnt += 1 )
-		wList = AddListItem( num2istr( icnt ), wList, ";", inf )
-	endfor
-	
-	if ( numWaves == 1 )
-	
-		waveNumStr = "0"
-		delta = 0
-	
-	else
-	
-		wlist += "All;"
-		
-		if ( waveNum == -1 )
-			waveNumStr = "All"
-		else
-			waveNumStr = num2istr( waveNum )
-		endif
-		
-	endif
-	
-	if ( pulseType > 1 )
-		Prompt waveNumStr, "add pulse train to output wave:", popup wList
-	else
-		Prompt waveNumStr, "add pulse to output wave:", popup wList
-		plasticity = 0 // not a pulse train
+	if ( pulseType == 1 )
+		plasticity = 0 // single pulse
 	endif
 	
 	Prompt shape, "pulse shape:", popup RemoveFromList( "squareTTL", NMPulseList )
@@ -4103,23 +4391,11 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 	
 		shape = "squareTTL"
 	
-		if ( numWaves > 1 )
-			DoPrompt title, waveNumStr
-		endif
-		
-		if ( V_flag == 1 )
-			return "" // cancel
-		endif
-	
 	else
 	
 		if ( plasticity )
 		
-			if ( numWaves == 1 )
-				DoPrompt title, shape, plasticityModel
-			else
-				DoPrompt title, waveNumStr, shape, plasticityModel
-			endif
+			DoPrompt title, shape, plasticityModel
 			
 			if ( V_flag == 1 )
 				return "" // cancel
@@ -4174,12 +4450,8 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 			endswitch
 		
 		else
-		
-			if ( numWaves == 1 )
-				DoPrompt title, shape
-			else
-				DoPrompt title, waveNumStr, shape
-			endif
+			
+			DoPrompt title, shape
 			
 			if ( V_flag == 1 )
 				return "" // cancel
@@ -4191,23 +4463,13 @@ Function /S NMPulsePromptWaveAndShape( df, pdf, numWaves, paramList, title, TTL,
 	
 	endif
 	
-	if ( StringMatch( waveNumStr, "All" ) )
-		waveNum = 0
-		delta = 1
-		waveNumStr = "wave=all;"
-		SetNMvar( pdf + promptPrefix + "WaveN", -1 )
-	else
-		delta = 0
-		waveNum = str2num( waveNumStr )
-		waveNumStr = NMPulseParamList( "wave", waveNum )
-		SetNMvar( pdf + promptPrefix + "WaveN", waveNum )
+	if ( StringMatch( shape, "other" ) && ( strlen( otherWave ) > 0 ) )
+		shape = otherWave
 	endif
 	
-	SetNMvar( pdf + promptPrefix + "WaveND", delta )
-	
-	return waveNumStr + "pulse=" + shape + ";" + paramList2
+	return "pulse=" + shape + ";" + paramList2
 
-End // NMPulsePromptWaveAndShape
+End // NMPulsePromptShape
 
 //****************************************************************
 //****************************************************************
@@ -4532,8 +4794,8 @@ End // NMPulsePromptTrainFixed
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptTrainRandom( df [ pdf, timeLimit, t ] )
-	String df
+Function /S NMPulsePromptTrainRandom( udf [ pdf, timeLimit, t ] )
+	String udf // data folder where user waves are located
 	String pdf
 	Variable timeLimit
 	STRUCT NMPulseTrain &t
@@ -4591,7 +4853,7 @@ Function /S NMPulsePromptTrainRandom( df [ pdf, timeLimit, t ] )
 	
 		wName = "Random" + num2istr( icnt )
 		
-		if ( !WaveExists( $df + wName ) )
+		if ( !WaveExists( $udf + wName ) )
 			break
 		endif
 		
@@ -4605,7 +4867,7 @@ Function /S NMPulsePromptTrainRandom( df [ pdf, timeLimit, t ] )
 		return "" // cancel
 	endif
 	
-	if ( WaveExists( $df + wName ) )
+	if ( WaveExists( $udf + wName ) )
 	
 		DoAlert 1, "Wave " + NMQuotes( wName ) + "exists already. Do you want to overwrite it?"
 		
@@ -4615,7 +4877,7 @@ Function /S NMPulsePromptTrainRandom( df [ pdf, timeLimit, t ] )
 		
 	endif
 	
-	numPulses = NMPulseTrainRandomTimes( df, wName, pstr, timeLimit )
+	numPulses = NMPulseTrainRandomTimes( udf, wName, pstr, timeLimit )
 	
 	return "train=" + wName + ";"
 		
@@ -4624,14 +4886,14 @@ End // NMPulsePromptTrainRandom
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptTrainUser( df, paramList )
-	String df
+Function /S NMPulsePromptTrainUser( udf, paramList )
+	String udf // data folder where user waves are located
 	String paramList
 	
 	Variable icnt
 	String trainType, wName, wList2 = ""
 	
-	String wList1 = NMFolderWaveList( df, "!*DAC*", ";", "TEXT:0", 0 )
+	String wList1 = NMFolderWaveList( udf, "!*DAC*", ";", "TEXT:0", 0 )
 	
 	for ( icnt = 0 ; icnt < ItemsInList( wList1 ) ; icnt += 1 )
 		
@@ -4644,7 +4906,7 @@ Function /S NMPulsePromptTrainUser( df, paramList )
 	endfor
 	
 	if ( ItemsInList( wList2 ) == 0 )
-		DoAlert 0, "No user-defined waves detected in folder: " + df
+		DoAlert 0, "No user-defined waves detected in folder: " + udf
 		return ""
 	endif
 	
@@ -4654,7 +4916,7 @@ Function /S NMPulsePromptTrainUser( df, paramList )
 	
 		trainType = StringByKey( "train", paramList, "=" )
 		
-		if ( WaveExists( $df + trainType ) )
+		if ( WaveExists( $udf + trainType ) )
 			wName = trainType
 		endif
 		
@@ -4674,9 +4936,11 @@ End // NMPulsePromptTrainUser
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptPulseParams( type [ df, pdf, paramList, DSC, ampUnits, timeUnits, TTL, train ] )
+Function /S NMPulsePromptPulseParams( type [ df, udf, pdf, paramList, DSC, ampUnits, timeUnits, TTL, train ] )
 	String type
-	String df, pdf
+	String df // DEPRECATED, use udf instead
+	String udf // data folder where user waves are located
+	String pdf
 	String paramList
 	String DSC // "delta" or "stdv" or "cv"
 	String ampUnits // "pA"
@@ -4689,8 +4953,14 @@ Function /S NMPulsePromptPulseParams( type [ df, pdf, paramList, DSC, ampUnits, 
 	
 	STRUCT NMPulseAOW p
 	
+	if ( ParamIsDefault( udf ) )
+		udf = ""
+	endif
+	
 	if ( ParamIsDefault( df ) )
 		df = ""
+	else
+		udf = df
 	endif
 	
 	if ( ParamIsDefault( pdf ) )
@@ -4827,7 +5097,7 @@ Function /S NMPulsePromptPulseParams( type [ df, pdf, paramList, DSC, ampUnits, 
 			
 		default: // Other
 			
-			type = NMPulsePromptUserWave( df, type, pdf = pdf )
+			type = NMPulsePromptUserWave( udf, type, pdf = pdf )
 			
 			if ( strlen( type ) == 0 )
 				return "" // cancel
@@ -4842,7 +5112,7 @@ End // NMPulsePromptPulseParams
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptAOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] )
+Function /S NMPulsePromptAOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] ) // Amplitude, Onset, Width
 	String pdf, type
 	String DSC // "delta" or "stdv" or "cv"
 	String ampUnits // "pA"
@@ -4995,7 +5265,7 @@ End // NMPulsePromptAOW
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] )
+Function /S NMPulsePromptOW( [ pdf, type, DSC, ampUnits, timeUnits, train, p ] ) // Onset, Width
 	String pdf, type
 	String DSC // "delta" or "stdv" or "cv"
 	String ampUnits // "pA"
@@ -5914,8 +6184,9 @@ End // NMPulsePromptSinZap
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulsePromptUserWave( df, wName [ pdf ] )
-	String df, wName
+Function /S NMPulsePromptUserWave( udf, wName [ pdf ] )
+	String udf // data folder where user waves are located
+	String wName
 	String pdf
 
 	String wList
@@ -5925,14 +6196,14 @@ Function /S NMPulsePromptUserWave( df, wName [ pdf ] )
 		pdf = NMPulseDF
 	endif
 	
-	if ( !WaveExists( $df + wName ) )
+	if ( !WaveExists( $udf + wName ) )
 		wName = " "
 	endif
 	
-	wList = NMFolderWaveList( df, "!*DAC_*", ";", "TEXT:0", 0 )
+	wList = NMFolderWaveList( udf, "!*DAC_*", ";", "TEXT:0", 0 )
 	
 	if ( ItemsInList( wList ) == 0 )
-		DoAlert 0, "There are no user-defined waves in stimulus folder " + df
+		DoAlert 0, "There are no user-defined waves in stimulus folder " + udf
 		return ""
 	endif
 	
@@ -5947,6 +6218,892 @@ Function /S NMPulsePromptUserWave( df, wName [ pdf ] )
 	return wName
 			
 End // NMPulsePromptUserWave
+
+//****************************************************************
+//****************************************************************
+//
+//	Listbox (LB) Functions
+//
+//	Listbox 1 - list of pulse configurations
+// Listbox 2 - list of paramters for currently selected config
+//
+// pcwName - pulse config wave name (full path)
+//	lbwName - listbox wave name (full path)
+//	pcvName - listbox 1 configNum variable name (full path)
+//
+//****************************************************************
+//****************************************************************
+
+Structure NMPulseLBWaves
+
+	String pcwName // pulse config wave name (full path)
+	String lb1wName // listbox 1 wave name (full path)
+	String lb1wNameSel // selWave (edit mode)
+	String lb2wName // listbox 2 wave name (full path)
+	String lb2wNameSel // selWave (edit mode)
+	String pcvName // listbox 1 configNum variable name (full path)
+
+EndStructure
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLBWavesDefault( lb, df )
+	STRUCT NMPulseLBWaves &lb
+	String df
+	
+	if ( strlen( df ) == 0 )
+		df = NMPulseDF
+	endif
+	
+	lb.pcwName = df + "PulseParamLists"
+	lb.lb1wName = df + "LB1Configs"
+	lb.lb1wNameSel = df + "LB1ConfigsEditable"
+	lb.lb2wName = df + "LB2Configs"
+	lb.lb2wNameSel = df + "LB2ConfigsEditable"
+	lb.pcvName = df + "LB1ConfigNum"
+	
+	NMPulseLBWavesCheck( lb )
+	
+End // NMPulseLBWavesDefault
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLBWavesCheck( lb )
+	STRUCT NMPulseLBWaves &lb
+	
+	Variable rows = 5, cols = 2
+	
+	if ( ( strlen( lb.pcwName ) > 0 ) && !WaveExists( $lb.pcwName ) )
+		Make /T/N=( 0 ) $lb.pcwName = ""
+	endif
+	
+	if ( !WaveExists( $lb.lb1wName ) )
+		Make /T/N=( rows, cols ) $lb.lb1wName = ""
+	endif
+	
+	if ( !WaveExists( $lb.lb1wNameSel ) )
+		Make /N=( rows, cols ) $lb.lb1wNameSel = 0
+	endif
+	
+	if ( DimSize( $lb.lb1wName, 1 ) != cols )
+		Redimension /N=( -1, cols ) $lb.lb1wName
+	endif
+	
+	if ( DimSize( $lb.lb1wNameSel, 1 ) != cols )
+		Redimension /N=( -1, cols ) $lb.lb1wNameSel
+	endif
+	
+	cols = 3
+	
+	if ( !WaveExists( $lb.lb2wName ) )
+		Make /T/N=( rows, cols ) $lb.lb2wName = ""
+	endif
+	
+	if ( !WaveExists( $lb.lb2wNameSel ) )
+		Make /N=( rows, cols ) $lb.lb2wNameSel = 0
+	endif
+	
+	if ( DimSize( $lb.lb2wName, 1 ) != cols )
+		Redimension /N=( -1, cols ) $lb.lb2wName
+	endif
+	
+	if ( DimSize( $lb.lb2wNameSel, 1 ) != cols )
+		Redimension /N=( -1, cols ) $lb.lb2wNameSel
+	endif
+
+End // NMPulseLBWavesCheck
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB1Update( lb )
+	STRUCT NMPulseLBWaves &lb
+	
+	Variable icnt, numConfigs, nrows, configNum, extraRows = 5
+	
+	Wave /T configs = $lb.lb1wName
+	Wave editable = $lb.lb1wNameSel
+	
+	if ( WaveExists( $lb.pcwName ) )
+	
+		Wave /T pulses = $lb.pcwName
+		
+		for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
+			if ( strlen( pulses[ icnt ] ) > 0 )
+				numConfigs += 1
+			endif
+		endfor
+		
+		nrows = numConfigs + extraRows
+		
+		Redimension /N=( nrows, 2 ) configs, editable
+		
+		configs[][ 0 ] = "+"
+		configs[][ 1 ] = ""
+		
+		for ( icnt = 0 ; icnt < numpnts( pulses ) ; icnt += 1 )
+		
+			if ( ItemsInList( pulses[ icnt ] ) > 0 )
+				configs[ icnt ][ 0 ] = "-"
+				configs[ icnt ][ 1 ] = pulses[ icnt ]
+			endif
+			
+		endfor
+		
+		configNum = NumVarOrDefault( lb.pcvName, 0 )
+		
+		if ( ( configNum <= 0 ) || ( configNum >= numpnts( $lb.pcwName ) ) )
+			SetNMvar( lb.pcvName, 0 )
+		endif
+		
+	else
+	
+		configs[ ][ 0 ] = "+"
+		configs[ ][ 1 ] = ""
+		
+		SetNMvar( lb.pcvName, 0 )
+		
+	endif
+	
+	editable = 0
+
+End // NMPulseLB1Update
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulseLB1Event( row, col, event, lb )
+	Variable row // row if click in interior, -1 if click in title
+	Variable col // column number
+	Variable event // event code
+	STRUCT NMPulseLBWaves &lb
+	
+	String valueStr
+	
+	if ( event != 2 ) // mouse up
+		return ""
+	endif
+	
+	if ( !WaveExists( $lb.lb1wName ) )
+		return ""
+	endif
+	
+	Wave /T configs = $lb.lb1wName
+	
+	if ( numtype( row * col ) > 0 )
+		return ""
+	endif
+	
+	if ( ( row < 0 ) || ( row >= DimSize( configs, 0 ) ) )
+		return ""
+	endif
+	
+	if ( ( col < 0 ) || ( col >= DimSize( configs, 1 ) ) )
+		return ""
+	endif
+	
+	valueStr = configs[ row ][ 0 ]
+	
+	SetNMvar( lb.pcvName, row ) // updates listbox2
+	
+	if ( StringMatch( valueStr, "+" ) )
+		return "+"
+	elseif ( StringMatch( valueStr, "-" ) && ( col == 0 ) )
+		return "-"
+	endif
+	
+	return ""
+	
+End // NMPulseLB1Event
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulseLB1PromptOODE( lb, udf ) // on / off / delete / edit
+	STRUCT NMPulseLBWaves &lb
+	String udf // data folder where user waves are located 
+	
+	Variable icnt, configNum, editExisting, off, numConfigs
+	String pList = "", paramList = "", titleEnding = "", trainStr = "", selectStr
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return ""
+	endif
+	
+	Wave /T configs = $lb.pcwName
+	
+	for ( icnt = 0 ; icnt < numpnts( configs ) ; icnt += 1 )
+		if ( ItemsInList( configs[ icnt ] ) > 1 )
+			numConfigs += 1
+		endif
+	endfor
+	
+	if ( ( numtype( configNum ) == 0 ) && ( configNum >= 0 ) && ( configNum < numConfigs ) )
+	
+		paramList = configs[ configNum ]
+		
+		off = str2num( StringByKey( "off", paramList, "=" ) )
+		
+		trainStr = StringByKey( "train", paramList, "=" )
+		
+		if ( off )
+			pList = "turn on;delete;"
+			off = 0
+		else
+			pList = "turn off;delete;"
+			off = 1
+		endif
+		
+		if ( numConfigs > 1 )
+			pList += "---;turn on all;turn off all;delete all;"
+		endif
+		
+		if ( WaveExists( $udf + trainStr ) )
+			plist += "---;edit " + trainStr + ";"
+		endif
+	
+	endif
+	
+	if ( strlen( plist ) == 0 )
+		return ""
+	endif
+	
+	selectStr = StringFromList( 0, pList )
+
+	Prompt selectStr, " ", popup pList
+	DoPrompt "Remove Pulse Config", selectStr
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	return ReplaceString( "turn ", selectStr, "" )
+
+End // NMPulseLB1PromptOODE
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB1OODE( lb, udf, oode [ noPrompt ] )
+	STRUCT NMPulseLBWaves &lb
+	String udf // data folder where user waves are located 
+	String oode // see NMPulseLB1PromptOOD
+	Variable noPrompt // for delete
+	
+	Variable configNum, deleteAll = 0
+	Variable deleteTrain = 2 // user prompt to delete
+	String trainStr, titleStr
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return -1
+	endif
+	
+	if ( noPrompt )
+		deleteTrain = 1 // delete w/o prompt
+	endif
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	strswitch( oode )
+		
+			case "on":
+				return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, off = 0 )
+			case "off":
+				return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, off = 1 )
+			case "delete":
+				return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, deleteTrain = deleteTrain )
+			case "off all":
+				return NMPulseConfigWaveRemove( lb.pcwName, all = 1, off = 1 )
+			case "on all":
+				return NMPulseConfigWaveRemove( lb.pcwName, all = 1, off = 0 )
+				
+			case "delete all":
+			
+				if ( noPrompt )
+				
+					deleteAll = 1
+					
+				else
+			
+					DoAlert 2, "Are you sure you want to delete all pulse configurations?"
+					
+					if ( V_flag == 1 ) // yes
+						deleteAll = 1
+					endif
+				
+				endif
+				
+				if ( deleteAll )
+					return NMPulseConfigWaveRemove( lb.pcwName, all = 1, deleteTrain = deleteTrain )
+				endif
+				
+				break
+		
+			default:
+			
+				if ( StringMatch( oode[ 0, 3 ], "edit" ) )
+				
+					trainStr = ReplaceString( "edit ", oode, "" )
+				
+					if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $udf + trainStr ) ) )
+						titleStr = udf + trainStr
+						Edit /K=1 $udf + trainStr as titleStr
+					endif
+					
+				endif
+		
+		endswitch
+		
+		return 0
+	
+End // NMPulseLB1OODE
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB2Update( lb [ editByPrompt ] )
+	STRUCT NMPulseLBWaves &lb
+	Variable editByPrompt // edit configs ( 0 ) directly via listbox ( 1 ) by user prompts
+
+	Variable configNum, icnt, ipnt, jcnt, kcnt
+	Variable numParams, slen, canedit, items
+	String paramList, paramList2, paramName, pstr
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	Wave /T params = $lb.lb2wName
+	Wave editable = $lb.lb2wNameSel
+	
+	params = ""
+	editable = 0
+	
+	if ( WaveExists( $lb.pcwName ) && ( configNum >= 0 ) && ( configNum < numpnts( $lb.pcwName ) ) )
+	
+		Wave /T configs = $lb.pcwName
+		
+		paramList = configs[ configNum ]
+		
+		if ( strlen( paramList ) == 0 )
+			return 0
+		endif
+		
+		numParams = 1 + ItemsInList( paramList ) // extra for config #
+		
+		if ( DimSize( params, 0 ) < numParams )
+			Redimension /N=( numParams, 3 ) params, editable
+		endif
+		
+		params[ 0 ][ 0 ] = "config"
+		params[ 0 ][ 1 ] = num2istr( configNum )
+		
+		ipnt = 1
+		
+		for ( icnt = 0 ; icnt < ItemsInList( paramList ) ; icnt += 1 )
+		
+			paramList2 = StringFromList( icnt, paramList )
+			
+			jcnt = strsearch( paramList2, "=", 0 )
+			
+			paramName = paramList2[ 0, jcnt - 1 ]
+			
+			params[ ipnt ][ 0 ] = paramName
+			
+			if ( editByPrompt )
+				canedit = 0
+			else
+				canedit = 3
+			endif
+			
+			if ( StringMatch( paramName, "train" ) )
+				//canedit = 0
+			endif
+			
+			if ( StringMatch( paramName, "pulse" ) )
+				canedit = 0
+			endif
+			
+			if ( StringMatch( paramName, "off" ) )
+				canedit = 0
+			endif
+			
+			slen = strlen( paramList2 )
+			
+			paramList2 = paramList2[ jcnt + 1, slen - 1 ]
+			
+			paramList2 = ReplaceString( ",delta,", paramList2, ",delta=" )
+			paramList2 = ReplaceString( ",stdv,", paramList2, ",stdv=" )
+			paramList2 = ReplaceString( ",cv,", paramList2, ",cv=" )
+			paramList2 = ReplaceString( ",gammaA,", paramList2, ",gammaA=" )
+			paramList2 = ReplaceString( ",gammaB,", paramList2, ",gammaB=" )
+			
+			items = ItemsInList( paramList2, "," )
+			
+			pstr = StringFromList( 0, paramList2, "," )
+			
+			if ( strlen( pstr ) > 0 )
+				params[ ipnt ][ 1 ] = pstr
+				editable[ ipnt ][ 1 ] = canedit
+			endif
+			
+			pstr = ""
+			
+			for ( kcnt = 1 ; kcnt < items ; kcnt += 1 )
+				
+				pstr += StringFromList( kcnt, paramList2, "," )
+				
+				if ( kcnt < items - 1 )
+					pstr += ","
+				endif
+			
+			endfor
+			
+			if ( WhichListItem( paramName, noDSCGList ) >= 0 )
+				params[ ipnt ][ 2 ] = ""
+			elseif ( strlen( pstr ) > 0 )
+				params[ ipnt ][ 2 ] = pstr
+			else
+				params[ ipnt ][ 2 ] = "+"
+			endif
+			
+			editable[ ipnt ][ 2 ] = 0
+			
+			ipnt += 1
+		
+		endfor
+	
+	endif
+
+End // NMPulseLB2Update
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB2Event( row, col, event, lb [ pdf, numWaves, TTL, ampUnits, timeUnits ] )
+	Variable row // row if click in interior, -1 if click in title
+	Variable col // column number
+	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
+	String pdf
+	Variable numWaves
+	STRUCT NMPulseLBWaves &lb
+	Variable TTL
+	String ampUnits, timeUnits
+	
+	Variable configNum, value, icnt, numRows, savePulse
+	Variable fix2positive
+	Variable Fratio, KF, F1, deltaF
+	String varName, valueStr, paramList, pstr, units, title
+	
+	if ( paramIsDefault( pdf ) )
+		pdf = NMPulseDF
+	endif
+	
+	if ( ParamIsDefault( numWaves ) )
+		numWaves = 1
+	endif
+	
+	if ( paramIsDefault( ampUnits ) )
+		ampUnits = ""
+	endif
+	
+	if ( paramIsDefault( timeUnits ) )
+		timeUnits = ""
+	endif
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return -1
+	endif
+	
+	if ( !WaveExists( $lb.lb2wName ) )
+		return -1
+	endif
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	if ( ( numtype( configNum ) > 0 ) || ( configNum < 0 ) || ( configNum >= numpnts( $lb.pcwName ) ) )
+		return -1
+	endif
+	
+	Wave /T params = $lb.lb2wName
+	
+	if ( ( numtype( row ) > 0 ) || ( row < 0 ) || ( row >= DimSize( params, 0 ) ) )
+		return -1
+	endif
+	
+	if ( ( numtype( col ) > 0 ) || ( col < 0 ) || ( col >= DimSize( params, 1 ) ) )
+		return -1
+	endif
+	
+	varName = params[ row ][ 0 ]
+	valueStr = params[ row ][ 1 ]
+	value = str2num( valueStr )
+	
+	strswitch( varName )
+		case "off":
+		case "config":
+		case "train":
+		case "pulse":
+			return 0 // no edit
+		case "width":
+		case "stdv":
+		case "tau":
+		case "tau1":
+		case "tau2":
+		case "tau3":
+		case "tauRise":
+		case "tauDecay":
+		case "power":
+		case "period":
+			fix2positive = 1
+			break
+	endswitch
+	
+	units = zAmpOrTime( varName )
+	
+	if ( StringMatch( units, "amp" ) )
+		units = ampUnits
+	elseif ( StringMatch( units, "time" ) )
+		units = timeUnits
+	else
+		units = ""
+	endif
+	
+	title = "Edit Pulse Config #" + num2istr( configNum ) + " : " + varName
+	
+	if ( ( event == 2 ) && ( row > 0 ) && ( col == 1 ) )
+	
+		pstr = params[ row ][ 1 ]
+		
+		if ( StringMatch( varName, "wave" ) )
+		
+			Variable pulseType = 1
+			
+			paramList = "wave=" + params[ row ][ 1 ] + ";"
+		
+			pstr = NMPulsePromptWaveSeq( pdf, numWaves, paramList, "Edit Pulse Config", pulseType, noDelta=1 )
+			
+			if ( ItemsInList( pstr ) == 1 )
+			
+				pstr = StringFromList( 0, pstr )
+				pstr = ReplaceString( "wave=", pstr, "" )
+				
+				if ( strlen( pstr ) > 0 )
+					params[ row ][ 1 ] = pstr
+					savePulse = 1
+				endif
+				
+			endif
+			
+		else
+		
+			if ( strlen( units ) > 0 )
+				Prompt value, "enter " + varName + " value (" + units + "):"
+			else
+				Prompt value, "enter " + varName + " value:"
+			endif
+			
+			DoPrompt title, value
+	
+			if ( V_flag == 0 )
+			
+				if ( fix2positive )
+					value = abs( value )
+				endif
+				
+				params[ row ][ 1 ] = num2str( value )
+				
+				savePulse = 1
+				
+			endif
+			
+		endif
+	
+	elseif ( ( event == 2 ) && ( row > 0 ) && ( col == 2 ) )
+	
+		if ( WhichListItem( varName, noDSCGList ) >= 0 )
+			return 0
+		endif
+		
+		if ( TTL && StringMatch( varName, "amp" ) )
+			return 0
+		endif
+	
+		paramList = params[ row ][ 2 ]
+		
+		pstr = NMPulsePromptDSCG( configNum, varName, paramList, fix2positive=fix2positive, units=units )
+		
+		if ( !StringMatch( pstr, "CANCEL" ) )
+			params[ row ][ 2 ] = pstr
+			savePulse = 1
+		endif
+		
+	elseif ( StringMatch( varName, "Fratio" ) && ( event == 7 ) )
+	
+		// NMPulseTrainDittman
+	
+		numRows = DimSize( params, 0 )
+		
+		Fratio = value
+		F1 = NaN
+		deltaF = NaN
+		
+		for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
+			
+			if ( StringMatch( params[ icnt ][ 0 ], "F1" ) )
+				F1 = str2num( params[ icnt ][ 1 ] )
+			endif
+			
+			if ( StringMatch( params[ icnt ][ 0 ], "deltaF" ) )
+				deltaF = str2num( params[ icnt ][ 1 ] )
+			endif
+			
+		endfor
+		
+		KF = NMPulseTrainDittmanKF( F1, Fratio, deltaF )
+		
+		for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
+			if ( StringMatch( params[ icnt ][ 0 ], "KF" ) )
+				params[ icnt ][ 1 ] = num2str( KF )
+			endif
+		endfor
+		
+	elseif ( StringMatch( varName, "KF" ) && ( event == 7 ) )
+	
+		numRows = DimSize( params, 0 )
+		
+		for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
+			if ( StringMatch( params[ icnt ][ 0 ], "Fratio" ) )
+				params[ icnt ][ 1 ] = num2str( NaN )
+			endif
+		endfor
+		
+	elseif ( ( event == 7 ) && fix2positive )
+	
+		params[ row ][ 1 ] = num2str( abs( value ) )
+		
+	endif
+	
+	if ( savePulse || ( event == 7 ) )
+		NMPulseLB2Save( lb )
+		return 1
+	endif
+	
+	return 0
+	
+End // NMPulseLB2Event
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptDSCG( configNum, varName, paramList [ fix2positive, units ] )
+	Variable configNum
+	String varName
+	String paramList
+	Variable fix2positive
+	String units
+	
+	Variable dscgValue, dscgValue2, fixPolarity
+	String dscg, dscgList, pstr, title
+	
+	if ( paramIsDefault( units ) )
+		units = ""
+	endif
+	
+	strswitch( paramList[ 0, 1 ] )
+		case "de":
+			dscg = "delta"
+			dscgValue = NumberByKey( "delta", paramList, "=", "," )
+			break
+		case "st":
+			dscg = "stdv"
+			dscgValue = NumberByKey( "stdv", paramList, "=", "," )
+			break
+		case "cv":
+			dscg = "cv"
+			dscgValue = NumberByKey( "cv", paramList, "=", "," )
+			break
+		case "ga":
+			dscg = "gamma"
+			dscgValue = NumberByKey( "gammaA", paramList, "=", "," )
+			dscgValue2 = NumberByKey( "gammaB", paramList, "=", "," )
+			break
+		default:
+			dscg = "none"
+			dscgValue = 1
+	endswitch
+	
+	if ( StringMatch( varName, "wave" ) )
+		dscgList = "none;delta;"
+	else
+		dscgList = "none;delta;stdv;cv;gamma;"
+	endif
+	
+	if ( strsearch( paramList, "FP", 0 ) > 0 )
+		fixPolarity = 2
+	else
+		fixPolarity = 1
+	endif
+	
+	title = "Edit Pulse Config #" + num2istr( configNum ) + " : " + varName
+
+	Prompt dscg, "increment type:", popup dscgList
+	Prompt fixPolarity, "fix polarity of " + varName + " parameter?", popup "no;yes;"
+	
+	DoPrompt title, dscg
+	
+	if ( V_flag == 1 )
+		return "CANCEL"
+	endif
+	
+	if ( strlen( units ) > 0 )
+		units = " (" + units + ")"
+	endif
+	
+	strswitch( dscg )
+	
+		case "none":
+			//params[ row ][ 2 ] = ""
+			//break
+			return ""
+			
+		case "delta":
+		case "stdv":
+		case "cv":
+		
+			Prompt dscgValue, "enter " + dscg + " value" + units + ":"
+		
+			if ( fix2positive )
+				DoPrompt title, dscgValue
+				fixPolarity = 2
+			else
+				DoPrompt title, dscgValue, fixPolarity
+			endif
+			
+			if ( V_flag == 1 )
+				return "CANCEL"
+			endif
+			
+			pstr = dscg + "=" + num2str( dscgValue )
+			
+			if ( fixPolarity == 2 )
+				pstr += ",FP"
+			endif
+			
+			return pstr
+			
+		case "gamma":
+		
+			Prompt dscgValue, "enter gamma A value:"
+			
+			pstr = ""
+			
+			if ( fix2positive )
+				DoPrompt title, dscgValue
+			else
+				DoPrompt title, dscgValue
+			endif
+			
+			if ( V_flag == 1 )
+				return "CANCEL"
+			endif
+			
+			pstr = "gammaA=" + num2str( dscgValue )
+			
+			if ( dscgValue2 == 0 )
+				dscgValue2 = 1
+			endif
+			
+			Prompt dscgValue2, "enter gamma B value" + units + ":"
+			
+			if ( fix2positive )
+				DoPrompt title, dscgValue2
+				fixPolarity = 2
+			else
+				DoPrompt title, dscgValue2, fixPolarity
+			endif
+			
+			if ( V_flag == 1 )
+				return "CANCEL"
+			endif
+			
+			pstr += ",gammaB=" + num2str( dscgValue2 )
+			
+			if ( fixPolarity == 2 )
+				pstr += ",FP"
+			endif
+		
+			return pstr
+			
+		endswitch
+
+	return ""
+		
+End // NMPulsePromptDSCG
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB2Save( lb )
+	STRUCT NMPulseLBWaves &lb
+	
+	Variable configNum, icnt, nrows, ncols
+	String pstr, paramList = ""
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	if ( !WaveExists( $lb.lb2wName ) )
+		return -1
+	endif
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return -1
+	endif
+	
+	if ( ( configNum < 0 ) || ( configNum >= numpnts( $lb.pcwName ) ) )
+		return -1
+	endif
+	
+	Wave /T params = $lb.lb2wName
+	Wave /T configs = $lb.pcwName
+	
+	nrows = DimSize( params, 0 )
+	ncols = DimSize( params, 1 )
+	
+	if ( ncols != 3 )
+		return -1
+	endif
+
+	for ( icnt = 1 ; icnt < nrows ; icnt += 1 )
+	
+		if ( strlen( params[ icnt ][ 0 ] ) == 0 )
+			continue
+		endif
+	
+		pstr = params[ icnt ][ 0 ] + "=" + params[ icnt ][ 1 ]
+		
+		if ( strlen( params[ icnt ][ 2 ] ) > 1 )
+			pstr += "," + params[ icnt ][ 2 ]
+		endif
+		
+		paramList += pstr + ";"
+	
+	endfor
+	
+	configs[ configNum ] = paramList
+	
+	return 0
+
+End // NMPulseLB2Save
 
 //****************************************************************
 //****************************************************************
@@ -5966,8 +7123,8 @@ Function PulseGraphMake()
 		pw = 600
 	endif
 	
-	Variable x0 = ceil((NMComputerPixelsX() - pw)/4)
-	Variable y0 = ceil((NMComputerPixelsY() - ph)/4)
+	Variable x0 = ceil((NMScreenPointsX(igorFrame=1) - pw)/4)
+	Variable y0 = ceil((NMScreenPointsY(igorFrame=1) - ph)/4)
 	
 	Make /O/N=0 PU_DumWave
 	
@@ -5986,7 +7143,7 @@ End // PulseGraphMake
 //****************************************************************
 
 Function PulseGraphUpdate(df, wlist)
-	String df // data folder
+	String df // data folder where waves are located
 	String wlist // wave list
 	
 	Variable icnt, madeGraph
@@ -6050,7 +7207,7 @@ End // PulseGraphRemove
 //****************************************************************
 
 Function PulseGraphAppend(df, wlist)
-	String df // data folder
+	String df // data folder where waves are located
 	String wlist // wave list
 	
 	String wname
@@ -7814,6 +8971,44 @@ End // zSaveToWave1Dp
 
 //****************************************************************
 //****************************************************************
+
+Static Function /S zAmpOrTime( varName )
+	String varName
+	
+	strswitch( varName )
+		case "amp":
+		case "amp1":
+		case "amp2":
+		case "amp3":
+		case "amp4":
+			return "amp"
+
+		case "onset":
+		case "width":
+		case "tau":
+		case "tau1":
+		case "tau2":
+		case "tau3":
+		case "tau4":
+		case "tauRise":
+		case "period":
+		case "periodBgn":
+		case "periodEnd":
+		case "interval":
+		case "refrac":
+		case "tbgn":
+		case "tend":
+		case "gammaB":
+			return "time"
+
+	endswitch
+	
+	return ""
+	
+End // zAmpOrTime
+
+//****************************************************************
+//****************************************************************
 //
 //	Plasticity Functions
 //
@@ -8479,6 +9674,43 @@ Function /S NMPulseTrainRP_GC_NMDA( [ p ] )
 	return NMPulseTrainRPparamList( pp )
 
 End // NMPulseTrainRP_GC_NMDA
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptWaveAndShape( udf, pdf, numWaves, paramList, title, TTL, pulseType [ binomialYN, plasticity ] ) 
+	// DEPRECATED // use NMPulsePromptWaveSeq() and NMPulsePromptShape()
+	String udf // data folder where user waves are located
+	String pdf
+	Variable numWaves
+	String paramList
+	String title
+	Variable TTL
+	Variable pulseType
+	Variable binomialYN
+	Variable plasticity
+	
+	String paramList1, paramList2
+	
+	if ( binomialYN )
+		paramList1 = "wave=all;"
+	else
+		paramList1 = NMPulsePromptWaveSeq( pdf, numWaves, paramList, title, pulseType )
+	endif
+	
+	if ( strlen( paramList1 ) == 0 )
+		return "" // cancel
+	endif
+	
+	paramList2 = NMPulsePromptShape( udf, pdf, paramList, title, TTL, pulseType, plasticity = plasticity )
+	
+	if ( strlen( paramList2 ) == 0 )
+		return "" // cancel
+	endif
+	
+	return paramList1 + paramList2
+
+End // NMPulsePromptWaveAndShape
 
 //****************************************************************
 //****************************************************************

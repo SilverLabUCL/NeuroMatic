@@ -39,37 +39,13 @@
 //****************************************************************
 //****************************************************************
 
-StrConstant NMNotesDF = "root:Packages:NeuroMatic:Notes:"
+StrConstant NMNotesDF = "root:Packages:NeuroMatic:ClampNotes:"
 StrConstant NMNotesTableName = "CT0_NotesTable"
 StrConstant NMNotesStr = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-Function /S NMNotesBasicList(prefix, varType)
-	String prefix // ("H") Header ("F") File
-	Variable varType // (0) numeric (1) string
-	
-	strswitch(prefix)
-	
-		case "H":
-			if (varType == 0)
-				return ""
-			else
-				return "H_Name;H_Lab;H_Title;"
-			endif
-		
-		case "F":
-			if (varType == 0)
-				return ""
-			else
-				return "F_Folder;F_Stim;F_Tbgn;F_Tend;"
-			endif
-			
-	endswitch
-
-End // NMNotesBasicList
+StrConstant NMNotesHeaderVarList = ""
+StrConstant NMNotesHeaderStrList = "H_Name;H_Lab;H_Title;"
+StrConstant NMNotesFileVarList = ""
+StrConstant NMNotesFileStrList = "F_Folder;F_Stim;F_Tbgn;F_Tend;"
 
 //****************************************************************
 //****************************************************************
@@ -79,28 +55,37 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	Variable type // ( 0 ) clamp ( 1 ) review
 	
 	Variable ocnt, icnt, items
-	String objName
+	String objName, df
 	
 	STRUCT Rect w
 	
 	String cdf = NMDF + "Clamp:"
 	String ndf = NMNotesDF
 	
-	String tableName = NMNotesTableName
+	String tName = NMNotesTableName
 	String tableTitle = "NM Data Acquisition Notes"
 	
 	if ( type == 1 )
 	
-		ndf = GetDataFolder( 1 ) + "Notes:"
+		df = GetDataFolder( 1 )
+	
+		if ( DataFolderExists( df + "Notes:" ) )
+			ndf = df + "Notes:"
+		elseif ( DataFolderExists( df + "ClampNotes:" ) )
+			ndf = df + "ClampNotes:"
+		else
+			return ""
+		endif
+		
 		cdf = ndf
 		
-		tableName = CurrentNMFolderPrefix() + "NotesTable"
+		tName = CurrentNMFolderPrefix() + "NotesTable"
 		
 		tableTitle += " : " + CurrentNMFolder( 0 )
 		
 	endif
 	
-	if ( DataFolderExists( ndf ) == 0 )
+	if ( !DataFolderExists( ndf ) )
 		return ""
 	endif
 	
@@ -112,8 +97,8 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	
 	notelist = SortList(notelist, ";", 16)
 	
-	fnlist = RemoveFromList(NMNotesBasicList("F",0), fnlist, ";")
-	fslist = RemoveFromList(NMNotesBasicList("F",1), fslist, ";")
+	fnlist = RemoveFromList(NMNotesFileVarList, fnlist, ";")
+	fslist = RemoveFromList(NMNotesFileStrList, fslist, ";")
 	fslist = RemoveFromList(notelist, fslist, ";") // remove note strings
 	
 	items = ItemsInList(hslist) + ItemsInList(hnlist) + ItemsInList(fslist) + ItemsInList(fnlist)
@@ -130,18 +115,18 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	Wave /T StrValue = $(cdf+"StrValue")
 	Wave NumValue = $(cdf+"NumValue")
 	
-	if (WinType(tableName) == 0)
+	if (WinType(tName) == 0)
 	
 		NMWinCascadeRect( w )
 		
-		Edit /K=1/N=$tableName/W=(w.left,w.top,w.right,w.bottom) VarName, NumValue, StrValue as tableTitle
+		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) VarName, NumValue, StrValue as tableTitle
 		
-		Execute "ModifyTable title(Point)= " + NMQuotes( "Entry" )
-		Execute "ModifyTable alignment(" + cdf + "VarName)=0, alignment(" + cdf + "StrValue)=0"
-		Execute "ModifyTable width(" + cdf + "NumValue)=60, width(" + cdf + "StrValue)=200"
+		ModifyTable /W=$tName title(Point)="Entry"
+		ModifyTable /W=$tName alignment($cdf+"VarName")=0, alignment($cdf+"StrValue")=0
+		ModifyTable /W=$tName width($cdf+"NumValue")=60, width($cdf+"StrValue")=200
 		
 		if ( type == 0 )
-			SetWindow $tableName hook=NMNotesTableHook
+			//SetWindow $tName hook=NMNotesTableHook
 		endif
 		
 	endif
@@ -202,7 +187,7 @@ Function /S NMNotesTable( type ) // create table to edit note vars
 	
 	icnt += 1
 	
-	return tableName
+	return tName
 
 End // NMNotesTable
 
@@ -223,7 +208,7 @@ Function NMNotesTableHook(infoStr)
 	strswitch(event)
 		case "deactivate":
 		case "kill":
-			Execute /Z "NMNotesTable2Vars()" // update note values
+			//Execute /Z "NMNotesTable2Vars()" // update note values
 	endswitch
 
 End // NMNotesTableHook
@@ -234,13 +219,13 @@ End // NMNotesTableHook
 
 Function /S NMNotesVarList(ndf, prefix, varType)
 	String ndf // notes data folder
-	String prefix // prefix string ("H_" for header, "F_" for file)
+	String prefix // prefix string ("H_" for Header, "F_" for File, "P_" for Progress button)
 	String varType // "numeric" or "string"
 
 	Variable ocnt, vtype = 2
 	String objName, olist, vlist = ""
 	
-	if (DataFolderExists(ndf) == 0)
+	if ( !DataFolderExists(ndf) )
 		return ""
 	endif
 	
@@ -269,12 +254,18 @@ End // NMNotesVarList
 //****************************************************************
 //****************************************************************
 
-Function /S NMNotesCheckVarName(objname) // vars require prefix "H_" or "F_"
+Function /S NMNotesCheckVarName( objname ) // vars require prefix "H_" or "F_" or "P_"
 	String objname
 	
-	String prefix = objname[0,1]
+	String prefix
 	
-	if ((StringMatch(prefix, "H_") == 1) || (StringMatch(prefix, "F_") == 1))
+	objname = ReplaceString( "H_H_", objname, "H_" )
+	objname = ReplaceString( "F_F_", objname, "F_" )
+	objname = ReplaceString( "P_P_", objname, "P_" )
+	
+	prefix = objname[0,1]
+	
+	if ( StringMatch(prefix, "H_") || StringMatch(prefix, "F_") || StringMatch(prefix, "P_") )
 		return objname // ok
 	else
 		return "F_" + objname // file var is default
@@ -289,12 +280,16 @@ End // NMNotesCheckVarName
 Function NMNotesPrint()
 	
 	Variable ocnt, items
-	String objName
+	String objName, ndf
 	
 	String cdf = NMDF + "Clamp:"
-	String ndf = GetDataFolder( 1 ) + "Notes:"
+	String df = GetDataFolder( 1 )
 	
-	if ( DataFolderExists( ndf ) == 0 )
+	if ( DataFolderExists( df + "Notes:" ) )
+		ndf = df + "Notes:"
+	elseif ( DataFolderExists( df + "ClampNotes:" ) )
+		ndf = df + "ClampNotes:"
+	else
 		return -1
 	endif
 	
@@ -308,8 +303,8 @@ Function NMNotesPrint()
 	
 	notelist = SortList(notelist, ";", 16)
 	
-	fnlist = RemoveFromList(NMNotesBasicList("F",0), fnlist, ";")
-	fslist = RemoveFromList(NMNotesBasicList("F",1), fslist, ";")
+	fnlist = RemoveFromList(NMNotesFileVarList, fnlist, ";")
+	fslist = RemoveFromList(NMNotesFileStrList, fslist, ";")
 	fslist = RemoveFromList(notelist, fslist, ";") // remove note strings
 	
 	items = ItemsInList(hslist) + ItemsInList(hnlist) + ItemsInList(fslist) + ItemsInList(fnlist)
@@ -365,6 +360,34 @@ Function NMNotesPrint()
 	return 0
 
 End // NMNotesPrint
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function /S NMNotesBasicList(prefix, varType) // DEPRECATED
+	String prefix // ("H") Header ("F") File
+	Variable varType // (0) numeric (1) string
+	
+	strswitch(prefix)
+	
+		case "H":
+			if (varType == 0)
+				return NMNotesHeaderVarList
+			else
+				return NMNotesHeaderStrList
+			endif
+		
+		case "F":
+			if (varType == 0)
+				return NMNotesFileVarList
+			else
+				return NMNotesFileStrList
+			endif
+			
+	endswitch
+
+End // NMNotesBasicList
 
 //****************************************************************
 //****************************************************************

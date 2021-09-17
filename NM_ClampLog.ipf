@@ -96,8 +96,8 @@ Function /S LogVarList(ndf, prefix, varType)
 	String prefix // prefix string ("H_" for header, "F_" for file)
 	String varType // "numeric" or "string"
 
-	Variable ocnt, vtype = 2
-	String objName, olist = ""
+	Variable icnt, vtype = 2
+	String objName, olist, olist2 = ""
 	
 	if (DataFolderExists(ndf) == 0)
 		return ""
@@ -108,9 +108,19 @@ Function /S LogVarList(ndf, prefix, varType)
 	endif
 	
 	olist = FolderObjectList(ndf, vtype)
-	olist = RemoveFromList("FileType", olist)
+	//olist = RemoveFromList("FileType", olist)
 	
-	return olist
+	for ( icnt = 0 ; icnt < ItemsInList( olist ) ; icnt += 1 )
+		
+		objName = StringFromList( icnt, olist )
+		
+		if ( StringMatch( objName[ 0, 1 ], prefix ) )
+			olist2 += objName + ";"
+		endif
+		
+	endfor
+	
+	return olist2
 
 End // LogVarList
 
@@ -356,7 +366,7 @@ Function LogTable(ldf [ kill ] ) // create a log table from a log data folder
 	
 	NMWinCascadeRect( w )
 	Edit /K=(NMK())/N=$tName/W=(w.left,w.top,w.right,w.bottom) as "Clamp Log : " + NMChild( ldf )
-	Execute "ModifyTable title(Point)= " + NMQuotes( "Entry" )
+	ModifyTable /W=$tName title(Point)="Entry"
 	
 	wlist = LogWaveList(ldf, "F")
 	
@@ -370,12 +380,11 @@ Function LogTable(ldf [ kill ] ) // create a log table from a log data folder
 	
 		objName = StringFromList(ocnt, wlist)
 		
-		RemoveFromTable $(ldf+objName) // remove wave first before appending
-		AppendToTable $(ldf+objName)
+		RemoveFromTable /W=$tName $(ldf+objName) // remove wave first before appending
+		AppendToTable /W=$tName $(ldf+objName)
 		
 		if (StringMatch(objName[0,3], "Note") == 1)
-			Execute "ModifyTable alignment(" + ldf + objName + ")=0"
-			Execute "ModifyTable width(" + ldf + objName + ")=150"
+			ModifyTable /W=$tName alignment($ldf+objName)=0, width($ldf+objName)=150
 		endif
 		
 	endfor
@@ -394,8 +403,9 @@ Function LogNotebook(ldf [ kill ] ) // create a log notebook from a log data fol
 	
 	ldf = LastPathColon(ldf,1)
 	
-	Variable ocnt
-	String objName, olist, ftype = StrVarOrDefault(LastPathColon(ldf,1)+"FileType", "")
+	Variable ocnt, value
+	String objName, olist, strvalue, typestr
+	String ftype = StrVarOrDefault(LastPathColon(ldf,1)+"FileType", "")
 	
 	STRUCT Rect w
 	
@@ -432,7 +442,12 @@ Function LogNotebook(ldf [ kill ] ) // create a log notebook from a log data fol
 		objName = StringFromList(ocnt, olist)
 		name = UpperStr(ReplaceString("H_", objName, "") + ":")
 		tabs = LogNotebookTabs(name)
-		Notebook $nbName text=(NMCR + name + tabs + StrVarOrDefault(ldf+objName, ""))
+		strvalue = StrVarOrDefault(ldf+objName, "")
+		typestr = StrVarOrDefault(ldf+"T_"+objName, "")
+		if ( strlen( typestr ) > 0 )
+			typestr = " " + typestr
+		endif
+		Notebook $nbName text=(NMCR + name + tabs + strvalue + typestr)
 	endfor
 	
 	olist = LogVarList(ldf, "H_", "numeric")
@@ -441,7 +456,12 @@ Function LogNotebook(ldf [ kill ] ) // create a log notebook from a log data fol
 		objName = StringFromList(ocnt, olist)
 		name = UpperStr(ReplaceString("H_", objName, "") + ":")
 		tabs = LogNotebookTabs(name)
-		Notebook $nbName text=(NMCR + name + tabs + num2str(NumVarOrDefault(ldf+objName, Nan)))
+		value = NumVarOrDefault(ldf+objName, Nan)
+		typestr = StrVarOrDefault(ldf+"T_"+objName, "")
+		if ( strlen( typestr ) > 0 )
+			typestr = " " + typestr
+		endif
+		Notebook $nbName text=(NMCR + name + tabs + num2str(value) + " " + typestr)
 	endfor
 	
 	olist = LogSubfolderList(ldf)
@@ -467,7 +487,7 @@ Function LogNotebookFileVars(ndf, nbName)
 	endif
 	
 	Variable icnt, value
-	String objName, strvalue
+	String objName, strvalue, typestr
 	
 	String nlist = LogVarList(ndf, "F_", "numeric")
 	String slist = LogVarList(ndf, "F_", "string")
@@ -482,28 +502,39 @@ Function LogNotebookFileVars(ndf, nbName)
 	Notebook $nbName text=(NMCR + "************************************************************")
 	
 	for (icnt = 0; icnt < ItemsInList(slist); icnt += 1) // string vars
-		objName = StringFromList(icnt,slist)
+		objName = StringFromList(icnt, slist)
 		name = ReplaceString("H_", objName, "") + ":"
 		name = UpperStr(ReplaceString("F_", name, ""))
 		tabs = LogNotebookTabs(name)
-		Notebook $nbName text=(NMCR + name + tabs + StrVarOrDefault(ndf+objName, ""))
+		strvalue = StrVarOrDefault(ndf+objName, "")
+		typestr = StrVarOrDefault(ndf+"T_"+objName, "")
+		if ( strlen( typestr ) > 0 )
+			typestr = " " + typestr
+		endif
+		Notebook $nbName text=(NMCR + name + tabs + strvalue + typestr)
 	endfor
 	
 	Notebook $nbName text=(NMCR)
 	
 	for (icnt = 0; icnt < ItemsInList(nlist); icnt += 1) // numeric vars
 	
-		objName = StringFromList(icnt,nlist)
+		objName = StringFromList(icnt, nlist)
 		name = UpperStr(ReplaceString("F_", objName, "") + ":")
 		tabs = LogNotebookTabs(name)
 		value = NumVarOrDefault(ndf+objName, Nan)
 		strvalue = ""
+		typestr = ""
 		
 		if (numtype(value) == 0)
 			strvalue = num2str(value)
+			typestr = StrVarOrDefault(ndf+"T_"+objName, "")
 		endif
 		
-		Notebook $nbName text=(NMCR + name + tabs + strvalue)
+		if ( strlen( typestr ) > 0 )
+			typestr = " " + typestr
+		endif
+		
+		Notebook $nbName text=(NMCR + name + tabs + strvalue + typestr)
 		
 	endfor
 	

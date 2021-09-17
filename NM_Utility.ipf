@@ -41,6 +41,157 @@ StrConstant NMPlotColorList = "black;gray;red;yellow;green;blue;purple;white;"
 StrConstant NMCancel = "CANCEL"
 StrConstant NMCR = "\r" // carriage return
 
+Constant NMBoltzmannConstant = 1.38064852e-23 // K // m2·kg·s-2·K-1
+Constant NMFaradayConstant = 96485.33212331 // F // C·mol−1 // equal to elementary charge e
+Constant NMGasConstant = 8.31446261815324 // R // kg⋅m2·K−1⋅mol−1⋅s−2
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestVarEqual( var1, var2 )
+	Variable var1, var2
+	
+	String flist
+	
+	switch( numtype( var1 ) )
+	
+		case 0:
+			if ( ( numtype( var2 ) == 0 ) && ( var1 == var2 ) )
+				return 1 // var1 = var2
+			endif
+			break
+			
+		case 1: // INF
+			if ( numtype( var2 ) == 1 )
+				if ( ( var1 < 0 ) && ( var2 < 0 ) )
+					return 1 // -INF = -INF
+				elseif ( ( var1 > 0 ) && ( var2 > 0 ) )
+					return 1 // +INF = +INF
+				endif
+			endif
+			break
+			
+		case 2: // NaN
+			if ( numtype( var2 ) == 2 )
+				return 1 // NaN = NaN
+			endif
+			break
+			
+	endswitch
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: unequal numbers: " + num2str( var1 ) + " ≠ " + num2str( var2 ) + ": " + flist
+
+	Abort
+
+End // NMTestVarEqual
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestVarNotEqual( var1, var2 )
+	Variable var1, var2
+	
+	Variable equal
+	String flist
+	
+	switch( numtype( var1 ) )
+	
+		case 0:
+			if ( ( numtype( var2 ) == 0 ) && ( var1 == var2 ) )
+				equal = 1 // var1 = var2
+			endif
+			break
+			
+		case 1: // INF
+			if ( numtype( var2 ) == 1 )
+				if ( ( var1 < 0 ) && ( var2 < 0 ) )
+					equal = 1 // -INF = -INF
+				elseif ( ( var1 > 0 ) && ( var2 > 0 ) )
+					equal = 1 // +INF = +INF
+				endif
+			endif
+			break
+			
+		case 2: // NaN
+			if ( numtype( var2 ) == 2 )
+				equal = 1 // NaN = NaN
+			endif
+			break
+			
+	endswitch
+	
+	if ( !equal )
+		return 1
+	endif
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: equal numbers: " + num2str( var1 ) + " = " + num2str( var2 ) + ": " + flist
+
+	Abort
+
+End // NMTestVarNotEqual
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestStrEqual( str1, str2 [ casesensitive ] )
+	String str1, str2
+	Variable casesensitive // ( 0 ) no ( 1 ) yes
+	
+	String flist
+	
+	if ( ParamIsDefault( casesensitive ) )
+		casesensitive = 1
+	else
+		casesensitive = BinaryCheck( casesensitive )
+	endif
+	
+	if ( CmpStr( str1, str2, casesensitive ) == 0 )
+		return 1
+	endif
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: unequal strings: " + NMQuotes( str1 ) + " ≠ " + NMQuotes( str2 ) + ": " + flist
+
+	Abort
+
+End // NMTestStrEqual
+
+//****************************************************************
+//****************************************************************
+
+Function NMTestStrNotEqual( str1, str2 [ casesensitive ] )
+	String str1, str2
+	Variable casesensitive // ( 0 ) no ( 1 ) yes
+	
+	String flist
+	
+	if ( ParamIsDefault( casesensitive ) )
+		casesensitive = 1
+	else
+		casesensitive = BinaryCheck( casesensitive )
+	endif
+	
+	if ( CmpStr( str1, str2, casesensitive ) != 0 )
+		return 1
+	endif
+	
+	flist = GetRTStackInfo( 3 )
+	flist = StringFromList( 0, flist )
+
+	Print "NM test failure: equal strings: " + NMQuotes( str1 ) + " = " + NMQuotes( str2 ) + ": " + flist
+
+	Abort
+
+End // NMTestStrNotEqual
+
 //****************************************************************
 //****************************************************************
 
@@ -100,28 +251,140 @@ End // Nan2Zero
 //****************************************************************
 //****************************************************************
 
-Function NMInequality( testValue [ greaterThan, lessThan, binaryOutput, deprecation ] )
+Function NMInequality( testValue [ greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, logic, binaryOutput, deprecation ] )
 	Variable testValue
-	Variable greaterThan, lessThan
-	Variable binaryOutput // ( 0 ) output wave will contain NaN for false or corresponding input wave value for true ( 1 ) output wave will contain '0' for false or '1' for true
+	Variable greaterThan // testvalue > greaterThan
+	Variable greaterThanOrEqual // testvalue ≥ greaterThanOrEqual
+	Variable lessThan // testvalue < lessThan
+	Variable lessThanOrEqual // testvalue ≤ lessThanOrEqual
+	Variable equal // testvalue == equal
+	Variable notEqual // testvalue != notEqual
+	String logic // sequence logic, "AND" or "OR"
+	Variable binaryOutput
+				// ( 0 ) output wave will contain NaN for false or corresponding input wave value for true
+				// ( 1 ) output wave will contain '0' for false or '1' for true
 	Variable deprecation
 	
-	Variable inequality = 1
+	Variable test, inequality
 	
 	if ( deprecation )
 		NMDeprecationAlert()
+	endif
+	
+	if ( ParamIsDefault( logic ) || !StringMatch( logic, "OR" ) )
+		logic = "AND"
+		inequality = 1
+	else
+		logic = "OR"
+		inequality = 0
 	endif
 	
 	if ( ParamIsDefault( binaryOutput ) )
 		binaryOutput = 1
 	endif
 	
-	if ( !ParamIsDefault( greaterThan ) && ( numtype( greaterThan ) == 0 ) )
-		inequality = inequality && ( testValue > greaterThan )
+	if ( !ParamIsDefault( greaterThan ) )
+	
+		test = testValue > greaterThan
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
 	endif
 	
-	if ( !ParamIsDefault( lessThan ) && ( numtype( lessThan ) == 0 ) )
-		inequality = inequality && ( testValue < lessThan )
+	if ( !ParamIsDefault( greaterThanOrEqual ) )
+	
+		if ( numtype( testValue ) == 2 )
+			test = 0
+		else
+			test = testValue >= greaterThanOrEqual
+		endif
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( lessThan ) )
+	
+		test = testValue < lessThan
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( lessThanOrEqual ) )
+	
+		test = testValue <= lessThanOrEqual
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( equal ) )
+	
+		switch( numtype( equal ) )
+			case 0:
+				test = testValue == equal
+				break
+			case 1: // inf
+				if ( equal > 0 ) // +inf
+					test = ( numtype( testValue ) == 1 ) && ( testValue > 0 )
+				else
+					test = ( numtype( testValue ) == 1 ) && ( testValue < 0 )
+				endif
+				break
+			case 2: // NaN
+				test = numtype( testValue ) == 2
+				break
+		endswitch
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
+	endif
+	
+	if ( !ParamIsDefault( notEqual ) )
+	
+		switch( numtype( notEqual ) )
+			case 0:
+				test = testValue != notEqual
+				break
+			case 1: // inf
+				if ( notEqual > 0 ) // +inf
+					test = !( ( numtype( testValue ) == 1 ) && ( testValue > 0 ) )
+				else // -inf
+					test = !( ( numtype( testValue ) == 1 ) && ( testValue < 0 ) )
+				endif
+				break
+			case 2: // NaN
+				test = numtype( testValue ) != 2
+				break
+		endswitch
+		
+		if ( StringMatch( logic, "OR" ) )
+			inequality = inequality || test
+		else
+			inequality = inequality && test
+		endif
+		
 	endif
 	
 	if ( binaryOutput )
@@ -137,27 +400,22 @@ End // NMInequality
 //****************************************************************
 //****************************************************************
 
-Function /S NMInequalityFxn( greaterThan, lessThan ) // create function string
-	Variable greaterThan, lessThan
-	
-	if ( ( numtype( greaterThan ) == 0 ) && ( numtype( lessThan ) == 0 ) )
-		return num2str( greaterThan ) + " < y < " + num2str( lessThan )
-	elseif ( numtype( greaterThan ) == 0 )
-		return "y > " + num2str( greaterThan )
-	elseif ( numtype( lessThan ) == 0 )
-		return "y < " + num2str( lessThan )
-	endif
-	
-End // NMInequalityFxn
-
-//****************************************************************
-//****************************************************************
-
 Structure NMInequalityStruct
 	
-	Variable lessThan, greaterThan, binaryOutput
+	Variable greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, binaryOutput
 
 EndStructure
+
+//****************************************************************
+//****************************************************************
+
+Function NMInequalityStructNull( s )
+	STRUCT NMInequalityStruct &s
+	
+	s.greaterThan = NaN; s.greaterThanOrEqual = NaN; s.lessThan = NaN; s.lessThanOrEqual = NaN;
+	s.equal = NaN; s.notEqual = NaN; s.binaryOutput = 1;
+	
+End // NMInequalityStructNull
 
 //****************************************************************
 //****************************************************************
@@ -177,13 +435,13 @@ EndStructure
 //****************************************************************
 //****************************************************************
 
-Function NMInequalityStructNull( s )
+Function NMInequalityStructOldNull( s )
 	STRUCT NMInequalityStructOld &s
 	
 	s.select = NaN; s.aValue = NaN; s.sValue = NaN; s.nValue = NaN
 	s.lessThan = NaN; s.greaterThan = NaN
 	
-End // NMInequalityStructNull
+End // NMInequalityStructOldNull
 
 //****************************************************************
 //****************************************************************
@@ -193,7 +451,7 @@ Function /S NMInequalityStructConvert( select, aValue, sValue, nValue, s )
 	Variable aValue, sValue, nValue
 	STRUCT NMInequalityStructOld &s
 	
-	NMInequalityStructNull( s )
+	NMInequalityStructOldNull( s )
 	
 	s.select = select
 	s.aValue = aValue
@@ -252,8 +510,11 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 	String df // data folder for global variables
 	String promptStr
 	
+	String returnList
+	String ilist = "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+	
 	if ( ParamIsDefault( promptStr ) || ( strlen( promptStr ) == 0 ) )
-		promptStr = NMPromptStr( "NM Inequality <>" )
+		promptStr = NMPromptStr( "NM Inequality <>=" )
 	endif
 	
 	String inequality = StrVarOrDefault( df + "InequalitySelect", "y > a" )
@@ -261,7 +522,7 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 	Variable aValue = NumVarOrDefault( df + "InequalityValueA", 0 )
 	Variable bValue = NumVarOrDefault( df + "InequalityValueB", 0 )
 	
-	Prompt inequality, "inequality test for wave point values y:", popup "y > a;y < b;a < y < b;"
+	Prompt inequality, "inequality test for wave point values y:", popup ilist
 	Prompt binaryOutput, "denote true and false with:", popup "y and NaN;1 and 0;"
 	Prompt aValue, "enter value for a:"
 	Prompt bValue, "enter value for b:"
@@ -272,6 +533,8 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 		return "" // cancel
 	endif
 	
+	NMInequalityStructNull( s )
+	
 	binaryOutput -= 1
 	
 	SetNMstr( df + "InequalitySelect", inequality )
@@ -280,6 +543,8 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 	s.binaryOutput = binaryOutput
 	
 	promptStr = NMPromptStr( inequality )
+	
+	returnList = "inequality=" + inequality + ";"
 	
 	strswitch( inequality )
 	
@@ -291,14 +556,33 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 				return "" // cancel
 			endif
 			
-			s.lessThan = NaN
-			
 			if ( numtype( aValue ) == 0 )
 				SetNMvar( df + "InequalityValueA", aValue )
 				s.greaterThan = aValue
 			else
 				s.greaterThan = NaN
 			endif
+			
+			returnList += "greaterThan=" + num2str( s.greaterThan ) + ";"
+			
+			break
+			
+		case "y ≥ a":
+		
+			DoPrompt promptStr, aValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.greaterThanOrEqual = aValue
+			else
+				s.greaterThanOrEqual = NaN
+			endif
+			
+			returnList += "greaterThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
 			
 			break
 		
@@ -310,14 +594,33 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 				return "" // cancel
 			endif
 			
-			s.greaterThan = NaN
-			
 			if ( numtype( bValue ) == 0 )
 				SetNMvar( df + "InequalityValueB", bValue )
 				s.lessThan = bValue
 			else
 				s.lessThan = NaN
 			endif
+			
+			returnList += "lessThan=" + num2str( s.greaterThan ) + ";"
+			
+			break
+			
+		case "y ≤ b":
+		
+			DoPrompt promptStr, bValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( bValue ) == 0 )
+				SetNMvar( df + "InequalityValueB", bValue )
+				s.lessThanOrEqual = bValue
+			else
+				s.lessThanOrEqual = NaN
+			endif
+			
+			returnList += "lessThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
 			
 			break
 			
@@ -343,9 +646,81 @@ Function /S NMInequalityCall( s, df [ promptStr ] )
 				s.lessThan = NaN
 			endif
 			
+			returnList += "greaterThan=" + num2str( s.greaterThan ) + ";"
+			returnList += "lessThan=" + num2str( s.greaterThan ) + ";"
+			
+			break
+			
+		case "a ≤ y ≤ b":
+		
+			DoPrompt promptStr, aValue, bValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.greaterThanOrEqual = aValue
+			else
+				s.greaterThanOrEqual = NaN
+			endif
+			
+			if ( numtype( bValue ) == 0 )
+				SetNMvar( df + "InequalityValueB", bValue )
+				s.lessThanOrEqual = bValue
+			else
+				s.lessThanOrEqual = NaN
+			endif
+			
+			returnList += "greaterThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
+			returnList += "lessThanOrEqual=" + num2str( s.greaterThanOrEqual ) + ";"
+			
+			break
+			
+		case "y = a":
+		
+			DoPrompt promptStr, aValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.equal = aValue
+			else
+				s.equal = NaN
+			endif
+			
+			returnList += "equal=" + num2str( s.equal ) + ";"
+		
+			break
+		
+		case "y ≠ a":
+		
+			DoPrompt promptStr, aValue
+			
+			if ( V_flag == 1 )
+				return "" // cancel
+			endif
+			
+			if ( numtype( aValue ) == 0 )
+				SetNMvar( df + "InequalityValueA", aValue )
+				s.notequal = aValue
+			else
+				s.notequal = NaN
+			endif
+			
+			returnList += "notequal=" + num2str( s.notequal ) + ";"
+		
+			break
+			
 	endswitch
 	
-	return "lessThan=" + num2str( s.lessThan ) + ";greaterThan=" + num2str( s.greaterThan ) + ";binaryOutput=" + num2istr( binaryOutput ) + ";"
+	returnList += "binaryOutput=" + num2istr( binaryOutput ) + ";"
+	
+	return returnList
 	
 End // NMInequalityCall
 
@@ -874,9 +1249,15 @@ Function List2Wave( strList, wName [ numeric, overwrite ] ) // convert list item
 		return 0 // nothing to do
 	endif
 	
+	if ( strlen( wName ) == 0 )
+		return NM2Error( 21, "wName", "" )
+	endif
+	
 	if ( WaveExists( $wName ) && !overwrite )
 		return NM2Error( 2, "wName", wName )
 	endif
+	
+	wName = NMCheckStringName( wName )
 	
 	if ( numeric )
 	
@@ -1026,7 +1407,7 @@ Function NMShuffleWave2( wName )
 	String wName
 	
 	Variable icnt, jcnt, kcnt, npnts, items
-	String jstr, iList = "", iList2 = ""
+	String jstr, iList = "", iList2 = "", saveList
 	
 	if ( !WaveExists( $wName ) )
 		return -1
@@ -1037,6 +1418,8 @@ Function NMShuffleWave2( wName )
 	for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
 		iList = AddListItem( num2str( wtemp[ icnt ] ), iList, ";", inf )
 	endfor
+	
+	saveList = iList
 	
 	for ( icnt = 0 ; icnt < 1000 ; icnt += 1 )
 	
@@ -1062,6 +1445,8 @@ Function NMShuffleWave2( wName )
 		endif
 	
 	endfor
+	
+	print icnt, saveList, ilist2
 	
 	for ( icnt = 0 ; icnt < ItemsInList( iList2 ) ; icnt += 1 )
 		if ( icnt < numpnts( wtemp ) )
@@ -1300,13 +1685,15 @@ Function /S NMEventsToWaves( waveOfWaveNums, waveOfEvents, xwinBefore, xwinAfter
 	chanNum = ChanNumCheck( chanNum )
 	
 	if ( strlen( outputWavePrefix ) == 0 )
-		return NM2ErrorStr( 21, "outputWavePrefix", outputWavePrefix )
+		return NM2ErrorStr( 21, "outputWavePrefix", "" )
 	endif
 	
 	Wave recordNum = $waveOfWaveNums
 	Wave eventTimes = $waveOfEvents
 	
 	npnts = numpnts( recordNum )
+	
+	outputWavePrefix = NMCheckStringName( outputWavePrefix )
 	
 	wName3 = outputWavePrefix + "Times"
 	
@@ -1480,6 +1867,10 @@ Function NMWaveOfPeriodicTimes( wName, interval, xbgn, xend )
 	
 	Variable npnts
 	
+	if ( strlen( wName ) == 0 )
+		return NM2Error( 21, "wName", "" )
+	endif
+	
 	if ( ( numtype( interval ) > 0 ) || ( interval <= 0 ) )
 		return NM2Error( 10, "interval", num2str( interval ) )
 	endif
@@ -1491,6 +1882,8 @@ Function NMWaveOfPeriodicTimes( wName, interval, xbgn, xend )
 	if ( numtype( xend ) > 0 )
 		return NM2Error( 10, "xend", num2str( xend ) )
 	endif
+	
+	wName = NMCheckStringName( wName )
 	
 	npnts = 1 + ( xend - xbgn ) / interval
 	
@@ -1575,6 +1968,12 @@ End // RenameWaves
 Function /S NMMatrixArithmeticMake( matrixName, numRows )
 	String matrixName
 	Variable numRows
+	
+	if ( strlen( matrixName ) == 0 )
+		return ""
+	endif
+	
+	matrixName = NMCheckStringName( matrixName )
 
 	Make /O/T/N=( numRows, 4 ) $matrixName = ""
 	
@@ -1948,15 +2347,20 @@ End // NMMatrixSumRows
 //
 //****************************************************************
 
-Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
+Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum [ overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWaveName // output wave name
 	Variable rowNum // row number
+	Variable overwrite
 	
-	Variable rows
+	Variable rows, cols
 	
 	if ( !WaveExists( $matrixName ) )
 		return NM2Error( 1, "matrixName", matrixName )
+	endif
+	
+	if ( strlen( outputWaveName ) == 0 )
+		return NM2Error( 21, "outputWaveName", "" )
 	endif
 	
 	if ( WaveExists( $outputWaveName ) )
@@ -1964,15 +2368,26 @@ Function NMMatrixRow2Wave( matrixName, outputWaveName, rowNum )
 	endif
 
 	rows = DimSize( $matrixName, 0 )
+	cols = DimSize( $matrixName, 1 )
 	
 	if ( ( rowNum < 0 ) || ( rowNum >= rows ) )
 		return -1
 	endif
 	
+	if ( cols == 0 )
+		return -1
+	endif
+	
 	Wave m2D = $matrixName
 	
-	MatrixOp /O $outputWaveName = row( m2D, rowNum )
+	outputWaveName = NMCheckStringName( outputWaveName )
 	
+	if ( !overwrite && WaveExists( $outputWaveName ) )
+		return NM2Error( 2, "outputWaveName", outputWaveName )
+	endif
+	
+	MatrixOp /O $outputWaveName = row( m2D, rowNum )
+	Redimension /N=( cols ) $outputWaveName
 	Setscale /P x DimOffset( $matrixName, 1 ), DimDelta( $matrixName, 1 ), $outputWaveName
 	
 	return 0
@@ -1986,12 +2401,14 @@ End // NMMatrixRow2Wave
 //
 //****************************************************************
 
-Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix )
+Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix [ chanNum, overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWavePrefix // output wave prefix name
+	Variable chanNum // for wave name
+	Variable overwrite
 	
-	Variable rcnt, rows, startx, dx
-	String wName, wList = ""
+	Variable rcnt, rows, cols, startx, dx
+	String chanStr, wName, wList = ""
 	String thisFxn = GetRTStackInfo( 1 )
 	
 	if ( !WaveExists( $matrixName ) )
@@ -1999,14 +2416,23 @@ Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix )
 	endif
 	
 	if ( strlen( outputWavePrefix ) == 0 )
-		return NM2ErrorStr( 2, "outputWaveName", outputWavePrefix )
+		return NM2ErrorStr( 21, "outputWavePrefix", "" )
 	endif
+	
+	chanStr = ChanNum2Char( chanNum )
 
 	rows = DimSize( $matrixName, 0 )
+	cols = DimSize( $matrixName, 1 )
+	
+	if ( cols == 0 )
+		return ""
+	endif
+	
+	outputWavePrefix = NMCheckStringName( outputWavePrefix )
 	
 	for ( rcnt = 0 ; rcnt < rows ; rcnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( rcnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( rcnt )
 		
 		if ( WaveExists( $wName ) )
 			NMDoAlert( "Abort " + thisFxn + " : a wave with prefix " + NMQuotes( outputWavePrefix ) + " exists already : " + wName )
@@ -2022,10 +2448,14 @@ Function /S NMMatrixRows2Waves( matrixName, outputWavePrefix )
 	
 	for ( rcnt = 0 ; rcnt < rows ; rcnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( rcnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( rcnt )
 		
-		MatrixOp /O $wName = col( m2D, rcnt )
-	
+		if ( !overwrite && WaveExists( $wName ) )
+			continue
+		endif
+		
+		MatrixOp /O $wName = row( m2D, rcnt )
+		Redimension /N=( cols ) $wName
 		Setscale /P x startx, dx, $wName
 		
 		wList = AddListItem( wName, wList, ";", inf )
@@ -2043,15 +2473,20 @@ End // NMMatrixRows2Waves
 //
 //****************************************************************
 
-Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum )
+Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum [ overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWaveName // output wave name
 	Variable columnNum // column number
+	Variable overwrite
 	
 	Variable columns
 	
 	if ( !WaveExists( $matrixName ) )
 		return NM2Error( 1, "matrixName", matrixName )
+	endif
+	
+	if ( strlen( outputWaveName ) == 0 )
+		return NM2Error( 21, "outputWaveName", "" )
 	endif
 	
 	if ( WaveExists( $outputWaveName ) )
@@ -2065,6 +2500,12 @@ Function NMMatrixColumn2Wave( matrixName, outputWaveName, columnNum )
 	endif
 	
 	Wave m2D = $matrixName
+	
+	outputWaveName = NMCheckStringName( outputWaveName )
+	
+	if ( !overwrite && WaveExists( $outputWaveName ) )
+		return NM2Error( 2, "outputWaveName", outputWaveName )
+	endif
 	
 	MatrixOp /O $outputWaveName = col( m2D, columnNum )
 	
@@ -2081,12 +2522,14 @@ End // NMMatrixColumn2Wave
 //
 //****************************************************************
 
-Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix )
+Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix [ chanNum, overwrite ] )
 	String matrixName // 2D matrix wave name
 	String outputWavePrefix // output wave prefix name
+	Variable chanNum // for wave name
+	Variable overwrite
 	
 	Variable ccnt, columns, startx, dx
-	String wName, wList = ""
+	String chanStr, wName, wList = ""
 	String thisFxn = GetRTStackInfo( 1 )
 	
 	if ( !WaveExists( $matrixName ) )
@@ -2094,14 +2537,19 @@ Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix )
 	endif
 	
 	if ( strlen( outputWavePrefix ) == 0 )
-		return NM2ErrorStr( 2, "outputWaveName", outputWavePrefix )
+		return NM2ErrorStr( 21, "outputWavePrefix", "" )
 	endif
+	
+	chanStr = ChanNum2Char( chanNum )
 
 	columns = DimSize( $matrixName, 1 )
 	
+	outputWavePrefix = NMCheckStringName( outputWavePrefix )
+	
 	for ( ccnt = 0 ; ccnt < columns ; ccnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( ccnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( ccnt )
+		wName = ReplaceString( "__", wName, "_" )
 		
 		if ( WaveExists( $wName ) )
 			NMDoAlert( "Abort " + thisFxn + " : a wave with prefix " + NMQuotes( outputWavePrefix ) + " exists already : " + wName )
@@ -2117,7 +2565,11 @@ Function /S NMMatrixColumns2Waves( matrixName, outputWavePrefix )
 	
 	for ( ccnt = 0 ; ccnt < columns ; ccnt += 1 )
 	
-		wName = outputWavePrefix + "_A" + num2istr( ccnt )
+		wName = outputWavePrefix + "_" + chanStr + num2istr( ccnt )
+		
+		if ( !overwrite && WaveExists( $wName ) )
+			continue
+		endif
 		
 		MatrixOp /O $wName = col( m2D, ccnt )
 	
@@ -2163,21 +2615,44 @@ End // CheckGraphName
 //****************************************************************
 //****************************************************************
 
-Function GraphRainbow( gName, wList ) // change color of waves to raindow
+Function GraphRainbow( gName, wList [ wavePrefix ] ) // change color of waves to raindow
 	String gName // graph name
 	String wList // wave list or "_ALL_" for all waves in the graph
+	String wavePrefix // for waves in graph that begin with this wave prefix
 	
 	Variable wcnt
-	String wName
+	String wName, wList2 = ""
 	
 	STRUCT NMRGB c
+	
+	if ( ParamIsDefault( wavePrefix ) )
+		wavePrefix = ""
+	endif
 	
 	if ( Wintype( gName ) != 1 )
 		return NM2Error( 40, "gName", gName )
 	endif
 	
-	if ( StringMatch( wList, "_ALL_" ) || ( ItemsInList( wList ) == 0 ) )
+	if ( StringMatch( wList, "_ALL_" ) || ( ItemsInList( wList ) == 0 ) || ( strlen( wavePrefix ) > 0 ) )
+	
 		wList = TraceNameList( gName, ";", 1 )
+		
+		if ( strlen( wavePrefix ) > 0 )
+		
+			for ( wcnt = 0; wcnt < ItemsInList( wList ); wcnt += 1 )
+	
+				wName = StringFromList( wcnt, wList )
+				
+				if ( strsearch( wName, wavePrefix, 0, 2 ) == 0 )
+					wList2 += wName + ";"
+				endif
+				
+			endfor
+			
+			wList = wList2
+		
+		endif
+		
 	endif
 
 	for ( wcnt = 0; wcnt < ItemsInList( wList ); wcnt += 1 )
@@ -2307,11 +2782,67 @@ End // NMStrSearchList
 //****************************************************************
 //****************************************************************
 
-Function /S NMUtilityWaveListShort( wList ) // convert wave list to short format
+Function /S NMUtilityWaveListShort( wList [ prePrefix ] ) // convert wave list to short format
+	String wList
+	String prePrefix
+	
+	Variable icnt
+	String foundList = "", wList1, wList2, oList = ""
+	
+	if ( ParamIsDefault( prePrefix ) )
+		prePrefix = NMFoldersWavePrePrefix // prefix of wave names after NM folder merge ("DF0_", "DF1_", etc), or file import
+	endif
+	
+	if ( ItemsInList( wList ) <= 1 )
+		return wList // not enough waves
+	endif
+	
+	if ( strlen( prePrefix ) > 0 )
+	
+		wList1 = NMStrSearchList( wList, preprefix )
+		
+		if ( ItemsInList( wList1 ) > 0 )
+	
+			for ( icnt = 0 ; icnt < 999 ; icnt += 1 )
+			
+				preprefix = NMFoldersWavePrePrefix + num2istr( icnt ) + "_" // e.g. "DF0_"
+				
+				wList2 = NMStrSearchList( wList, preprefix )
+				
+				if ( ItemsInList( wList2 ) == 0 )
+					continue
+				endif
+				
+				olist += NMUtilityWaveListShort2( wList2 )
+				foundList += wList2
+				
+				if ( ItemsInList( foundList ) >= ItemsInList( wList1 ) )
+					break
+				endif
+			
+			endfor
+			
+			if ( ItemsInList( foundList ) > 0 )
+				return olist + RemoveFromList( foundList, wList )
+			endif
+			
+		endif
+		
+	endif
+	
+	return NMUtilityWaveListShort2( wList )
+	
+End // NMUtilityWaveListShort
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S NMUtilityWaveListShort2( wList ) // convert wave list to short format
 	String wList
 	
 	Variable wcnt
-	String prefix, wName, wNameNew, tempList = "", foundList = "", oList = ""
+	String prefix, wName, wNameNew
+	String tempList = "", foundList = "", oList = ""
 	
 	if ( ItemsInList( wList ) <= 1 )
 		return wList // not enough waves
@@ -2344,7 +2875,7 @@ Function /S NMUtilityWaveListShort( wList ) // convert wave list to short format
 	
 		oList = prefix + ";"
 		
-	elseif ( ItemsInList( tempList ) >= 1 )
+	else
 	
 		tempList = SequenceToRangeStr( tempList, "-" )
 		
@@ -2354,7 +2885,7 @@ Function /S NMUtilityWaveListShort( wList ) // convert wave list to short format
 	
 	return ReplaceString( ",;", oList, ";" ) + RemoveFromList( foundList, wList )
 	
-End // NMUtilityWaveListShort
+End // NMUtilityWaveListShort2
 
 //****************************************************************
 //****************************************************************
@@ -2469,15 +3000,24 @@ Function /S RangeToSequenceStr( rangeStr )
 	elseif ( strsearch( rangeStr, "-", 0 ) > 0 )
 		rangeStr = ReplaceString( "-", rangeStr, "," )
 	else
-		return rangeStr // unrecognized seperator
+		return "" // unrecognized seperator
 	endif
 	
 	if ( ItemsInList( rangeStr, "," ) != 2 )
-		return rangeStr
+		return "" // bad range
 	endif
 	
 	first = str2num( StringFromList( 0, rangeStr, "," ) )
+	
+	if ( numtype( first ) > 0 )
+		return ""
+	endif
+	
 	last = str2num( StringFromList( 1, rangeStr, "," ) )
+	
+	if ( numtype( last ) > 0 )
+		return ""
+	endif
 	
 	for ( icnt = first; icnt <= last; icnt += 1 )
 		seqStr += num2istr( icnt ) + ";"
@@ -2597,19 +3137,31 @@ End //  NMReplaceStringList
 Function /S NMCheckStringName( strName )
 	String strName
 	
+	Variable beLiberal = 0
+	Variable maxChar = 31 // 31 or 255
+	
+	String path, strName2
+	
 	if ( strlen( strName ) == 0 )
 		return ""
 	endif
 	
-	strName = CleanupName( strName, 0 )
+	if ( IgorVersion() >= 8 )
+		maxChar = 255
+	endif
 	
-	strName = ReplaceString( "__", strName, "_" )
-	strName = ReplaceString( "__", strName, "_" )
-	strName = ReplaceString( "__", strName, "_" )
+	path = NMParent( strName )
+	strName2 = NMChild( strName )
 	
-	strName = RemoveEnding( strName , "_" )
+	strName2 = ReplaceString( "__", strName2, "_" )
+	strName2 = ReplaceString( "__", strName2, "_" )
+	strName2 = ReplaceString( "__", strName2, "_" )
 	
-	return strName[ 0, 30 ] // max 31 characters
+	strName2 = RemoveEnding( strName2 , "_" )
+	
+	strName2 = CleanupName( strName2, beLiberal )
+	
+	return path + strName2[ 0, maxChar - 1 ]
 
 End // NMCheckStringName
 
@@ -2744,15 +3296,13 @@ End // NMQuotes
 Function /S FindCommonPrefix( wList )
 	String wList
 	
-	Variable icnt, jcnt, thesame
+	Variable icnt, jcnt
 	String wname, wname2, prefix = ""
 	
 	wname = StringFromList( 0, wList )
 	
 	for ( icnt = 0 ; icnt < strlen( wname ) ; icnt += 1 )
 	
-		thesame = 1
-		
 		for ( jcnt = 1 ; jcnt < ItemsInList( wList ) ; jcnt += 1 )
 		
 			wname2 = StringFromList( jcnt, wList )
@@ -3865,7 +4415,7 @@ End // NMGaussSTDV2FWHM
 //****************************************************************
 //****************************************************************
 //
-//		Functions not used anymore
+//		Functions NOT USED anymore
 //
 //****************************************************************
 //****************************************************************
@@ -4131,6 +4681,8 @@ Function NMCrossCorrelation( wName1, wName2, outHistoName, binSize ) // NOT USED
 	
 	endfor
 	
+	outHistoName = NMCheckStringName( outHistoName )
+	
 	Make /O/N=1 $outHistoName
 	
 	iMin = binSize * floor( iMin / binSize )
@@ -4197,6 +4749,22 @@ Function NMFindStim( wName, xbinSize, conf ) // find stimulus artifact times // 
 	return 0
 
 End // NMFindStim
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMInequalityFxn( greaterThan, lessThan ) // NOT USED
+	Variable greaterThan, lessThan
+	
+	if ( ( numtype( greaterThan ) == 0 ) && ( numtype( lessThan ) == 0 ) )
+		return num2str( greaterThan ) + " < y < " + num2str( lessThan )
+	elseif ( numtype( greaterThan ) == 0 )
+		return "y > " + num2str( greaterThan )
+	elseif ( numtype( lessThan ) == 0 )
+		return "y < " + num2str( lessThan )
+	endif
+	
+End // NMInequalityFxn
 
 //****************************************************************
 //****************************************************************

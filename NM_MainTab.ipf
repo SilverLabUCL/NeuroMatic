@@ -59,11 +59,11 @@
 
 StrConstant NMMainDF = "root:Packages:NeuroMatic:Main:"
 
-StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Add Note;Print Notes;Print Names;Print Missing Seq #;" // keep extra space after Graph
-StrConstant NMMainEditList = "Edit;---;Make;Move;Copy;Save;Kill;---;Concatenate;2D Wave;Split;---;Redimension;Delete Points;Insert Points;---;Rename;Renumber;"
+StrConstant NMMainDisplayList = "Display;---;Graph;Table;XLabel;YLabel;Print Notes;Print Names;Print Missing Seq #;"
+StrConstant NMMainEditList = "Edit;---;Make;Move;Copy;Save;Kill;---;Concatenate;2D Wave;Split;---;Redimension;Delete Points;Insert Points;---;Rename;Renumber;---;Add Note;Clear Notes;"
 StrConstant NMMainXScaleList = "X-scale;---;Align;StartX;DeltaX;XLabel;Xwave;Make Xwave;---;Resample;Decimate;Interpolate;---;Continuous;Episodic;---;sec;msec;usec;"
 StrConstant NMMainOperationsList = "Operations;---;Baseline;dF/Fo;Normalize;Scale By Num;Scale By Wave;Rescale;Smooth;FilterFIR;FilterIIR;Rs Correction;Add Noise;Reverse;Rotate;Sort;Integrate;Differentiate;FFT;Replace Value;Delete NANs;Clip Events;"
-StrConstant NMMainFunctionList = "Functions;---;Wave Stats;Average;Sum;SumSqrs;Histogram;Inequality <>;"
+StrConstant NMMainFunctionList = "Functions;---;Wave Stats;Average;Sum;SumSqrs;Histogram;Inequality <>=;"
 Static StrConstant NMInterpolateAlgList = "linear;cubic spline;smoothing spline;"
 
 Static StrConstant NMNewPrefix = "C_"
@@ -126,7 +126,7 @@ Function MainTab( enable )
 		CheckNMPackage( "Main", 1 ) // declare folder/globals if necessary
 		NMMainTabMake()
 		NMMainTabUpdate()
-		NMChannelGraphDisable( channel = -2, all = 0 )
+		NMChannelGraphDisable( channel=-2, all=0 )
 	endif
 
 End // MainTab
@@ -227,7 +227,7 @@ End // NMMainStrGet
 Function NMWaveDetailsOnCall( on )
 	Variable on // ( 0 ) no ( 1 ) yes
 	
-	NMCmdHistory( "NMWaveDetailsOn", NMCmdNum( on,"", integer = 1 ) )
+	NMCmdHistory( "NMWaveDetailsOn", NMCmdNum( on,"", integer=1 ) )
 	
 	return NMWaveDetailsOn( on )
 	
@@ -318,8 +318,8 @@ Function NMMainTabMake() // create Main tab controls
 	
 	DoWindow /F $NMPanelName // bring NMPanel to front
 	
-	Button MN_Graph, pos={x0,y0}, title = "Graph", size={100,20}, proc=NMMainButton, fsize=fs, win=$NMPanelName
-	Button MN_Copy, pos={x0+xinc,y0}, title = "Copy", size={100,20}, proc=NMMainButton, fsize=fs, win=$NMPanelName
+	Button MN_Graph, pos={x0,y0}, title="Graph", size={100,20}, proc=NMMainButton, fsize=fs, win=$NMPanelName
+	Button MN_Copy, pos={x0+xinc,y0}, title="Copy", size={100,20}, proc=NMMainButton, fsize=fs, win=$NMPanelName
 	
 	Button MN_Baseline, pos={x0,y0+1*yinc}, title="Baseline", size={100,20}, proc=NMMainButton, fsize=fs, win=$NMPanelName
 	Button MN_Average, pos={x0+xinc,y0+1*yinc}, title="Average", size={100,20}, proc=NMMainButton, fsize=fs, win=$NMPanelName
@@ -329,7 +329,7 @@ Function NMMainTabMake() // create Main tab controls
 	
 	y0 += 135
 	
-	GroupBox MN_More, title = "More...", pos={x0-20,y0-30}, size={260,135}, fsize=fs, win=$NMPanelName
+	GroupBox MN_More, title="More...", pos={x0-20,y0-30}, size={260,135}, fsize=fs, win=$NMPanelName
 	
 	PopupMenu MN_EditMenu, pos={x0+100,y0+0*yinc}, size={0,0}, bodyWidth=100, fsize=fs, win=$NMPanelName
 	PopupMenu MN_EditMenu, value=NMMainEditList, proc=NMMainPopup, win=$NMPanelName
@@ -393,7 +393,7 @@ Function NMMainTabUpdate()
 		SetNMstr( NMMainDF + "YAxisLabel1", "" )
 	
 		GroupBox MN_WaveDetails, win=$NMPanelName, disable=1
-		CheckBox MN_WaveDetailsOn, win=$NMPanelName, disable=1, title = "No Waves"
+		CheckBox MN_WaveDetailsOn, win=$NMPanelName, disable=1, title="No Waves"
 		SetVariable MN_StartX, win=$NMPanelName, disable=1, valueColor=( 0, 0, 0 )
 		SetVariable MN_DeltaX, win=$NMPanelName, disable=1, title="x-axis delta ", valueColor=( 0, 0, 0 )
 		SetVariable MN_XLabel, win=$NMPanelName, disable=1
@@ -412,7 +412,7 @@ Function NMMainTabUpdate()
 		SetNMstr( NMMainDF + "YAxisLabel1", "" )
 	
 		GroupBox MN_WaveDetails, win=$NMPanelName, disable=1
-		CheckBox MN_WaveDetailsOn, win=$NMPanelName, disable=0, value=detailsOn, title = "Wave Details"
+		CheckBox MN_WaveDetailsOn, win=$NMPanelName, disable=0, value=detailsOn, title="Wave Details"
 		SetVariable MN_StartX, win=$NMPanelName, disable=1, valueColor=( 0, 0, 0 )
 		SetVariable MN_DeltaX, win=$NMPanelName, disable=1, title="x-axis delta ", valueColor=( 0, 0, 0 )
 		SetVariable MN_XLabel, win=$NMPanelName, disable=1
@@ -422,7 +422,7 @@ Function NMMainTabUpdate()
 	else
 	
 		GroupBox MN_WaveDetails, win=$NMPanelName, disable=0
-		CheckBox MN_WaveDetailsOn, win=$NMPanelName, value=detailsOn, title = "Wave Details ( " + currentPrefix + " : All )"
+		CheckBox MN_WaveDetailsOn, win=$NMPanelName, value=detailsOn, title="Wave Details ( " + currentPrefix + " : All )"
 		
 		startx = NMChanStartX( 0, 1 )
 		
@@ -627,10 +627,6 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 		case "Print Names":
 			returnStr = zCall_NMMainWaveList()
 			break
-			
-		case "Add Note":
-			returnStr = zCall_NMMainWaveNotesAdd()
-			break
 		
 		case "Notes":
 		case "Print Notes":
@@ -709,6 +705,14 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 		case "Kill":
 		case "Delete":
 			returnStr = zCall_NMMainKillWaves()
+			break
+		
+		case "Add Note":
+			returnStr = zCall_NMMainWaveNotesAdd()
+			break
+			
+		case "Clear Notes":
+			returnStr = zCall_NMMainWaveNotesClear()
 			break
 			
 		// X-scale Functions
@@ -810,7 +814,6 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 			returnStr = NMScalePanel()
 			break
 		
-		case "Scale":
 		case "Scale By Num":
 		case "Scale By Number":
 			returnStr = NMScalePanel( mode = "value" )
@@ -913,7 +916,7 @@ Function /S NMMainCall( fxn, varStr [ deprecation ] )
 			break
 		
 		case "Inequality":
-		case "Inequality <>":
+		case "Inequality <>=":
 			returnStr = zCall_NMMainInequality()
 			break
 			
@@ -1118,15 +1121,15 @@ Static Function /S zCall_NMMainMake()
 	
 	if ( StringMatch( fillWith, "0's" ) )
 	
-		returnList = NMMainMake( wavePrefixList = wavePrefix, chanSelectList = chanList, numWaves = numWaves, xpnts = xpnts, dx = dx, ypnts = ypnts, dy = dy, value = 0, overwrite = overwrite, xLabel = xLabel, yLabel = yLabel, history = 1 )
+		returnList = NMMainMake( wavePrefixList=wavePrefix, chanSelectList=chanList, numWaves=numWaves, xpnts=xpnts, dx=dx, ypnts=ypnts, dy=dy, value=0, overwrite=overwrite, xLabel=xLabel, yLabel=yLabel, history=1 )
 	
 	elseif ( StringMatch( fillWith, "NaN's" ) )
 	
-		returnList = NMMainMake( wavePrefixList = wavePrefix, chanSelectList = chanList, numWaves = numWaves, xpnts = xpnts, dx = dx, ypnts = ypnts, dy = dy, value = NaN, overwrite = overwrite, xLabel = xLabel, yLabel = yLabel, history = 1 )
+		returnList = NMMainMake( wavePrefixList=wavePrefix, chanSelectList=chanList, numWaves=numWaves, xpnts=xpnts, dx=dx, ypnts=ypnts, dy=dy, value=NaN, overwrite=overwrite, xLabel=xLabel, yLabel=yLabel, history=1 )
 		
 	elseif ( StringMatch( fillWith, "noise" ) )
 	
-		returnList = NMMainMake( wavePrefixList = wavePrefix, chanSelectList = chanList, numWaves = numWaves, xpnts = xpnts, dx = dx, ypnts = ypnts, dy = dy, noiseStdv = noiseStdv, overwrite = overwrite, xLabel = xLabel, yLabel = yLabel, history = 1 )
+		returnList = NMMainMake( wavePrefixList=wavePrefix, chanSelectList=chanList, numWaves=numWaves, xpnts=xpnts, dx=dx, ypnts=ypnts, dy=dy, noiseStdv=noiseStdv, overwrite=overwrite, xLabel=xLabel, yLabel=yLabel, history=1 )
 	
 	endif
 	
@@ -1135,7 +1138,7 @@ Static Function /S zCall_NMMainMake()
 	endif
 	
 	if ( selectNewPrefix )
-		NMPrefixSelect( wavePrefix, noPrompts = 1 )
+		NMPrefixSelect( wavePrefix, noPrompts=1 )
 	else
 		NMPrefixAdd( wavePrefix )
 	endif
@@ -1167,7 +1170,7 @@ Function /S NMMainMake( [ folderList, wavePrefixList, chanSelectList, waveSelect
 	String thisFxn = GetRTStackInfo( 1 )
 	
 	if ( !ParamIsDefault( numWaves ) )
-		NMLoopExecVarAdd( "numWaves", numWaves, nm, integer = 1 )
+		NMLoopExecVarAdd( "numWaves", numWaves, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( waveLength ) )
@@ -1199,11 +1202,11 @@ Function /S NMMainMake( [ folderList, wavePrefixList, chanSelectList, waveSelect
 	endif
 	
 	if ( !ParamIsDefault( precision ) )
-		NMLoopExecVarAdd( "precision", precision, nm, integer = 1 )
+		NMLoopExecVarAdd( "precision", precision, nm, integer=1 )
 	endif
 	
 	if ( overwrite )
-		NMLoopExecVarAdd( "overwrite", overwrite, nm, integer = 1 )
+		NMLoopExecVarAdd( "overwrite", overwrite, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( xLabel ) && ( strlen( xLabel ) > 0 ) )
@@ -1351,7 +1354,7 @@ Function /S NMMainMake2( [ folder, wavePrefix, chanNum, waveSelect, numWaves, wa
 	nm.chanNum = chanNum
 	nm.waveSelect = "All"
 	
-	return NMMake2( nm, m, history = 1 )
+	return NMMake2( nm, m, history=1 )
 	
 End // NMMainMake2
 
@@ -1426,7 +1429,7 @@ Static Function /S zCall_NMMainMove()
 	
 	endif
 	
-	returnList = NMMainMove( toFolder = toFolder, copySets = copySets, history = 1 )
+	returnList = NMMainMove( toFolder=toFolder, copySets=copySets, history=1 )
 	
 	if ( ItemsInList( returnList ) == 0 )
 		return ""
@@ -1434,7 +1437,7 @@ Static Function /S zCall_NMMainMove()
 	
 	if ( select )
 		NMFolderChange( toFolder )
-		NMPrefixSelect( currentWavePrefix, noPrompts = 1 )
+		NMPrefixSelect( currentWavePrefix, noPrompts=1 )
 	endif
 	
 	return returnList
@@ -1547,7 +1550,7 @@ Function /S NMMainMove2( [ folder, wavePrefix, chanNum, waveSelect, toFolder, co
 		return ""
 	endif
 	
-	return NMMove2( nm, toFolder, copySets = copySets, history = 1 )
+	return NMMove2( nm, toFolder, copySets=copySets, history=1 )
 	
 End // NMMainMove2
 
@@ -1637,14 +1640,14 @@ Static Function /S zCall_NMMainDuplicate()
 	
 	endif
 	
-	returnList = NMMainDuplicate( xbgn = xbgn, xend = xend, newPrefix = newPrefix, overwrite = overwrite, copySets = copySets, history = 1 )
+	returnList = NMMainDuplicate( xbgn=xbgn, xend=xend, newPrefix=newPrefix, overwrite=overwrite, copySets=copySets, history=1 )
 	
 	if ( ItemsInList( returnList ) == 0 )
 		return ""
 	endif
 	
 	if ( selectNewPrefix )
-		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts = 1 )
+		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts=1 )
 	else
 		NMPrefixAdd( newPrefix + currentWavePrefix )
 	endif
@@ -1858,7 +1861,7 @@ Static Function /S zCall_NMMainDuplicateToFolder()
 	
 	endif
 	
-	returnList = NMMainDuplicate( xbgn = xbgn, xend = xend, toFolder = toFolderFP, newPrefix = newPrefix, overwrite = overwrite, copySets = copySets, history = 1 )
+	returnList = NMMainDuplicate( xbgn=xbgn, xend=xend, toFolder=toFolderFP, newPrefix=newPrefix, overwrite=overwrite, copySets=copySets, history=1 )
 	
 	if ( ItemsInList( returnList ) == 0 )
 		return ""
@@ -1874,7 +1877,7 @@ Static Function /S zCall_NMMainDuplicateToFolder()
 			NMFolderChange( toFolder )
 		endif
 		
-		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts = 1 )
+		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts=1 )
 		
 	elseif ( strlen( newPrefix ) > 0 )
 	
@@ -2027,7 +2030,7 @@ Function /S NMMainDuplicate2( [ folder, wavePrefix, chanNum, waveSelect, xbgn, x
 		return ""
 	endif
 	
-	return NMDuplicate2( nm, xbgn = xbgn, xend = xend, toFolder = toFolder, newPrefix = newPrefix, overwrite = overwrite, copySets = copySets, history = 1 )
+	return NMDuplicate2( nm, xbgn=xbgn, xend=xend, toFolder=toFolder, newPrefix=newPrefix, overwrite=overwrite, copySets=copySets, history=1 )
 	
 End // NMMainDuplicate2
 
@@ -2045,7 +2048,7 @@ Static Function /S zNMMainConcatenatePrefix( waveSelect, wavePrefix, prefixFolde
 		
 	else
 	
-		wPrefix = wavePrefix + NMWaveSelectShort( prefixFolder = prefixFolder, waveSelect = waveSelect )
+		wPrefix = wavePrefix + NMWaveSelectShort( prefixFolder=prefixFolder, waveSelect=waveSelect )
 		wPrefix = NMNameStrShort( wPrefix ) + "_"
 		wPrefix = wPrefix[ 0, 11 ]
 		
@@ -2111,14 +2114,14 @@ Static Function /S zCall_NMMainConcatenate( dimension )
 	
 	endif
 	
-	returnList = NMMainConcatenate( dimension = dimension, newPrefix = newPrefix, overwrite = overwrite, history = 1 )
+	returnList = NMMainConcatenate( dimension=dimension, newPrefix=newPrefix, overwrite=overwrite, history=1 )
 	
 	if ( ItemsInList( returnList ) == 0 )
 		return ""
 	endif
 	
 	if ( selectNewPrefix )
-		NMPrefixSelect( newPrefix, noPrompts = 1 )
+		NMPrefixSelect( newPrefix, noPrompts=1 )
 	else
 		NMPrefixAdd( newPrefix )
 	endif
@@ -2229,7 +2232,7 @@ Function /S NMMainConcatenate2( [ folder, wavePrefix, chanNum, waveSelect, dimen
 	
 	wName = GetWaveName( newPrefix, nm.chanNum, 0 )
 	
-	return NMConcatenate2( nm, wName, dimension = dimension, overwrite = overwrite, history = 1 )
+	return NMConcatenate2( nm, wName, dimension=dimension, overwrite=overwrite, history=1 )
 	
 End // NMMainConcatenate2
 
@@ -2243,6 +2246,10 @@ Static Function /S zCall_NMMainSplit()
 	
 	String dName = ChanDisplayWave( -1 )
 	String currentWavePrefix = CurrentNMWavePrefix()
+	
+	if ( DimSize( $dName, 1 ) > 0 )
+		return zCall_NMMainSplit2D()
+	endif
 	
 	Variable xbgn = NumVarOrDefault( NMMainDF + "SplitXbgn", -inf )
 	Variable xend = NumVarOrDefault( NMMainDF + "SplitXend", inf )
@@ -2286,14 +2293,14 @@ Static Function /S zCall_NMMainSplit()
 	
 	endif
 	
-	returnList = NMMainSplit( xbgn = xbgn, xend = xend, outputWaveLength = outputWaveLength, newPrefix = newPrefix, overwrite = overwrite, history = 1 )
+	returnList = NMMainSplit( xbgn=xbgn, xend=xend, outputWaveLength=outputWaveLength, newPrefix=newPrefix, overwrite=overwrite, history=1 )
 	
 	if ( ItemsInList( returnList ) == 0 )
 		return ""
 	endif
 	
 	if ( selectNewPrefix )
-		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts = 1 )
+		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts=1 )
 	else
 		NMPrefixAdd( newPrefix + currentWavePrefix )
 	endif
@@ -2434,9 +2441,206 @@ Function /S NMMainSplit2( [ folder, wavePrefix, chanNum, waveSelect, xbgn, xend,
 		return ""
 	endif
 	
-	return NMSplit2( nm, outputWaveLength, newPrefix, xbgn = xbgn, xend = xend, overwrite = overwrite, history = 1 )
+	return NMSplit2( nm, outputWaveLength, newPrefix, xbgn=xbgn, xend=xend, overwrite=overwrite, history=1 )
 	
 End // NMMainSplit2
+
+//****************************************************************
+//****************************************************************
+
+Static Function /S zCall_NMMainSplit2D()
+
+	Variable overwrite
+	String wList, returnList, promptStr = NMPromptStr( "NM Split 2D Waves" )
+	String columnsOrRows
+	
+	String dName = ChanDisplayWave( -1 )
+	String currentWavePrefix = CurrentNMWavePrefix()
+	
+	if ( DimSize( $dName, 1 ) == 0 )
+		return "" // not a 2D wave
+	endif
+	
+	if ( DimSize( $dName, 1 ) < DimSize( $dName, 0 ) )
+		columnsOrRows = "columns"
+	else
+		columnsOrRows = "rows"
+	endif
+	
+	columnsOrRows = StrVarOrDefault( NMMainDF + "SplitColumnsOrRows", columnsOrRows )
+	Variable selectNewPrefix = 1 + NumVarOrDefault( NMMainDF + "SplitSelectPrefix", 1 )
+	String newPrefix = StrVarOrDefault( NMMainDF + "SplitPrefix", NMNewPrefix )
+	
+	Prompt columnsOrRows, "split 2D wave along:", popup "columns;rows;"
+	Prompt newPrefix, "prefix name for output split waves:"
+	Prompt selectNewPrefix, "select split waves?", popup "no;yes;"
+	
+	DoPrompt promptStr, columnsOrRows, newPrefix, selectNewPrefix
+	
+	if ( V_flag == 1 )
+		return "" // cancel
+	endif
+	
+	selectNewPrefix -= 1
+	
+	SetNMstr( NMMainDF + "SplitColumnsOrRows", columnsOrRows )
+	SetNMstr( NMMainDF + "SplitPrefix", newPrefix )
+	SetNMvar( NMMainDF + "SplitSelectPrefix", selectNewPrefix )
+	
+	wList = WaveList( newPrefix + currentWavePrefix + "*", ";", "" )
+	
+	if ( ItemsInList( wList ) > 0 )
+		
+		DoAlert /T= ( promptStr ) 1, "Alert: waves with prefix " + NMQuotes( newPrefix + currentWavePrefix ) + " already exist and may be overwritten. Do you want to continue?"
+		
+		if ( V_flag == 1 )
+			overwrite = 1
+		else
+			return "" // cancel
+		endif
+	
+	endif
+	
+	returnList = NMMainSplit2D( columnsOrRows=columnsOrRows, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+	
+	if ( ItemsInList( returnList ) == 0 )
+		return ""
+	endif
+	
+	if ( selectNewPrefix )
+		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts=1 )
+	else
+		NMPrefixAdd( newPrefix + currentWavePrefix )
+	endif
+	
+	return returnList
+
+End // zCall_NMMainSplit2D
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMMainSplit2D( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, columnsOrRows, newPrefix, overwrite ] )
+	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
+	Variable history, deprecation
+	
+	String columnsOrRows // default is "columns"
+	String newPrefix // prefix name of output wave ( must specify )
+	Variable overwrite // overwrite output waves if they already exist ( 0 ) no ( 1 ) yes
+	
+	STRUCT NMLoopExecStruct nm
+	NMLoopExecStructNull( nm )
+	
+	if ( ParamIsDefault( columnsOrRows ) )
+		columnsOrRows = "columns"
+	endif
+	
+	strswitch( columnsOrRows )
+		case "column":
+		case "columns":
+		case "row":
+		case "rows":
+			break
+		default:
+			return NM2ErrorStr( 20, "columnsOrRows", columnsOrRows )
+	endswitch
+	
+	if ( ParamIsDefault( newPrefix ) || ( strlen( newPrefix ) == 0 ) )
+		return NM2ErrorStr( 21, "newPrefix", "" )
+	endif
+	
+	NMLoopExecStrAdd( "columnsOrRows", columnsOrRows, nm )
+	NMLoopExecStrAdd( "newPrefix", newPrefix, nm )
+	
+	if ( overwrite )
+		NMLoopExecVarAdd( "overwrite", overwrite, nm, integer = 1 )
+	endif
+	
+	if ( ParamIsDefault( folderList ) )
+		folderList = ""
+	endif
+	
+	if ( ParamIsDefault( wavePrefixList ) )
+		wavePrefixList = ""
+	endif
+	
+	if ( ParamIsDefault( chanSelectList ) )
+		chanSelectList = ""
+	endif
+	
+	if ( ParamIsDefault( waveSelectList ) )
+		waveSelectList = ""	
+	endif
+	
+	if ( NMLoopExecStructInit( folderList, wavePrefixList, chanSelectList, waveSelectList, nm ) != 0 )
+		return ""
+	endif
+	
+	//nm.updateWaveLists = 1
+	//nm.updateGraphs = 1
+	//nm.updatePanel = 1
+	//nm.ignorePrefixFolder = 1
+	
+	return NMLoopExecute( nm, history, deprecation )
+
+End // NMMainSplit2D
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMMainSplit2D2( [ folder, wavePrefix, chanNum, waveSelect, columnsOrRows, newPrefix, overwrite ] )
+	String folder, wavePrefix, waveSelect // see description at top
+	Variable chanNum
+	
+	String columnsOrRows // "columns" is default
+	String newPrefix // prefix name of output wave
+	Variable overwrite // overwrite output waves if they already exist ( 0 ) no ( 1 ) yes
+	
+	String fxn = "NMSplit2D"
+	
+	STRUCT NMParams nm
+	
+	if ( ParamIsDefault( columnsOrRows ) )
+		columnsOrRows = "columns"
+	endif
+	
+	strswitch( columnsOrRows )
+		case "column":
+		case "columns":
+		case "row":
+		case "rows":
+			break
+		default:
+			return NM2ErrorStr( 20, "columnsOrRows", columnsOrRows )
+	endswitch
+	
+	if ( ParamIsDefault( newPrefix ) || ( strlen( newPrefix ) == 0 ) )
+		return NM2ErrorStr( 21, "newPrefix", "" )
+	endif
+	
+	if ( ParamIsDefault( folder ) )
+		folder = ""
+	endif
+	
+	if ( ParamIsDefault( wavePrefix ) )
+		wavePrefix = ""
+	endif
+	
+	if ( ParamIsDefault( chanNum ) )
+		chanNum = -1
+	endif
+	
+	if ( ParamIsDefault( waveSelect ) )
+		waveSelect = ""
+	endif
+	
+	if ( NMLoopStructInit( fxn, folder, wavePrefix, chanNum, waveSelect, nm ) != 0 )
+		return ""
+	endif
+	
+	return NMSplit2D( nm, columnsOrRows, newPrefix, overwrite=overwrite, history=1 )
+	
+End // NMMainSplit2D2
 
 //****************************************************************
 //****************************************************************
@@ -2766,7 +2970,7 @@ Function /S NMMainRename2( [ folder, wavePrefix, chanNum, waveSelect, find, repl
 		return ""
 	endif
 	
-	return NMRenameWavesSafely2( nm, find, replacement, updateSets = updateSets, history = 1 )
+	return NMRenameWavesSafely2( nm, find, replacement, updateSets=updateSets, history=1 )
 	
 End // NMMainRename2
 
@@ -2786,7 +2990,7 @@ Static Function /S zCall_NMMainRenumber()
 		return "" // cancel
 	endif
 	
-	return NMMainRenumber( fromNum = fromNum, increment = increment, updateSets = 1, history = 1 )
+	return NMMainRenumber( fromNum=fromNum, increment=increment, updateSets=1, history=1 )
 
 End // zCall_NMMainRenumber
 
@@ -2805,17 +3009,17 @@ Function /S NMMainRenumber( [ folderList, wavePrefixList, chanSelectList, waveSe
 	NMLoopExecStructNull( nm )
 	
 	if ( !ParamIsDefault( fromNum ) )
-		NMLoopExecVarAdd( "fromNum", fromNum, nm, integer = 1 )
+		NMLoopExecVarAdd( "fromNum", fromNum, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( increment ) )
 		increment = 1
 	else
-		NMLoopExecVarAdd( "increment", increment, nm, integer = 1 )
+		NMLoopExecVarAdd( "increment", increment, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( updateSets ) )
-		NMLoopExecVarAdd( "updateSets", updateSets, nm, integer = 1 )
+		NMLoopExecVarAdd( "updateSets", updateSets, nm, integer=1 )
 	endif
 	
 	fromNum = round( fromNum )
@@ -2901,7 +3105,7 @@ Function /S NMMainRenumber2( [ folder, wavePrefix, chanNum, waveSelect, fromNum,
 		return ""
 	endif
 	
-	return NMRenumberWavesSafely2( nm, fromNum = fromNum, increment = increment, updateSets = updateSets, history = 1 )
+	return NMRenumberWavesSafely2( nm, fromNum=fromNum, increment=increment, updateSets=updateSets, history=1 )
 	
 End // NMMainRenumber2
 
@@ -2974,7 +3178,7 @@ Static Function /S zCall_NMMainSave()
 	
 	SetNMstr( NMMainDF + "SaveWavesPath", extFolderPath )
 
-	return NMMainSave( extFolderPath = extFolderPath, fileType = fileType, saveXaxisWave = saveXaxisWave, saveWaveNotes = saveWaveNotes, saveParams = saveParams, history = 1 )
+	return NMMainSave( extFolderPath=extFolderPath, fileType=fileType, saveXaxisWave=saveXaxisWave, saveWaveNotes=saveWaveNotes, saveParams=saveParams, history=1 )
 
 End // zCall_NMMainSave
 
@@ -3019,15 +3223,15 @@ Function /S NMMainSave( [ folderList, wavePrefixList, chanSelectList, waveSelect
 	endif
 	
 	if ( !ParamIsDefault( saveXaxisWave ) )
-		NMLoopExecVarAdd( "saveXaxisWave", saveXaxisWave, nm, integer = 1 )
+		NMLoopExecVarAdd( "saveXaxisWave", saveXaxisWave, nm, integer=1 )
 	endif
 	
 	if ( saveWaveNotes )
-		NMLoopExecVarAdd( "saveWaveNotes", saveWaveNotes, nm, integer = 1 )
+		NMLoopExecVarAdd( "saveWaveNotes", saveWaveNotes, nm, integer=1 )
 	endif
 	
 	if ( saveParams )
-		NMLoopExecVarAdd( "saveParams", saveParams, nm, integer = 1 )
+		NMLoopExecVarAdd( "saveParams", saveParams, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -3127,7 +3331,7 @@ Function /S NMMainSave2( [ folder, wavePrefix, chanNum, waveSelect, extFolderPat
 		return ""
 	endif
 	
-	return NMSave2( nm, extFolderPath = extFolderPath, fileType = fileType, saveXaxisWave = saveXaxisWave, saveWaveNotes = saveWaveNotes, saveParams = saveParams, history = 1 )
+	return NMSave2( nm, extFolderPath=extFolderPath, fileType=fileType, saveXaxisWave=saveXaxisWave, saveWaveNotes=saveWaveNotes, saveParams=saveParams, history=1 )
 	
 End // NMMainSave2
 
@@ -3169,7 +3373,7 @@ Static Function /S zCall_NMMainKillWaves()
 	
 	endif
 	
-	returnStr = NMMainKillWaves( history = 1 )
+	returnStr = NMMainKillWaves( history=1 )
 	
 	if ( killPrefixGlobals )
 		NMPrefixSubfolderKill( currentPrefix )
@@ -3192,7 +3396,7 @@ Function /S NMMainKillWaves( [ folderList, wavePrefixList, chanSelectList, waveS
 	NMLoopExecStructNull( nm )
 	
 	if ( !ParamIsDefault( updateSets ) )
-		NMLoopExecVarAdd( "updateSets", updateSets, nm, integer = 1 )
+		NMLoopExecVarAdd( "updateSets", updateSets, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -3262,7 +3466,7 @@ Function /S NMMainKillWaves2( [ folder, wavePrefix, chanNum, waveSelect, updateS
 		return ""
 	endif
 	
-	return NMKillWaves2( nm, updateSets = updateSets, history = 1 )
+	return NMKillWaves2( nm, updateSets=updateSets, history=1 )
 	
 End // NMMainKillWaves2
 
@@ -3337,9 +3541,9 @@ Static Function /S zCall_NMMainGraph()
 		SetNMvar( NMMainDF + "GraphYoffset", yOffset )
 		
 		if ( onePerChannel )
-			return NMMainGraph( color = color, reverseOrder = reverseOrder, xoffset = xoffset, yoffset = yoffset, errors = errors, all = waveSelect, history = 1 )
+			return NMMainGraph( color=color, reverseOrder=reverseOrder, xoffset=xoffset, yoffset=yoffset, errors=errors, all=waveSelect, history=1 )
 		else
-			return NMMainGraph( color = color, reverseOrder = reverseOrder, xoffset = xoffset, yoffset = yoffset, errors = errors, history = 1 )
+			return NMMainGraph( color=color, reverseOrder=reverseOrder, xoffset=xoffset, yoffset=yoffset, errors=errors, history=1 )
 		endif
 		
 	else
@@ -3373,7 +3577,7 @@ Static Function /S zCall_NMMainGraph()
 		SetNMvar( NMMainDF + "GraphXoffset", xOffset )
 		SetNMvar( NMMainDF + "GraphYoffset", yOffset )
 		
-		return NMMainGraph( color = color, reverseOrder = reverseOrder, xoffset = xoffset, yoffset = yoffset, errors = errors, history = 1 )
+		return NMMainGraph( color=color, reverseOrder=reverseOrder, xoffset=xoffset, yoffset=yoffset, errors=errors, history=1 )
 		
 	endif
 
@@ -3401,7 +3605,7 @@ Function /S NMMainGraph( [ folderList, wavePrefixList, chanSelectList, waveSelec
 	endif
 	
 	if ( reverseOrder )
-		NMLoopExecVarAdd( "reverseOrder", reverseOrder, nm, integer = 1 )
+		NMLoopExecVarAdd( "reverseOrder", reverseOrder, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( xoffset ) && ( xoffset != 0 ) )
@@ -3413,7 +3617,7 @@ Function /S NMMainGraph( [ folderList, wavePrefixList, chanSelectList, waveSelec
 	endif
 	
 	if ( errors )
-		NMLoopExecVarAdd( "errors", errors, nm, integer = 1 )
+		NMLoopExecVarAdd( "errors", errors, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( all ) && ( strlen( all ) > 0 ) )
@@ -3519,9 +3723,9 @@ Function /S NMMainGraph2( [ folder, wavePrefix, chanNum, waveSelect, gName, gTit
 	if ( allFlag )
 		
 		if ( StringMatch( nm.waveSelect[ 0, 4 ], "Group" ) )
-			allList = NMGroupsList( 1, prefixFolder = nm.prefixFolder )
+			allList = NMGroupsList( 1, prefixFolder=nm.prefixFolder )
 		else
-			allList = NMSetsList( prefixFolder = nm.prefixFolder )
+			allList = NMSetsList( prefixFolder=nm.prefixFolder )
 		endif
 		
 		allNum = WhichListItem( nm.waveSelect, allList )
@@ -3562,7 +3766,7 @@ Function /S NMMainGraph2( [ folder, wavePrefix, chanNum, waveSelect, gName, gTit
 	g.plotErrors = errors
 	g.color = color
 	
-	return NMGraph2( nm, g, history = 1 )
+	return NMGraph2( nm, g, history=1 )
 	
 End // NMMainGraph2
 
@@ -3571,10 +3775,10 @@ End // NMMainGraph2
 
 Static Function /S zCall_NMMainTable()
 	
-	String xWave = NMXwave( waveNum = 0 )
+	String xWave = NMXwave( waveNum=0 )
 	
 	if ( strlen( xWave ) == 0 )
-		return NMMainTable( history = 1 )
+		return NMMainTable( history=1 )
 	endif
 	
 	Variable noXwave = NumVarOrDefault( NMMainDF + "TableNoXwave", 0 )
@@ -3594,7 +3798,7 @@ Static Function /S zCall_NMMainTable()
 	
 	SetNMvar( NMMainDF + "TableNoXwave", noXwave )
 
-	return NMMainTable( noXwave = noXwave, history = 1 )
+	return NMMainTable( noXwave=noXwave, history=1 )
 	
 End // zCall_NMMainTable
 
@@ -3611,7 +3815,7 @@ Function /S NMMainTable( [ folderList, wavePrefixList, chanSelectList, waveSelec
 	NMLoopExecStructNull( nm )
 	
 	if ( noXwave )
-		NMLoopExecVarAdd( "noXwave", noXwave, nm, integer = 1 )
+		NMLoopExecVarAdd( "noXwave", noXwave, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -3699,7 +3903,7 @@ Function /S NMMainTable2( [ folder, wavePrefix, chanNum, waveSelect, tName, tTit
 		nm.xWave = ""
 	endif
 	
-	return NMTable2( nm, tName = tName, tTitle = tTitle, history = 1 )
+	return NMTable2( nm, tName=tName, tTitle=tTitle, history=1 )
 	
 End // NMMainTable2
 
@@ -3717,61 +3921,88 @@ Static Function /S zCall_NMMainWaveNotesAdd()
 		return "" // cancel
 	endif
 	
-	return NMMainWaveNotes( notestr = notestr, history = 1 )
+	return NMMainWaveNotes( notestr=notestr, history=1 )
 
 End // zCall_NMMainWaveNotesAdd
 
 //****************************************************************
 //****************************************************************
 
+Static Function /S zCall_NMMainWaveNotesClear()
+
+	String promptStr = "NM Wave Notes"
+
+	DoAlert /T=( promptStr ) 2, "Alert: Are you sure you want to clear the notes of all selected waves?"
+		
+	if ( V_flag != 1 )
+		return "" // cancel
+	endif
+	
+	return NMMainWaveNotes( kill=1, history=1 )
+
+End // zCall_NMMainWaveNotesClear
+
+//****************************************************************
+//****************************************************************
+
 Static Function /S zCall_NMMainWaveNotesPrint()
 
-	Variable toNotebook = 1 + NumVarOrDefault( NMMainDF + "WaveNotes2Notebook", 0 )
+	Variable to = 1 + NumVarOrDefault( NMMainDF + "WaveNotesPrintTo", 0 )
 	
-	Prompt toNotebook, "print wave notes to:", popup "Igor history;notebook;"
-	DoPrompt NMPromptStr( "NM Wave Notes" ), toNotebook
+	Prompt to, "print wave notes to:", popup "Igor history;notebook;"
+	DoPrompt NMPromptStr( "NM Wave Notes" ), to
 	
 	if ( V_flag == 1 )
 		return "" // cancel
 	endif
 	
-	toNotebook -= 1
+	to -= 1
 	
-	SetNMvar( NMMainDF + "WaveNotes2Notebook", toNotebook )
+	SetNMvar( NMMainDF + "WaveNotesPrintTo", to )
 	
-	return NMMainWaveNotes( toNotebook = toNotebook, history = 1 )
+	if ( to == 0 )
+		return NMMainWaveNotes( toHistory=1, history=1 )
+	endif
+	
+	if ( to == 1 )
+		return NMMainWaveNotes( toNotebook=1, history=1 )
+	endif
+	
+	return ""
 
 End // zCall_NMMainWaveNotesPrint
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainWaveNotes( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, toNotebook, notestr ] )
+Function /S NMMainWaveNotes( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, kill, notestr, toHistory, toNotebook ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
-	Variable toNotebook // print wave notes to ( 0 ) Igor history ( 1 ) notebook
-	String notestr // or add note to wave notes (ignores toNotebook )
+	Variable kill // kill all wave notes (executed first)
+	String notestr // add note to wave notes
+	Variable toHistory // print wave notes to Igor history
+	Variable toNotebook // print wave notes to notebook
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
 	
+	if ( kill )
+		NMLoopExecVarAdd( "kill", kill, nm, integer = 1 )
+	endif
+	
 	if ( ParamIsDefault( notestr ) )
-	
 		notestr = ""
-		
-	else
-	
-		if ( strlen( notestr ) == 0 )
-			return "" // nothing to do
-		endif
-		
+	elseif (strlen( notestr ) > 0 )
 		NMLoopExecStrAdd( "notestr", notestr, nm )
-	
 	endif
 	
 	if ( toNotebook )
 		NMLoopExecVarAdd( "toNotebook", toNotebook, nm, integer = 1 )
+	endif
+	
+	if ( toHistory )
+		NMLoopExecVarAdd( "toHistory", toHistory, nm, integer = 1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -3806,21 +4037,21 @@ End // NMMainWaveNotes
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNotebook, notestr ] )
+Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, kill, notestr, toHistory, toNotebook ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
 	
-	Variable toNotebook // print wave notes to ( 0 ) Igor history ( 1 ) notebook
-	String notestr // or add note to wave notes
+	Variable kill // kill all wave notes (executed first)
+	String notestr // add note to wave notes
+	Variable toHistory // print wave notes to Igor history
+	Variable toNotebook // print wave notes to notebook
 	
-	String nbName, nbTitle, fxn = "NMWaveNotes"
+	String nbName = "", nbTitle = "", fxn = "NMWaveNotes"
 	
 	STRUCT NMParams nm
 	
 	if ( ParamIsDefault( notestr ) )
 		notestr = ""
-	elseif ( strlen( notestr ) == 0 )
-		return "" // nothing to do
 	endif
 	
 	if ( ParamIsDefault( folder ) )
@@ -3843,20 +4074,12 @@ Function /S NMMainWaveNotes2( [ folder, wavePrefix, chanNum, waveSelect, toNoteb
 		return ""
 	endif
 	
-	if ( strlen( notestr ) > 0 )
-		return NMWaveNotes2( nm, notestr = notestr, history = 1 )
-	endif
-	
 	if ( toNotebook )
-	
 		nbName = NMMainWindowName( folder, wavePrefix, chanNum, waveSelect, "notebook" )
 		nbTitle = NMMainWindowTitle( "Wave Notes", folder, wavePrefix, chanNum, waveSelect, nm.wList )
-	
-		return NMWaveNotes2( nm, nbName = nbName, nbTitle = nbTitle, history = 1 )
-		
 	endif
 	
-	return NMWaveNotes2( nm, history = 1 )
+	return NMWaveNotes2( nm, kill=kill, notestr=notestr, toHistory=toHistory, nbName=nbName, nbTitle=nbTitle, history=1 )
 
 End // NMMainWaveNotes2
 
@@ -3877,11 +4100,11 @@ Static Function /S zCall_NMMainWaveList()
 	SetNMvar( NMMainDF + "PrintNamesFormat", format )
 	
 	if ( format == 1 )
-		return NMMainWaveList( printToHistory = 1, history = 1 )
+		return NMMainWaveList( printToHistory=1, history=1 )
 	elseif ( format == 2 )
-		return NMMainWaveList( printToHistory = 1, compact = 1, history = 1 )
+		return NMMainWaveList( printToHistory=1, compact=1, history=1 )
 	elseif ( format == 3 )
-		return NMMainWaveList( printToHistory = 1, fullPath = 1, history = 1 )
+		return NMMainWaveList( printToHistory=1, fullPath=1, history=1 )
 	endif
 
 End // zCall_NMMainWaveList
@@ -3901,15 +4124,15 @@ Function /S NMMainWaveList( [ folderList, wavePrefixList, chanSelectList, waveSe
 	NMLoopExecStructNull( nm )
 	
 	if ( fullPath )
-		NMLoopExecVarAdd( "fullPath", fullPath, nm, integer = 1 )
+		NMLoopExecVarAdd( "fullPath", fullPath, nm, integer=1 )
 	endif
 	
 	if ( compact )
-		NMLoopExecVarAdd( "compact", compact, nm, integer = 1 )
+		NMLoopExecVarAdd( "compact", compact, nm, integer=1 )
 	endif
 	
 	if ( printToHistory )
-		NMLoopExecVarAdd( "printToHistory", printToHistory, nm, integer = 1 )
+		NMLoopExecVarAdd( "printToHistory", printToHistory, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -3972,14 +4195,14 @@ Function /S NMMainWaveList2([ folder, wavePrefix, chanNum, waveSelect, fullPath,
 		waveSelect = ""
 	endif
 
-	if ( NMLoopStructInit( fxn, folder, wavePrefix, chanNum, waveSelect, nm, fullPath = 1 ) != 0 )
+	if ( NMLoopStructInit( fxn, folder, wavePrefix, chanNum, waveSelect, nm, fullPath=1 ) != 0 )
 		return ""
 	endif
 	
 	nm.successList = nm.wList
 	
 	if ( printToHistory )
-		NMLoopHistory( nm, includeWaveNames = 1, fullPath = fullPath, compact = compact, SkipFailures = 1 )
+		NMLoopHistory( nm, includeWaveNames=1, fullPath=fullPath, compact=compact, SkipFailures=1 )
 	endif
 	
 	SetNMstr( NMDF + "OutputWaveList", nm.wList )
@@ -4020,7 +4243,7 @@ Static Function /S zCall_NMMainFindMissingSeqNums()
 	SetNMvar( NMMainDF + "FindMissingSeqFirst", firstNum )
 	SetNMvar( NMMainDF + "FindMissingSeqStep", seqStep )
 
-	return NMMainFindMissingSeqNums( firstNum = firstNum, lastNum = lastNum, seqStep = seqStep, history = 1 )
+	return NMMainFindMissingSeqNums( firstNum=firstNum, lastNum=lastNum, seqStep=seqStep, history=1 )
 	
 End // zCall_NMMainFindMissingSeqNums
 
@@ -4043,15 +4266,15 @@ Function /S NMMainFindMissingSeqNums( [ folderList, wavePrefixList, chanSelectLi
 	NMLoopExecStructNull( nm )
 	
 	if ( !ParamIsDefault( firstNum ) )
-		NMLoopExecVarAdd( "firstNum", firstNum, nm, integer = 1 )
+		NMLoopExecVarAdd( "firstNum", firstNum, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( lastNum ) )
-		NMLoopExecVarAdd( "lastNum", lastNum, nm, integer = 1 )
+		NMLoopExecVarAdd( "lastNum", lastNum, nm, integer=1 )
 	endif
 	
 	if ( !ParamIsDefault( seqStep ) )
-		NMLoopExecVarAdd( "seqStep", seqStep, nm, integer = 1 )
+		NMLoopExecVarAdd( "seqStep", seqStep, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -4137,14 +4360,14 @@ Function /S NMMainFindMissingSeqNums2( [ folder, wavePrefix, chanNum, waveSelect
 	
 	if ( ItemsInList( nm.wList ) > 1 )
 	
-		nm.newList = NMFindMissingSeqNums( nm.wList, firstNum = firstNum, lastNum = lastNum, seqStep = seqStep )
+		nm.newList = NMFindMissingSeqNums( nm.wList, firstNum=firstNum, lastNum=lastNum, seqStep=seqStep )
 		nm.successList = nm.wList
 		
 		if ( !quiet )
 		
 			found = ItemsInList( nm.newList )
 		
-			txt = NMLoopHistory( nm, quiet = 1 )
+			txt = NMLoopHistory( nm, quiet=1 )
 			
 			if ( found == 0 )
 				txt += " : found no missing seq numbers"
@@ -4205,7 +4428,7 @@ Static Function /S zCall_NMMainLabelX()
 		return "" // cancel
 	endif
 	
-	return NMMainLabel( chanSelectList = chanSelect, waveSelectList = waveSelect, xLabel = xLabel, history = 1 )
+	return NMMainLabel( chanSelectList=chanSelect, waveSelectList=waveSelect, xLabel=xLabel, history=1 )
 	
 End // zCall_NMMainLabelX
 
@@ -4219,7 +4442,7 @@ Static Function /S zCall_NMMainLabelY()
 	String chanSelect = NMChanSelectStr()
 	String waveSelect = NMWaveSelectGet()
 	String promptStr = NMPromptStr( "NM Y-Axis Label" )
-	String promptStr2 = zError_AllChanWavesPromptStr( promptStr, ignoreChannels = 1 )
+	String promptStr2 = zError_AllChanWavesPromptStr( promptStr, ignoreChannels=1 )
 	
 	if ( StringMatch( promptStr2, NMCancel ) )
 	
@@ -4242,7 +4465,7 @@ Static Function /S zCall_NMMainLabelY()
 		return "" // cancel
 	endif
 	
-	return NMMainLabel( chanSelectList = chanSelect, waveSelectList = waveSelect, yLabel = yLabel, history = 1 )
+	return NMMainLabel( chanSelectList=chanSelect, waveSelectList=waveSelect, yLabel=yLabel, history=1 )
 	
 End // zCall_NMMainLabelY
 
@@ -4356,11 +4579,11 @@ Function /S NMMainLabel2( [ folder, wavePrefix, chanNum, waveSelect, xLabel, yLa
 	endif
 	
 	if ( xFlag && yFlag )
-		return NMLabel2( nm, xLabel = xLabel, yLabel = yLabel, history = 1 )
+		return NMLabel2( nm, xLabel=xLabel, yLabel=yLabel, history=1 )
 	elseif ( xFlag )
-		return NMLabel2( nm, xLabel = xLabel, history = 1 )
+		return NMLabel2( nm, xLabel=xLabel, history=1 )
 	elseif ( yFlag )
-		return NMLabel2( nm, yLabel = yLabel, history = 1 )
+		return NMLabel2( nm, yLabel=yLabel, history=1 )
 	else
 		return ""
 	endif
@@ -4382,8 +4605,8 @@ Static Function /S zCall_NMMainAlign()
 	String txt, optionsStr, statsFolderList, statsFolderPath, wList
 	String promptStr = NMPromptStr( "NM StartX Alignment" )
 	
-	if ( WaveExists( $NMXwave( waveNum = 0 ) ) )
-		return NMXWaveFunctionError( title = promptStr )
+	if ( WaveExists( $NMXwave( waveNum=0 ) ) )
+		return NMXWaveFunctionError( title=promptStr )
 	endif
 	
 	Variable numWaves = NMNumWaves()
@@ -4498,7 +4721,7 @@ Static Function /S zCall_NMMainAlign()
 	
 	wName = ReplaceString( currentFolder, wName, "" )
 	
-	return NMMainAlign( waveOfAlignValues = wName, alignAt = alignAt, history = 1 )
+	return NMMainAlign( waveOfAlignValues=wName, alignAt=alignAt, history=1 )
 
 End // zCall_NMMainAlign
 
@@ -4531,7 +4754,7 @@ Function /S NMMainAlign( [ folderList, wavePrefixList, chanSelectList, waveSelec
 	endif
 	
 	if ( !ParamIsDefault( printToHistory ) )
-		NMLoopExecVarAdd( "printToHistory", printToHistory, nm, integer = 1 )
+		NMLoopExecVarAdd( "printToHistory", printToHistory, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -4610,7 +4833,7 @@ Function /S NMMainAlign2( [ folder, wavePrefix, chanNum, waveSelect, waveOfAlign
 		return ""
 	endif
 	
-	return NMAlign2( nm, waveOfAlignValues, alignAt = alignAt, history = printToHistory )
+	return NMAlign2( nm, waveOfAlignValues, alignAt=alignAt, history=printToHistory )
 	
 End // NMMainAlign2
 
@@ -4624,8 +4847,8 @@ Static Function /S zCall_NMMainStartX()
 	
 	String promptStr = NMPromptStr( "NM X-Axis Start" )
 	
-	if ( WaveExists( $NMXwave( waveNum = 0 ) ) )
-		return NMXWaveFunctionError( title = promptStr )
+	if ( WaveExists( $NMXwave( waveNum=0 ) ) )
+		return NMXWaveFunctionError( title=promptStr )
 	endif
 	
 	String promptStr2 = zError_AllChanWavesPromptStr( promptStr )
@@ -4673,13 +4896,13 @@ Static Function /S zCall_NMMainStartX()
 	
 		SetNMstr( NMMainDF + "StartWaveName", startWaveName )
 	
-		return NMMainSetScale( chanSelectList = chanSelect, waveSelectList = waveSelect, startWaveName = startWaveName, history = 1 )
+		return NMMainSetScale( chanSelectList=chanSelect, waveSelectList=waveSelect, startWaveName=startWaveName, history=1 )
 	
 	else
 	
 		SetNMvar( NMMainDF + "StartX", startx )
 		
-		return NMMainSetScale( chanSelectList = chanSelect, waveSelectList = waveSelect, start = startx, history = 1 )
+		return NMMainSetScale( chanSelectList=chanSelect, waveSelectList=waveSelect, start=startx, history=1 )
 		
 	endif
 	
@@ -4694,8 +4917,8 @@ Static Function /S zCall_NMMainDeltaX()
 	
 	String promptStr = NMPromptStr( "NM X-Axis Delta" )
 	
-	if ( WaveExists( $NMXwave( waveNum = 0 ) ) )
-		return NMXWaveFunctionError( title = promptStr )
+	if ( WaveExists( $NMXwave( waveNum=0 ) ) )
+		return NMXWaveFunctionError( title=promptStr )
 	endif
 	
 	String promptStr2 = zError_AllChanWavesPromptStr( promptStr )
@@ -4736,7 +4959,7 @@ Static Function /S zCall_NMMainDeltaX()
 		return "" // cancel
 	endif
 	
-	return NMMainSetScale( chanSelectList = chanSelect, waveSelectList = waveSelect, delta = dx, history = 1 )
+	return NMMainSetScale( chanSelectList=chanSelect, waveSelectList=waveSelect, delta=dx, history=1 )
 	
 End // zCall_NMMainDeltaX
 
@@ -4760,7 +4983,7 @@ Function /S NMDeltaXAllCall( dx ) // does all channels and waves
 		return "" // user cancel
 	endif
 	
-	return NMMainSetScale( delta = dx, history = 1 )
+	return NMMainSetScale( delta=dx, history=1 )
 	
 End // NMDeltaXAllCall
 
@@ -4901,17 +5124,17 @@ Function /S NMMainSetScale2( [ folder, wavePrefix, chanNum, waveSelect, dim, sta
 	if ( strlen( startWaveName ) > 0 )
 	
 		if ( strlen( dim ) > 0 )
-			return NMSetScale2( nm, dim = dim, startWaveName = startWaveName, delta = delta, history = 1 )
+			return NMSetScale2( nm, dim=dim, startWaveName=startWaveName, delta=delta, history=1 )
 		else
-			return NMSetScale2( nm, startWaveName = startWaveName, delta = delta, history = 1 )
+			return NMSetScale2( nm, startWaveName=startWaveName, delta=delta, history=1 )
 		endif
 	
 	endif
 	
 	if ( strlen( dim ) > 0 )
-		return NMSetScale2( nm, dim = dim, start = start, delta = delta, history = 1 )
+		return NMSetScale2( nm, dim=dim, start=start, delta=delta, history=1 )
 	else
-		return NMSetScale2( nm, start = start, delta = delta, history = 1 )
+		return NMSetScale2( nm, start=start, delta=delta, history=1 )
 	endif
 	
 End // NMMainSetScale2
@@ -4928,7 +5151,7 @@ Static Function /S zCall_NMMainRedimension()
 	String promptStr = NMPromptStr( "NM Redimension" )
 	String promptStr2 = zError_AllChanWavesPromptStr( promptStr )
 	
-	String xWave = NMXwave( waveNum = 0 )
+	String xWave = NMXwave( waveNum=0 )
 	
 	if ( WaveExists( $xWave ) )
 	
@@ -4982,11 +5205,11 @@ Static Function /S zCall_NMMainRedimension()
 		
 		SetNMvar( NMMainDF + "RedimensionValue", value )
 		
-		return NMMainRedimension( chanSelectList = chanSelect, waveSelectList = waveSelect, points = points, value = value, history = 1 )
+		return NMMainRedimension( chanSelectList=chanSelect, waveSelectList=waveSelect, points=points, value=value, history=1 )
 		
 	else
 	
-		return NMMainRedimension( chanSelectList = chanSelect, waveSelectList = waveSelect, points = points, history = 1 )
+		return NMMainRedimension( chanSelectList=chanSelect, waveSelectList=waveSelect, points=points, history=1 )
 	
 	endif
 	
@@ -5009,7 +5232,7 @@ Function /S NMMainRedimension( [ folderList, wavePrefixList, chanSelectList, wav
 		return NM2ErrorStr( 11, "points", "" )
 	endif
 	
-	NMLoopExecVarAdd( "points", points, nm, integer = 1 )
+	NMLoopExecVarAdd( "points", points, nm, integer=1 )
 	
 	if ( ( numtype( points ) > 0 ) || ( points < 0 ) )
 		return NM2ErrorStr( 10, "points", num2str( points ) )
@@ -5094,7 +5317,7 @@ Function /S NMMainRedimension2( [ folder, wavePrefix, chanNum, waveSelect, point
 		return ""
 	endif
 	
-	return NMRedimension2( nm, points, value = value, history = 1 )
+	return NMRedimension2( nm, points, value=value, history=1 )
 	
 End // NMMainRedimension2
 
@@ -5105,7 +5328,7 @@ Static Function /S zCall_NMMainDeletePoints()
 	
 	Variable numChannels = NMNumChannels()
 	
-	String xWave = NMXwave( waveNum = 0 )
+	String xWave = NMXwave( waveNum=0 )
 	
 	String chanSelect = NMChanSelectStr()
 	String waveSelect = NMWaveSelectGet()
@@ -5152,7 +5375,7 @@ Static Function /S zCall_NMMainDeletePoints()
 	SetNMvar( NMMainDF + "DeletePointsFrom", from )
 	SetNMvar( NMMainDF + "DeletePoints", points )
 	
-	return NMMainDeletePoints( chanSelectList = chanSelect, waveSelectList = waveSelect, from = from, points = points, history = 1 )
+	return NMMainDeletePoints( chanSelectList=chanSelect, waveSelectList=waveSelect, from=from, points=points, history=1 )
 
 End // zCall_NMMainDeletePoints
 
@@ -5181,8 +5404,8 @@ Function /S NMMainDeletePoints( [ folderList, wavePrefixList, chanSelectList, wa
 		return ""
 	endif
 	
-	NMLoopExecVarAdd( "from", from, nm, integer = 1 )
-	NMLoopExecVarAdd( "points", points, nm, integer = 1 )
+	NMLoopExecVarAdd( "from", from, nm, integer=1 )
+	NMLoopExecVarAdd( "points", points, nm, integer=1 )
 	
 	if ( ParamIsDefault( folderList ) )
 		folderList = ""
@@ -5259,7 +5482,7 @@ Function /S NMMainDeletePoints2( [ folder, wavePrefix, chanNum, waveSelect, from
 		return ""
 	endif
 	
-	return NMDeletePoints2( nm, from, points, history = 1 )
+	return NMDeletePoints2( nm, from, points, history=1 )
 	
 End // NMMainDeletePoints2
 
@@ -5270,7 +5493,7 @@ Static Function /S zCall_NMMainInsertPoints()
 	
 	Variable numChannels = NMNumChannels()
 	
-	String xWave = NMXwave( waveNum = 0 )
+	String xWave = NMXwave( waveNum=0 )
 	
 	String chanSelect = NMChanSelectStr()
 	String waveSelect = NMWaveSelectGet()
@@ -5320,7 +5543,7 @@ Static Function /S zCall_NMMainInsertPoints()
 	SetNMvar( NMMainDF + "InsertPoints", points )
 	SetNMvar( NMMainDF + "InsertPointsValue", value )
 	
-	return NMMainInsertPoints( chanSelectList = chanSelect, waveSelectList = waveSelect, at = at, points = points, value = value, history = 1 )
+	return NMMainInsertPoints( chanSelectList=chanSelect, waveSelectList=waveSelect, at=at, points=points, value=value, history=1 )
 	
 End // zCall_NMMainInsertPoints
 
@@ -5350,8 +5573,8 @@ Function /S NMMainInsertPoints( [ folderList, wavePrefixList, chanSelectList, wa
 		return ""
 	endif
 	
-	NMLoopExecVarAdd( "at", at, nm, integer = 1 )
-	NMLoopExecVarAdd( "points", points, nm, integer = 1 )
+	NMLoopExecVarAdd( "at", at, nm, integer=1 )
+	NMLoopExecVarAdd( "points", points, nm, integer=1 )
 	
 	if ( !ParamIsDefault( value ) )
 		NMLoopExecVarAdd( "value", value, nm )
@@ -5437,7 +5660,7 @@ Function /S NMMainInsertPoints2( [ folder, wavePrefix, chanNum, waveSelect, at, 
 		return ""
 	endif
 	
-	return NMInsertPoints2( nm, at, points, value = value, history = 1 )
+	return NMInsertPoints2( nm, at, points, value=value, history=1 )
 	
 End // NMMainInsertPoints2
 
@@ -5450,8 +5673,8 @@ Static Function /S zCall_NMMainResample()
 
 	String promptStr = NMPromptStr( "NM Resample" )
 	
-	if ( WaveExists( $NMXwave( waveNum = 0 ) ) )
-		return NMXWaveFunctionError( title = promptStr )
+	if ( WaveExists( $NMXwave( waveNum=0 ) ) )
+		return NMXWaveFunctionError( title=promptStr )
 	endif
 	
 	String promptStr2 = zError_AllChanWavesPromptStr( promptStr )
@@ -5492,7 +5715,7 @@ Static Function /S zCall_NMMainResample()
 	
 	Prompt upSamples, "resample UP by x number of points:"
 	Prompt downSamples, "resample DOWN by x number of points:"
-	Prompt rate, NMPromptAddUnitsX( "or specify a new sample rate", hz = 1 )
+	Prompt rate, NMPromptAddUnitsX( "or specify a new sample rate", hz=1 )
 	
 	DoPrompt promptStr, upSamples, downSamples, rate
 	
@@ -5501,9 +5724,9 @@ Static Function /S zCall_NMMainResample()
 	endif
 	
 	if ( rate != oldRate )
-		return NMMainResample( chanSelectList = chanSelect, waveSelectList = waveSelect, rate = rate, history = 1 )
+		return NMMainResample( chanSelectList=chanSelect, waveSelectList=waveSelect, rate=rate, history=1 )
 	elseif ( ( upSamples >= 1 ) && ( downSamples >= 1 ) )
-		return NMMainResample( chanSelectList = chanSelect, waveSelectList = waveSelect, upSamples = upSamples, downSamples = downSamples, history = 1 )
+		return NMMainResample( chanSelectList=chanSelect, waveSelectList=waveSelect, upSamples=upSamples, downSamples=downSamples, history=1 )
 	else
 		return ""
 	endif
@@ -5527,13 +5750,13 @@ Function /S NMMainResample( [ folderList, wavePrefixList, chanSelectList, waveSe
 	if ( ParamIsDefault( upSamples ) )
 		upSamples = 1
 	else
-		NMLoopExecVarAdd( "upSamples", upSamples, nm, integer = 1 )
+		NMLoopExecVarAdd( "upSamples", upSamples, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( downSamples ) )
 		downSamples = 1
 	else
-		NMLoopExecVarAdd( "downSamples", downSamples, nm, integer = 1 )
+		NMLoopExecVarAdd( "downSamples", downSamples, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( rate ) )
@@ -5626,7 +5849,7 @@ Function /S NMMainResample2( [ folder, wavePrefix, chanNum, waveSelect, upSample
 		return ""
 	endif
 	
-	return NMResample2( nm, upSamples = upSamples, downSamples = downSamples, rate = rate, history = 1 )
+	return NMResample2( nm, upSamples=upSamples, downSamples=downSamples, rate=rate, history=1 )
 	
 End // NMMainResample2
 
@@ -5683,7 +5906,7 @@ Static Function /S zCall_NMMainDecimate()
 	SetNMvar( NMMainDF + "DecimateN", downSamples )
 	SetNMstr( NMMainDF + "DecimateAlg", alg )
 	
-	return NMMainDecimate( chanSelectList = chanSelect, waveSelectList = waveSelect, downSamples = downSamples, alg = alg, history = 1 )
+	return NMMainDecimate( chanSelectList=chanSelect, waveSelectList=waveSelect, downSamples=downSamples, alg=alg, history=1 )
 
 End // zCall_NMMainDecimate()
 
@@ -5730,7 +5953,7 @@ Static Function /S zCall_NMMainDecimate2()
 	Variable newDeltaX = NumVarOrDefault( NMMainDF + "DecimateDeltaX", oldDeltax )
 	String alg = StrVarOrDefault( NMMainDF + "DecimateAlg", NMInterpolateAlg )
 	
-	xunits = NMChanLabelX( units = 1 )
+	xunits = NMChanLabelX( units=1 )
 	
 	Prompt newDeltaX, "new sample interval > " + num2str( oldDeltax ) + " " + xunits
 	Prompt alg, "interpolation method:", popup NMInterpolateAlgList
@@ -5750,7 +5973,7 @@ Static Function /S zCall_NMMainDecimate2()
 	
 	Variable rate = 1 / newDeltaX
 	
-	return NMMainDecimate( chanSelectList = chanSelect, waveSelectList = waveSelect, rate = rate, alg = alg, history = 1 )
+	return NMMainDecimate( chanSelectList=chanSelect, waveSelectList=waveSelect, rate=rate, alg=alg, history=1 )
 
 End // zCall_NMMainDecimate2
 
@@ -5779,7 +6002,7 @@ Function /S NMMainDecimate( [ folderList, wavePrefixList, chanSelectList, waveSe
 	
 	else
 	
-		NMLoopExecVarAdd( "downSamples", downSamples, nm, integer = 1 )
+		NMLoopExecVarAdd( "downSamples", downSamples, nm, integer=1 )
 		
 	endif
 	
@@ -5894,9 +6117,9 @@ Function /S NMMainDecimate2( [ folder, wavePrefix, chanNum, waveSelect, downSamp
 	endif
 	
 	if ( rateFlag )
-		return NMDecimate2( nm, rate = rate, alg = alg, history = 1 )
+		return NMDecimate2( nm, rate=rate, alg=alg, history=1 )
 	else
-		return NMDecimate2( nm, downSamples = downSamples, alg = alg, history = 1 )
+		return NMDecimate2( nm, downSamples=downSamples, alg=alg, history=1 )
 	endif
 	
 End // NMMainDecimate2
@@ -5979,9 +6202,9 @@ Static Function /S zCall_NMMainInterpolate()
 	SetNMstr( NMMainDF + "InterpolatexWaveNew", xWaveNew )
 	
 	if ( xmode == 1 )
-		return NMMainInterpolate( chanSelectList = chanSelect, waveSelectList = waveSelect, alg = alg, xmode = 1, history = 1 )
+		return NMMainInterpolate( chanSelectList=chanSelect, waveSelectList=waveSelect, alg=alg, xmode=1, history=1 )
 	else
-		return NMMainInterpolate( chanSelectList = chanSelect, waveSelectList = waveSelect, alg = alg, xmode = xmode, xWaveNew = xWaveNew, history = 1 )
+		return NMMainInterpolate( chanSelectList=chanSelect, waveSelectList=waveSelect, alg=alg, xmode=xmode, xWaveNew=xWaveNew, history=1 )
 	endif
 
 End // zCall_NMMainInterpolate
@@ -6018,7 +6241,7 @@ Function /S NMMainInterpolate( [ folderList, wavePrefixList, chanSelectList, wav
 	if ( ParamIsDefault( xmode ) )
 		xmode = 1
 	else
-		NMLoopExecVarAdd( "xmode", xmode, nm, integer = 1 )
+		NMLoopExecVarAdd( "xmode", xmode, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( xWaveNew ) )
@@ -6123,9 +6346,9 @@ Function /S NMMainInterpolate2( [ folder, wavePrefix, chanNum, waveSelect, algor
 	endif
 	
 	if ( xmode == 1 )
-		return NMInterpolate2( nm, alg = alg, xmode = 1, history = 1 )
+		return NMInterpolate2( nm, alg=alg, xmode=1, history=1 )
 	else
-		return NMInterpolate2( nm, alg = alg, xmode = xmode, xWaveNew = xWaveNew, history = 1 )
+		return NMInterpolate2( nm, alg=alg, xmode=xmode, xWaveNew=xWaveNew, history=1 )
 	endif
 	
 End // NMMainInterpolate2
@@ -6139,7 +6362,7 @@ Static Function /S zCall_NMMainXScaleMode( mode )
 	Variable timeBetweenWaves
 	String sdf
 	
-	if ( WaveExists( $NMXwave( waveNum = 0 ) ) )
+	if ( WaveExists( $NMXwave( waveNum=0 ) ) )
 		return NMXWaveFunctionError()
 	endif
 	
@@ -6160,12 +6383,12 @@ Static Function /S zCall_NMMainXScaleMode( mode )
 		endif
 	
 		if ( ( numtype( timeBetweenWaves ) == 0 ) && ( timeBetweenWaves > 0 ) )
-			return NMMainXScaleMode( mode = mode, timeBetweenWaves = timeBetweenWaves, history = 1 )
+			return NMMainXScaleMode( mode=mode, timeBetweenWaves=timeBetweenWaves, history=1 )
 		endif
 		
 	endif
 	
-	return NMMainXScaleMode( mode = mode, history = 1 )
+	return NMMainXScaleMode( mode=mode, history=1 )
 	
 End // zCall_NMMainXScaleMode
 
@@ -6257,7 +6480,7 @@ Function /S NMMainXScaleMode2( [ folder, wavePrefix, chanNum, waveSelect, mode, 
 		return ""
 	endif
 	
-	return NMXScaleMode2( nm, mode, timeBetweenWaves = timeBetweenWaves, history = 1 )
+	return NMXScaleMode2( nm, mode, timeBetweenWaves=timeBetweenWaves, history=1 )
 	
 End // NMMainXScaleMode2
 
@@ -6272,8 +6495,8 @@ Static Function /S zCall_NMMainTimeScaleConvert( newUnits )
 	
 	String promptStr = NMPromptStr( "Time Scale Conversion" )
 	
-	if ( WaveExists( $NMXwave( waveNum = 0 ) ) )
-		return NMXWaveFunctionError( title = promptStr )
+	if ( WaveExists( $NMXwave( waveNum=0 ) ) )
+		return NMXWaveFunctionError( title=promptStr )
 	endif
 	
 	unitsList = NMChanXUnitsList()
@@ -6293,13 +6516,13 @@ Static Function /S zCall_NMMainTimeScaleConvert( newUnits )
 			return "" // cancel
 		endif
 		
-		NMMainLabel( xLabel = oldUnits, history = 1 )
+		NMMainLabel( xLabel=oldUnits, history=1 )
 	
 	elseif ( icnt == 1 )
 	
 		oldUnits = StringFromList( 0, unitsList )
 		
-		NMMainLabel( xLabel = oldUnits, history = 1 )
+		NMMainLabel( xLabel=oldUnits, history=1 )
 	
 	elseif ( icnt > 1 )
 		
@@ -6319,7 +6542,7 @@ Static Function /S zCall_NMMainTimeScaleConvert( newUnits )
 			return "" // cancel
 		endif
 	
-		NMMainLabel( xLabel = oldUnits, history = 1 )
+		NMMainLabel( xLabel=oldUnits, history=1 )
 		
 	else
 	
@@ -6331,7 +6554,7 @@ Static Function /S zCall_NMMainTimeScaleConvert( newUnits )
 		return ""
 	endif
 		
-	return NMMainTimeScaleConvert( oldUnits = oldUnits, newUnits = newUnits, history = 1 )
+	return NMMainTimeScaleConvert( oldUnits=oldUnits, newUnits=newUnits, history=1 )
 
 End // zCall_NMMainTimeScaleConvert
 
@@ -6438,7 +6661,7 @@ Function /S NMMainTimeScaleConvert2( [ folder, wavePrefix, chanNum, waveSelect, 
 		return ""
 	endif
 	
-	return NMTimeScaleConvert2( nm, oldUnits, newUnits, history = 1 )
+	return NMTimeScaleConvert2( nm, oldUnits, newUnits, history=1 )
 	
 End // NMMainTimeScaleConvert2
 
@@ -6483,9 +6706,9 @@ Static Function /S zCall_NMMainXWaveMake()
 	endif
 	
 	if ( !singleXscale || ( multiple == 2 ) )
-		return NMMainXWaveMake( newPrefix = newPrefix, multiple = 1, overwrite = 1, history = 1 )
+		return NMMainXWaveMake( newPrefix=newPrefix, multiple=1, overwrite=1, history=1 )
 	else
-		return NMMainXWaveMake( newPrefix = newPrefix, overwrite = 1, history = 1 )
+		return NMMainXWaveMake( newPrefix=newPrefix, overwrite=1, history=1 )
 	endif
 
 End // zCall_NMMainXWaveMake
@@ -6509,11 +6732,11 @@ Function /S NMMainXWaveMake( [ folderList, wavePrefixList, chanSelectList, waveS
 	endif
 	
 	if ( multiple )
-		NMLoopExecVarAdd( "multiple", multiple, nm, integer = 1 )
+		NMLoopExecVarAdd( "multiple", multiple, nm, integer=1 )
 	endif
 	
 	if ( overwrite )
-		NMLoopExecVarAdd( "overwrite", overwrite, nm, integer = 1 )
+		NMLoopExecVarAdd( "overwrite", overwrite, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -6586,13 +6809,13 @@ Function /S NMMainXWaveMake2( [ folder, wavePrefix, chanNum, waveSelect, newPref
 	
 	if ( multiple )
 	
-		return NMXWaveMake2( nm, newPrefix = newPrefix, multiple = 1, overwrite = overwrite, history = 1 )
+		return NMXWaveMake2( nm, newPrefix=newPrefix, multiple=1, overwrite=overwrite, history=1 )
 		
 	else
 	
 		xWave = newPrefix + wavePrefix
 		
-		return NMXWaveMake2( nm, xWave = xWave, overwrite = overwrite, history = 1 )
+		return NMXWaveMake2( nm, xWave=xWave, overwrite=overwrite, history=1 )
 		
 	endif
 	
@@ -6639,17 +6862,17 @@ Static Function /S zCall_NMMainBaseline( [ DFOF ] )
 	if ( DFOF )
 	
 		if ( allWavesAvg )
-			return NMMainBaseline( xbgn = xbgn, xend = xend, allWavesAvg = 1, DFOF = 1, history = 1 )
+			return NMMainBaseline( xbgn=xbgn, xend=xend, allWavesAvg=1, DFOF=1, history=1 )
 		else
-			return NMMainBaseline( xbgn = xbgn, xend = xend, DFOF = 1, history = 1 )
+			return NMMainBaseline( xbgn=xbgn, xend=xend, DFOF=1, history=1 )
 		endif
 	
 	else
 	
 		if ( allWavesAvg )
-			return NMMainBaseline( xbgn = xbgn, xend = xend, allWavesAvg = 1, history = 1 )
+			return NMMainBaseline( xbgn=xbgn, xend=xend, allWavesAvg=1, history=1 )
 		else
-			return NMMainBaseline( xbgn = xbgn, xend = xend, history = 1 )
+			return NMMainBaseline( xbgn=xbgn, xend=xend, history=1 )
 		endif
 	
 	endif
@@ -6685,11 +6908,11 @@ Function /S NMMainBaseline( [ folderList, wavePrefixList, chanSelectList, waveSe
 	endif
 	
 	if ( allWavesAvg )
-		NMLoopExecVarAdd( "allWavesAvg", allWavesAvg, nm, integer = 1 )
+		NMLoopExecVarAdd( "allWavesAvg", allWavesAvg, nm, integer=1 )
 	endif
 	
 	if ( DFOF )
-		NMLoopExecVarAdd( "DFOF", DFOF, nm, integer = 1 )
+		NMLoopExecVarAdd( "DFOF", DFOF, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -6768,7 +6991,7 @@ Function /S NMMainBaseline2( [ folder, wavePrefix, chanNum, waveSelect, xbgn, xe
 		return ""
 	endif
 	
-	return NMBaseline2( nm, xbgn = xbgn, xend = xend, allWavesAvg = allWavesAvg, DFOF = DFOF, history = 1 )
+	return NMBaseline2( nm, xbgn=xbgn, xend=xend, allWavesAvg=allWavesAvg, DFOF=DFOF, history=1 )
 	
 End // NMMainBaseline2
 
@@ -6781,8 +7004,8 @@ Static Function /S zCall_NMMainNormalize()
 
 	STRUCT NMNormalizeStruct n
 	
-	if ( NMNormalizeCall( NMMainDF, promptStr = promptStr, all = 1, n = n ) == 0 )
-		return NMMainNormalize( n = n, history = 1 )
+	if ( NMNormalizeCall( NMMainDF, promptStr=promptStr, all=1, n=n ) == 0 )
+		return NMMainNormalize( n=n, history=1 )
 	endif
 	
 	return ""
@@ -6897,7 +7120,7 @@ Function /S NMMainNormalize( [ folderList, wavePrefixList, chanSelectList, waveS
 	endif
 	
 	if ( n2.allWavesAvg )
-		NMLoopExecVarAdd( "allWavesAvg", n2.allWavesAvg, nm, integer = 1 )
+		NMLoopExecVarAdd( "allWavesAvg", n2.allWavesAvg, nm, integer=1 )
 	endif
 	
 	if ( ParamIsDefault( folderList ) )
@@ -7026,7 +7249,7 @@ Function /S NMMainNormalize2( [ folder, wavePrefix, chanNum, waveSelect, fxn1, a
 		return ""
 	endif
 	
-	return NMNormalize2( nm, n2, history = 1 )
+	return NMNormalize2( nm, n2, history=1 )
 	
 End // NMMainNormalize2
 
@@ -7073,7 +7296,7 @@ Static Function /S zCall_NMMainScaleByNum()
 	SetNMvar( NMMainDF + "ScaleByNumXbgn", xbgn )
 	SetNMvar( NMMainDF + "ScaleByNumXend", xend )
 	
-	return NMMainScale( xbgn = xbgn, xend = xend, op = op, factor = factor, history = 1 )
+	return NMMainScale( xbgn=xbgn, xend=xend, op=op, factor=factor, history=1 )
 	
 End // zCall_NMMainScaleByNum
 
@@ -7256,11 +7479,11 @@ Function /S NMMainScale2( [ folder, wavePrefix, chanNum, waveSelect, xbgn, xend,
 	
 	switch( toDo )
 		case 1:
-			return NMScale2( nm, op, factor = factor, xbgn = xbgn, xend = xend, history = printToHistory )
+			return NMScale2( nm, op, factor=factor, xbgn=xbgn, xend=xend, history=printToHistory )
 		case 2:
-			return NMScale2( nm, op, waveOfFactors = waveOfFactors, xbgn = xbgn, xend = xend, history = printToHistory )
+			return NMScale2( nm, op, waveOfFactors=waveOfFactors, xbgn=xbgn, xend=xend, history=printToHistory )
 		case 3:
-			return NMScale2( nm, op, wavePntByPnt = wavePntByPnt, xbgn = xbgn, xend = xend, history = printToHistory )
+			return NMScale2( nm, op, wavePntByPnt=wavePntByPnt, xbgn=xbgn, xend=xend, history=printToHistory )
 	endswitch
 	
 End // NMMainScale2
@@ -7393,7 +7616,7 @@ Static Function /S zCall_NMMainScaleByWave()
 		
 			txt = "select a wave to scale by (" + num2istr( npnts ) + " points)"
 		
-			waveSelect = NMWaveBrowser( txt, numWavesLimit = 1, numPoints = npnts, noText = 1 )
+			waveSelect = NMWaveBrowser( txt, numWavesLimit=1, numPoints=npnts, noText=1 )
 			
 			if ( WaveExists( $waveSelect ) == 0 )
 				return ""
@@ -7631,7 +7854,7 @@ Static Function /S zCall_NMMainScaleBySet()
 	SetNMstr( NMMainDF + "ScaleBySet", setSelect )
 	SetNMstr( NMMainDF + "ScaleBySetAlg", algorithm )
 	
-	//return NMMainScaleBySet( set1 = currentWaveSelect, algorithm = algorithm, set2 = setSelect )
+	//return NMMainScaleBySet( set1=currentWaveSelect, algorithm=algorithm, set2=setSelect )
 
 End // zCall_NMMainScaleBySet
 
@@ -7833,7 +8056,7 @@ Static Function /S zCall_NMMainRescale()
 	
 	scale1 /= scale2
 	
-	return NMMainRescale( oldUnits = oldUnits, newUnits = newUnits, scale = scale1, history = 1 )
+	return NMMainRescale( oldUnits=oldUnits, newUnits=newUnits, scale=scale1, history=1 )
 
 End // zCall_NMMainRescale
 
@@ -7959,7 +8182,7 @@ Function /S NMMainRescale2( [ folder, wavePrefix, chanNum, waveSelect, oldUnits,
 		return ""
 	endif
 	
-	return NMRescale2( nm, oldUnits, newUnits, scale, history = 1 )
+	return NMRescale2( nm, oldUnits, newUnits, scale, history=1 )
 	
 End // NMMainRescale2
 
@@ -8009,7 +8232,7 @@ Static Function /S zCall_NMMainSmooth()
 	SetNMstr( NMMainDF + "SmoothAlg", algorithm )
 	SetNMvar( NMMainDF + "SmoothNum", num )
 	
-	return NMMainSmooth( algorithm = algorithm, num = num, history = 1 )
+	return NMMainSmooth( algorithm=algorithm, num=num, history=1 )
 	
 End // zCall_NMMainSmooth
 
@@ -8117,7 +8340,7 @@ Function /S NMMainSmooth2( [ folder, wavePrefix, chanNum, waveSelect, algorithm,
 		return ""
 	endif
 
-	return NMSmooth2( nm, num, algorithm = algorithm, history = 1 )
+	return NMSmooth2( nm, num, algorithm=algorithm, history=1 )
 	
 End // NMMainSmooth2
 
@@ -8178,7 +8401,7 @@ Static Function /S zCall_NMMainFilterFIR()
 			SetNMvar( NMMainDF + "FilterFIRLPf2", f2 )
 			SetNMvar( NMMainDF + "FilterFIRLPn", n )
 	
-			return NMMainFilterFIR( algorithm = algorithm, f1 = f1, f2 = f2, n = n, history = 1 )
+			return NMMainFilterFIR( algorithm=algorithm, f1=f1, f2=f2, n=n, history=1 )
 			
 		case "high-pass":
 		
@@ -8206,7 +8429,7 @@ Static Function /S zCall_NMMainFilterFIR()
 			SetNMvar( NMMainDF + "FilterFIRHPf2", f2 )
 			SetNMvar( NMMainDF + "FilterFIRHPn", n )
 			
-			return NMMainFilterFIR( algorithm = algorithm, f1 = f1, f2 = f2, n = n, history = 1 )
+			return NMMainFilterFIR( algorithm=algorithm, f1=f1, f2=f2, n=n, history=1 )
 			
 		case "notch":
 		
@@ -8228,7 +8451,7 @@ Static Function /S zCall_NMMainFilterFIR()
 			SetNMvar( NMMainDF + "FilterFIRfc", fc )
 			SetNMvar( NMMainDF + "FilterFIRfw", fw )
 			
-			return NMMainFilterFIR( fc = fc, fw = fw, history = 1 )
+			return NMMainFilterFIR( fc=fc, fw=fw, history=1 )
 			
 	endswitch
 	
@@ -8353,9 +8576,9 @@ Function /S NMMainFilterFIR2( [ folder, wavePrefix, chanNum, waveSelect, algorit
 	endif
 	
 	if ( ( numtype( fc * fw ) == 0 ) && ( fc > 0 ) && ( fw > 0 ) )
-		return NMFilterFIR2( nm, algorithm = algorithm, fc = fc, fw = fw, history = 1 )
+		return NMFilterFIR2( nm, algorithm=algorithm, fc=fc, fw=fw, history=1 )
 	else
-		return NMFilterFIR2( nm, algorithm = algorithm, f1 = f1, f2 = f2, n = n, history = 1 )
+		return NMFilterFIR2( nm, algorithm=algorithm, f1=f1, f2=f2, n=n, history=1 )
 	endif
 	
 End // NMMainFilterFIR2
@@ -8406,7 +8629,7 @@ Static Function /S zCall_NMMainFilterIIR()
 			
 			SetNMvar( NMMainDF + "FilterIIRfLow", fLow )
 			
-			return NMMainFilterIIR( fLow = fLow, history = 1 )
+			return NMMainFilterIIR( fLow=fLow, history=1 )
 			
 		case "high-pass":
 		
@@ -8424,7 +8647,7 @@ Static Function /S zCall_NMMainFilterIIR()
 			
 			SetNMvar( NMMainDF + "FilterIIRfHigh", fHigh )
 			
-			return NMMainFilterIIR( fHigh = fHigh, history = 1 )
+			return NMMainFilterIIR( fHigh=fHigh, history=1 )
 			
 		case "notch":
 		
@@ -8446,7 +8669,7 @@ Static Function /S zCall_NMMainFilterIIR()
 			SetNMvar( NMMainDF + "FilterIIRfNotch", fNotch )
 			SetNMvar( NMMainDF + "FilterIIRnotchQ", notchQ )
 			
-			return NMMainFilterIIR( fNotch = fNotch, notchQ = notchQ, history = 1 )
+			return NMMainFilterIIR( fNotch=fNotch, notchQ=notchQ, history=1 )
 			
 	endswitch
 	
@@ -8556,7 +8779,7 @@ Function /S NMMainFilterIIR2( [ folder, wavePrefix, chanNum, waveSelect, fLow, f
 		return ""
 	endif
 	
-	return NMFilterIIR2( nm, fLow = fLow, fHigh = fHigh, fNotch = fNotch, notchQ = notchQ, history = 1 )
+	return NMFilterIIR2( nm, fLow=fLow, fHigh=fHigh, fNotch=fNotch, notchQ=notchQ, history=1 )
 	
 End // NMMainFilterIIR2
 
@@ -8564,92 +8787,35 @@ End // NMMainFilterIIR2
 //****************************************************************
 
 Static Function /S zCall_NMMainRsCorrection()
-
-	STRUCT NMRsCorr rc
-
-	String txt = "Warning: this correction (Traynellis assumes your voltage-clamp data is recorded from "
-	txt += "a one-compartment cell containing a linear membrane conductance. "
-	txt += "Do you want to continue?"
-
-	DoAlert /T="NM Series-Resistance Correction" 1, txt
 	
-	if ( V_flag == 2 )
-		return "" // cancel
+	String promptStr = NMPromptStr( "" )
+	String xLabel = NMChanLabelX()
+	String yLabel = NMChanLabelY()
+	
+	Variable warning = NumVarOrDefault( NMDF + "RsCorrWarning", 1 )
+	
+	Variable dx = NMChanDeltaX( 0, 1 )
+	
+	STRUCT NMRsCorrParams rc
+	
+	if ( NMRsCorrectionCall( NMDF, promptStr=promptStr, xLabel=xLabel, yLabel=yLabel, dx=dx, warning=warning, rc=rc ) == 0 )
+		SetNMvar( NMDF + "RsCorrWarning", 0 ) // turn off warning after first use
+		return NMMainRsCorrection( Vhold=rc.Vhold, Vrev=rc.Vrev, Rs=rc.Rs, Cm=rc.Cm, Vcomp=rc.Vcomp, Ccomp=rc.Ccomp, Fc=rc.Fc, dataUnitsX=rc.dataUnitsX, dataUnitsY=rc.dataUnitsY, history=1 )
 	endif
 	
-	String dataUnits = NMChanLabelY()
-	String unitsList = " ;A;mA;uA;nA;pA;"
-	
-	if ( strsearch( dataUnits, "mA", 0 ) >= 0 )
-		dataUnits = "mA"
-	elseif ( strsearch( dataUnits, "uA", 0 ) >= 0 )
-		dataUnits = "uA"
-	elseif ( strsearch( dataUnits, "nA", 0 ) >= 0 )
-		dataUnits = "nA"
-	elseif ( strsearch( dataUnits, "pA", 0 ) >= 0 )
-		dataUnits = "pA"
-	else
-		dataUnits = " "
-	endif
-	
-	Prompt dataUnits, "select units of your voltage-clamp data", popup unitsList
-	
-	Doprompt "Cell Parameters", dataUnits
-	
-	if ( ( V_flag == 1 ) || StringMatch( dataUnits, " " ) )
-		return "" // cancel
-	endif
-	
-	Variable Vhold = NumVarOrDefault( NMDF + "RsCorrVhold", -100 ) // mV
-	Variable Vrev = NumVarOrDefault( NMDF + "RsCorrVrev", 0 ) // mV
-	Variable Rs = NumVarOrDefault( NMDF + "RsCorrRs", 10 ) // MOhms
-	Variable Cm = NumVarOrDefault( NMDF + "RsCorrCm", 10 ) // pF
-	
-	Variable Vcomp = NumVarOrDefault( NMDF + "RsCorrVcomp", 1 ) // 0 - 1
-	Variable Ccomp = NumVarOrDefault( NMDF + "RsCorrCcomp", 1 ) // 0 - 1
-	Variable Fc = NumVarOrDefault( NMDF + "RsCorrFc", 100 ) // kHz
-	
-	Prompt Vhold, "voltage-clamp holding potential (mV)"
-	Prompt Vrev, "membrane conductance reversal potential (mV)"
-	Prompt Rs, "electrode series resistance (MOhms)"
-	Prompt Cm, "membrane capacitance (pF)"
-	Doprompt "Cell Parameters", Vhold, Vrev, Rs, Cm
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	SetNMvar( NMDF + "RsCorrVhold", Vhold )
-	SetNMvar( NMDF + "RsCorrVrev", Vrev )
-	SetNMvar( NMDF + "RsCorrRs", Rs )
-	SetNMvar( NMDF + "RsCorrCm", Cm )
-	
-	Prompt Vcomp,"fraction of resistive-current correction to apply (0-1)"
-	Prompt Ccomp,"fraction of capacitive-current correction to apply (0-1)"
-	Prompt Fc,"filter cutofff frequency (kHz)"
-	Doprompt "Compensation Parameters",  Vcomp, Ccomp, Fc
-	
-	if ( V_flag == 1 )
-		return "" // cancel
-	endif
-	
-	SetNMvar( NMDF + "RsCorrVcomp", Vcomp )
-	SetNMvar( NMDF + "RsCorrCcomp", Ccomp )
-	SetNMvar( NMDF + "RsCorrFc", Fc )
-	
-	return NMMainRsCorrection( Vhold=Vhold, Vrev=Vrev, Rs=Rs, Cm=Cm, Vcomp=Vcomp, Ccomp=Ccomp, Fc=Fc, dataUnits=dataUnits, history=1 )
+	return ""
 	
 End // zCall_NMMainRsCorrection
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ] )
+Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
-	String dataUnits
+	String dataUnitsX, dataUnitsY
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
@@ -8696,13 +8862,30 @@ Function /S NMMainRsCorrection( [ folderList, wavePrefixList, chanSelectList, wa
 	
 	NMLoopExecVarAdd( "Fc", Fc, nm )
 	
-	if ( ParamIsDefault( dataUnits ) )
-		return NM2ErrorStr( 21, "dataUnits", dataUnits )
+	if ( ParamIsDefault( dataUnitsX ) )
+		return NM2ErrorStr( 21, "dataUnitsX", dataUnitsX )
 	endif
 	
-	NMLoopExecStrAdd( "dataUnits", dataUnits, nm )
+	if ( ParamIsDefault( dataUnitsY ) )
+		return NM2ErrorStr( 21, "dataUnitsY", dataUnitsY )
+	endif
 	
-	if ( NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ) != 0 )
+	NMLoopExecStrAdd( "dataUnitsX", dataUnitsX, nm )
+	NMLoopExecStrAdd( "dataUnitsY", dataUnitsY, nm )
+	
+	STRUCT NMRsCorrParams rc
+	
+	rc.Vhold = Vhold
+	rc.Vrev = Vrev
+	rc.Rs = Rs
+	rc.Cm = Cm
+	rc.Vcomp = Vcomp
+	rc.Ccomp = Ccomp
+	rc.Fc = Fc
+	rc.dataUnitsX = dataUnitsX
+	rc.dataUnitsY = dataUnitsY
+	
+	if ( NMRsCorrError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -8738,12 +8921,12 @@ End // NMMainRsCorrection
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits ] )
+Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
 	
 	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
-	String dataUnits
+	String dataUnitsX, dataUnitsY
 	
 	String fxn = "NMRsCorrection"
 	
@@ -8769,7 +8952,7 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 		return ""
 	endif
 	
-	STRUCT NMRsCorr rc
+	STRUCT NMRsCorrParams rc
 	
 	rc.Vhold = Vhold
 	rc.Vrev = Vrev
@@ -8778,9 +8961,10 @@ Function /S NMMainRsCorrection2( [ folder, wavePrefix, chanNum, waveSelect, Vhol
 	rc.Vcomp = Vcomp
 	rc.Ccomp = Ccomp
 	rc.Fc = Fc
-	rc.dataUnits = dataUnits
+	rc.dataUnitsX = dataUnitsX
+	rc.dataUnitsY = dataUnitsY
 	
-	return NMRsCorrection2( nm, rc, history = 1 )
+	return NMRsCorrection( nm, rc, history = 1 )
 	
 End // NMMainRsCorrection2
 
@@ -9451,26 +9635,42 @@ End // NMMainSort2
 //****************************************************************
 
 Static Function /S zCall_NMMainIntegrate()
-
-	DoAlert /T=( NMPromptStr( "NM Integrate Waves" ) ) 1, "Are you sure you want to integrate the currently selected waves?"
 	
-	if ( V_Flag == 1 )
-		return NMMainIntegrate( history = 1 )
+	Variable method = NumVarOrDefault( NMMainDF + "IntegrateMethod", 1 ) // ( 0 ) rectangular ( 1 ) trapezoid
+	
+	method += 1
+	
+	Prompt method, "select integration method:", popup "rectangular;trapezoid;"
+	DoPrompt NMPromptStr( "NM Integrate Waves" ), method
+	
+	if ( V_flag == 1 )
+		return "" // cancel
 	endif
 	
-	return ""
+	method -= 1
+	
+	SetNMvar( NMMainDF + "IntegrateMethod", method )
+	
+	return NMMainIntegrate( method = method, history = 1 )
 
 End // zCall_NMMainIntegrate
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainIntegrate( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation ] )
+Function /S NMMainIntegrate( [ folderList, wavePrefixList, chanSelectList, waveSelectList, method, history, deprecation ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
+	Variable method // ( 0 ) rectangular, default ( 1 ) trapezoid
 	Variable history, deprecation
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
+	
+	if ( ( numtype( method ) > 0 ) || ( method < 0 ) || ( method > 1 ) )
+		return NM2ErrorStr( 10, "method", num2str( method ) )		
+	endif
+	
+	NMLoopExecVarAdd( "method", method, nm )
 	
 	if ( ParamIsDefault( folderList ) )
 		folderList = ""
@@ -9504,13 +9704,18 @@ End // NMMainIntegrate
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainIntegrate2( [ folder, wavePrefix, chanNum, waveSelect ] )
+Function /S NMMainIntegrate2( [ folder, wavePrefix, chanNum, waveSelect, method ] )
 	String folder, wavePrefix, waveSelect // see description at top
 	Variable chanNum
+	Variable method // ( 0 ) rectangular, default ( 1 ) trapezoid
 	
 	String fxn = "NMIntegrate"
 	
 	STRUCT NMParams nm
+	
+	if ( ( numtype( method ) > 0 ) || ( method < 0 ) || ( method > 1 ) )
+		return NM2ErrorStr( 10, "method", num2str( method ) )		
+	endif
 	
 	if ( ParamIsDefault( folder ) )
 		folder = ""
@@ -9532,7 +9737,7 @@ Function /S NMMainIntegrate2( [ folder, wavePrefix, chanNum, waveSelect ] )
 		return ""
 	endif
 	
-	return NMIntegrate2( nm, history = 1 )
+	return NMIntegrate2( nm, method = method, history = 1 )
 	
 End // NMMainIntegrate2
 
@@ -11562,7 +11767,7 @@ Static Function /S zCall_NMMainHistogram()
 	Variable xend = NumVarOrDefault( NMMainDF + "HistoXend", inf )
 	Variable binCentered = 1 + NumVarOrDefault( NMMainDF + "HistoBinCentered", 0 )
 	Variable cumulative = 1 + NumVarOrDefault( NMMainDF + "HistoCumulative", 0 )
-	Variable normalize = 1 + NumVarOrDefault( NMMainDF + "HistoNormalize", 0 )
+	Variable normalize = 1 + NumVarOrDefault( NMMainDF + "HistoNormalize", 0 ) // 0 - count, 1 - probability density, 2 - frequency distribution
 	
 	Prompt transforms, "Use channel Filter/Transforms on your data?", popup "no;yes;"
 	Prompt autoBinsStr, "bin dimensions:", popup "manual;automatic;"
@@ -11681,23 +11886,39 @@ Static Function /S zCall_NMMainHistogram()
 	
 	endif
 	
-	Prompt binCentered, "bin-centered x values:", popup "no;yes;"
+	Prompt normalize, "normalize:", popup "no;yes, probability density;yes, frequency distribution;"
 	Prompt cumulative, "cumulative histogram:", popup "no;yes;"
-	Prompt normalize, "normalize results to probability density:", popup "no;yes;"
+	Prompt binCentered, "bin-centered x values:", popup "no, x-values located at left edge of bins;yes, x-values located at center of bins;"
 	
-	DoPrompt promptStr, binCentered, cumulative, normalize
+	DoPrompt promptStr, normalize, cumulative
 
 	if ( V_flag == 1 )
 		return "" // cancel
 	endif
 	
-	binCentered -= 1
-	cumulative -= 1
 	normalize -= 1
+	cumulative -= 1
 	
-	SetNMvar( NMMainDF + "HistoBinCentered", binCentered )
-	SetNMvar( NMMainDF + "HistoCumulative", cumulative )
 	SetNMvar( NMMainDF + "HistoNormalize", normalize )
+	SetNMvar( NMMainDF + "HistoCumulative", cumulative )
+	
+	if ( normalize == 0 )
+	
+		DoPrompt promptStr, binCentered
+	
+		if ( V_flag == 1 )
+			return "" // cancel
+		endif
+		
+		binCentered -= 1
+		
+		SetNMvar( NMMainDF + "HistoBinCentered", binCentered )
+		
+	else
+	
+		binCentered = 1 // for /P, x-values are bin centered
+		
+	endif
 	
 	if ( binCentered )
 		optionStr += "/C"
@@ -11707,8 +11928,10 @@ Static Function /S zCall_NMMainHistogram()
 		optionStr += "/Cum"
 	endif
 	
-	if ( normalize )
+	if ( normalize == 1 )
 		optionStr += "/P"
+	elseif ( normalize == 2 )
+		optionStr += "/F"
 	endif
 	
 	if ( numtype( numBins * binWidth * binStart ) > 0 )
@@ -11750,7 +11973,7 @@ Function /S NMMainHistogram( [ folderList, wavePrefixList, chanSelectList, waveS
 	Variable binStart
 	Variable binWidth
 	Variable numBins
-	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help )
+	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help ), or "/F" for frequency
 	String newPrefix // wave prefix for output histograms ( must specify )
 	Variable overwrite
 	
@@ -11841,7 +12064,7 @@ Function /S NMMainHistogram2( [ folder, wavePrefix, chanNum, waveSelect, transfo
 	Variable binStart // see Igor Histogram
 	Variable binWidth
 	Variable numBins
-	String optionStr // e.g. "/C/P/Cum" // see Igor Histogram
+	String optionStr // e.g. "/C/P/Cum" // see Igor Histogram, or "/F" for frequency
 	String newPrefix // wave prefix for output histograms ( must specify )
 	Variable overwrite
 	
@@ -11915,7 +12138,7 @@ End // NMMainHistogram2
 Static Function /S zCall_NMMainInequality()
 
 	Variable overwrite, transforms
-	String returnList, wList, txt, promptStr = NMPromptStr( "NM Inequality <>" )
+	String returnList, fxn, wList, txt, promptStr = NMPromptStr( "NM Inequality <>=" )
 	
 	String currentWavePrefix = CurrentNMWavePrefix()
 	
@@ -11952,9 +12175,15 @@ Static Function /S zCall_NMMainInequality()
 		
 	endif
 	
-	returnList = NMInequalityCall( s, NMMainDF, promptStr = promptStr )
+	returnList = NMInequalityCall( s, NMMainDF, promptStr=promptStr )
 	
 	if ( strlen( returnList ) == 0 )
+		return "" // cancel
+	endif
+	
+	fxn = StringByKey( "inequality", returnList, "=" )
+	
+	if ( strlen( fxn ) == 0 )
 		return "" // cancel
 	endif
 	
@@ -11991,7 +12220,34 @@ Static Function /S zCall_NMMainInequality()
 	
 	endif
 	
-	returnList = NMMainInequality( transforms = transforms, xbgn = xbgn, xend = xend, greaterThan = s.greaterThan, lessThan = s.lessThan, binaryOutput = s.binaryOutput, newPrefix = newPrefix, overwrite = overwrite, history = 1 )
+	strswitch( fxn ) // "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+		case "y > a":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, greaterThan=s.greaterThan, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "y ≥ a":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, greaterThanOrEqual=s.greaterThanOrEqual, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "y < b":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, lessThan=s.lessThan, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "y ≤ b":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, lessThanOrEqual=s.lessThanOrEqual, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "a < y < b":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, greaterThan=s.greaterThan, lessThan=s.lessThan, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "a ≤ y ≤ b":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, greaterThanOrEqual=s.greaterThanOrEqual, lessThanOrEqual=s.lessThanOrEqual, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "y = a":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, equal=s.equal, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		case "y ≠ a":
+			returnList = NMMainInequality( transforms=transforms, xbgn=xbgn, xend=xend, notEqual=s.notEqual, binaryOutput=s.binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+			break
+		default:
+			returnList = ""
+	endswitch
 	
 	if ( selectNewPrefix )
 		NMPrefixSelect( newPrefix + currentWavePrefix, noPrompts = 1 )
@@ -12006,20 +12262,26 @@ End // zCall_NMMainInequality
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainInequality( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, transforms, xbgn, xend, greaterThan, lessThan, binaryOutput, newPrefix, overwrite ] )
+Function /S NMMainInequality( [ folderList, wavePrefixList, chanSelectList, waveSelectList, history, deprecation, transforms, xbgn, xend, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, binaryOutput, newPrefix, overwrite ] )
 	String folderList, wavePrefixList, chanSelectList, waveSelectList // see description at top
 	Variable history, deprecation
 	
 	Variable transforms
 	Variable xbgn, xend
-	Variable greaterThan // test if y-value is greater than this value
-	Variable lessThan // test if y-value is less than this value
+	Variable greaterThan // y-value > greaterThan
+	Variable greaterThanOrEqual // y-value ≥ greaterThanOrEqual
+	Variable lessThan // y-value < lessThan
+	Variable lessThanOrEqual // y-value ≤ lessThanOrEqual
+	Variable equal // y-value == equal
+	Variable notEqual // y-value != notEqual
 	Variable binaryOutput // ( 0 ) output wave will contain NaN for false or corresponding input wave value for true ( 1 ) output wave will contain '0' for false or '1' for true
 	String newPrefix // wave prefix for output inequality waves ( must specify )
 	Variable overwrite // overwrite output wave if it already exists ( 0 ) no, alert user ( 1 ) yes
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
+	
+	String fxn = ""
 	
 	if ( ParamIsDefault( xbgn ) || ( numtype( xbgn ) > 0 ) )
 		xbgn = -inf
@@ -12034,21 +12296,51 @@ Function /S NMMainInequality( [ folderList, wavePrefixList, chanSelectList, wave
 		NMLoopExecVarAdd( "xend", xend, nm )
 	endif
 	
-	if ( ParamIsDefault( greaterThan ) )
-		greaterThan = NaN
-	else
+	if ( !ParamIsDefault( greaterThan ) )
 		NMLoopExecVarAdd( "greaterThan", greaterThan, nm )
+		fxn = "y > a"
 	endif
 	
-	if ( ParamIsDefault( lessThan ) )
-		lessThan = NaN
-	else
+	if ( !ParamIsDefault( greaterThanOrEqual ) )
+		NMLoopExecVarAdd( "greaterThanOrEqual", greaterThanOrEqual, nm )
+		fxn = "y ≥ a"
+	endif
+	
+	if ( !ParamIsDefault( lessThan ) )
 		NMLoopExecVarAdd( "lessThan", lessThan, nm )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y < b"
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y < b"
+		else
+			fxn = "y < b"
+		endif
 	endif
 	
-	if ( ( numtype( greaterThan ) > 0 ) && ( numtype( lessThan ) > 0 ) )
+	if ( !ParamIsDefault( lessThanOrEqual ) )
+		NMLoopExecVarAdd( "lessThanOrEqual", lessThanOrEqual, nm )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y ≤ b"
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y ≤ b"
+		else
+			fxn = "y ≤ b"
+		endif
+	endif
+	
+	if ( !ParamIsDefault( equal ) )
+		NMLoopExecVarAdd( "equal", equal, nm )
+		fxn = "y = a"
+	endif
+	
+	if ( !ParamIsDefault( notEqual ) )
+		NMLoopExecVarAdd( "notEqual", notEqual, nm )
+		fxn = "y ≠ a"
+	endif
+	
+	if ( strlen( fxn ) == 0 )
 		return "" // nothing to do
-	endif 
+	endif
 	
 	if ( !ParamIsDefault( binaryOutput ) )
 		NMLoopExecVarAdd( "binaryOutput", binaryOutput, nm, integer = 1 )
@@ -12100,19 +12392,26 @@ End // NMMainInequality
 //****************************************************************
 //****************************************************************
 
-Function /S NMMainInequality2( [ folder, wavePrefix, chanNum, waveSelect, transforms, xbgn, xend, greaterThan, lessThan, binaryOutput, newPrefix, overwrite ] )
-	String folder, wavePrefix, waveSelect // see description at top
+Function /S NMMainInequality2( [ folder, wavePrefix, chanNum, waveSelect, transforms, xbgn, xend, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, binaryOutput, newPrefix, overwrite ] )
+	String folder, wavePrefix // see description at top
 	Variable chanNum
+	String waveSelect
 	
 	Variable transforms
 	Variable xbgn, xend
-	Variable greaterThan // test if y-value is greater than this value
-	Variable lessThan // test if y-value is less than this value
-	Variable binaryOutput // ( 0 ) output wave will contain NaN for false or corresponding input wave value for true ( 1 ) output wave will contain '0' for false or '1' for true
+	Variable greaterThan // y-value > greaterThan
+	Variable greaterThanOrEqual // y-value ≥ greaterThanOrEqual
+	Variable lessThan // y-value < lessThan
+	Variable lessThanOrEqual // y-value ≤ lessThanOrEqual
+	Variable equal // y-value == equal
+	Variable notEqual // y-value != notEqual
+	Variable binaryOutput
+				// ( 0 ) output wave will contain NaN for false or corresponding input wave value for true
+				// ( 1 ) output wave will contain '0' for false or '1' for true
 	String newPrefix // wave prefix for output inequality waves ( must specify )
 	Variable overwrite // overwrite output wave if it already exists ( 0 ) no ( 1 ) yes
 	
-	String fxn = "NMInequality"
+	String fxn = "", loopfxn = "NMInequality"
 	
 	STRUCT NMParams nm
 	
@@ -12128,17 +12427,45 @@ Function /S NMMainInequality2( [ folder, wavePrefix, chanNum, waveSelect, transf
 		xend = inf
 	endif
 	
-	if ( ParamIsDefault( greaterThan ) )
-		greaterThan = NaN
+	if ( !ParamIsDefault( greaterThan ) )
+		fxn = "y > a"
 	endif
 	
-	if ( ParamIsDefault( lessThan ) )
-		lessThan = NaN
+	if ( !ParamIsDefault( greaterThanOrEqual ) )
+		fxn = "y ≥ a"
 	endif
 	
-	if ( ( numtype( greaterThan ) > 0 ) && ( numtype( lessThan ) > 0 ) )
+	if ( !ParamIsDefault( lessThan ) )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y < b"
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y < b"
+		else
+			fxn = "y < b"
+		endif
+	endif
+	
+	if ( !ParamIsDefault( lessThanOrEqual ) )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y ≤ b"
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y ≤ b"
+		else
+			fxn = "y ≤ b"
+		endif
+	endif
+	
+	if ( !ParamIsDefault( equal ) )
+		fxn = "y = a"
+	endif
+	
+	if ( !ParamIsDefault( notEqual ) )
+		fxn = "y ≠ a"
+	endif
+	
+	if ( strlen( fxn ) == 0 )
 		return "" // nothing to do
-	endif 
+	endif
 	
 	if ( ParamIsDefault( binaryOutput ) )
 		binaryOutput = 1
@@ -12164,11 +12491,30 @@ Function /S NMMainInequality2( [ folder, wavePrefix, chanNum, waveSelect, transf
 		waveSelect = ""
 	endif
 	
-	if ( NMLoopStructInit( fxn, folder, wavePrefix, chanNum, waveSelect, nm, transforms = transforms ) != 0 )
+	if ( NMLoopStructInit( loopfxn, folder, wavePrefix, chanNum, waveSelect, nm, transforms = transforms ) != 0 )
 		return ""
 	endif
 	
-	return NMInequality2( nm, xbgn = xbgn, xend = xend, greaterThan = greaterThan, lessThan = lessThan, binaryOutput = binaryOutput, newPrefix = newPrefix, overwrite = overwrite, history = 1 )
+	strswitch( fxn ) // "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+		case "y > a":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, greaterThan=greaterThan, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "y ≥ a":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, greaterThanOrEqual=greaterThanOrEqual, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "y < b":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, lessThan=lessThan, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "y ≤ b":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, lessThanOrEqual=lessThanOrEqual, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "a < y < b":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, greaterThan=greaterThan, lessThan=lessThan, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "a ≤ y ≤ b":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, greaterThanOrEqual=greaterThanOrEqual, lessThanOrEqual=lessThanOrEqual, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "y = a":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, equal=equal, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+		case "y ≠ a":
+			return NMInequality2( nm, xbgn=xbgn, xend=xend, notEqual=notEqual, binaryOutput=binaryOutput, newPrefix=newPrefix, overwrite=overwrite, history=1 )
+	endswitch
+	
+	return ""
 	
 End // NMMainInequality2
 

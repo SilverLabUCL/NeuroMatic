@@ -1635,7 +1635,7 @@ Function NMModelTabMake( force ) // create Model tab on NM panel
 	PopupMenu MD_ModelSelect, pos={x0+190,y0}, bodywidth=200, fsize=fs, win=$NMPanelName
 	PopupMenu MD_ModelSelect, value="Model Select;---;" + NMModelList(), proc=NMModelPopup, win=$NMPanelName
 	
-	ListBox MD_Inputs, title="Input Parameters", pos={x0,y0+1*yinc}, size={280,280}, fsize=fs, listWave=$df+"Params", selWave=$df+"ParamsEditable", win=$NMPanelName
+	ListBox MD_Inputs, pos={x0,y0+1*yinc}, size={280,280}, fsize=fs, listWave=$df+"Params", selWave=$df+"ParamsEditable", win=$NMPanelName
 	ListBox MD_Inputs, mode=1, userColumnResize=1, proc=NMModelListbox, widths={110, 70, 55, 400}, win=$NMPanelName
 	
 	y0 += 280 + 35 + 15
@@ -1770,7 +1770,14 @@ Function NMModelListbox( ctrlName, row, col, event ) : ListboxControl
 	String ctrlName // name of this control
 	Variable row // row if click in interior, -1 if click in title
 	Variable col // column number
-	Variable event // event code ( 4 - cell selection, 6 - begin cell edit, 7 - finish cell edit )
+	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
 	
 	Variable value
 	String varName, valueStr, wName, df = NMModelDF()

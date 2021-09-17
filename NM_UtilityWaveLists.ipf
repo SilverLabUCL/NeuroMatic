@@ -221,7 +221,7 @@ Function NMParamsError( nm [ skipWaveList, skipXwave ] )
 		
 		if ( numWaves >= 1 )
 		
-			NMDoAlert( "Abort: the following waves do not exist: " + badList, title = GetRTStackInfo( 2 ) )
+			NMDoAlert( "Abort: the following waves do not exist: " + badList, title=GetRTStackInfo( 2 ) )
 			
 			return 1 // error
 		
@@ -235,7 +235,7 @@ Function NMParamsError( nm [ skipWaveList, skipXwave ] )
 			return NMError( 1, GetRTStackInfo( 2 ), "xWave", nm.folder + nm.xWave )
 		endif
 		
-		npnts = GetXstats( "numPnts" , nm.wList, folder = nm.folder )
+		npnts = GetXstats( "numPnts" , nm.wList, folder=nm.folder )
 		
 		if ( numpnts( $nm.folder + nm.xWave ) != npnts )
 			return NMError( 5, GetRTStackInfo( 2 ), "xWave", nm.folder + nm.xWave )
@@ -417,7 +417,7 @@ Function /S NMMake2( nm, m [ history ] )
 		
 	endfor
 	
-	//NMParamVarAdd( "pnts", m.xpnts, nm, integer = 1 )
+	//NMParamVarAdd( "pnts", m.xpnts, nm, integer=1 )
 	
 	NMParamsComputeFailures( nm )
 	
@@ -481,7 +481,7 @@ Function /S NMMove2( nm, toFolder [ copySets, history ] )
 			DuplicateDataFolder $fromF, $toF // copy channel graph configurations
 		endif
 		
-		setsList = NMSetsListAll( prefixFolder = nm.prefixFolder )
+		setsList = NMSetsListAll( prefixFolder=nm.prefixFolder )
 	
 		numSets = ItemsInList( setsList )
 	
@@ -563,7 +563,7 @@ Function /S NMDuplicate( wList [ folder, xWave, xbgn, xend, toFolder, newPrefix,
 		wList = NMFolderWaveList( folder, "*", ";", "", 0 )
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -590,7 +590,7 @@ Function /S NMDuplicate( wList [ folder, xWave, xbgn, xend, toFolder, newPrefix,
 		if ( !DataFolderExists( toFolder ) ) // create new NM folder
 		
 			toFolder = NMChild( toFolder )
-			NMFolderNew( toFolder, setCurrent = 0 )
+			NMFolderNew( toFolder, setCurrent=0 )
 			
 			if ( IsNMDataFolder( toFolder ) )
 				toFolder = CheckNMFolderPath( toFolder )
@@ -610,7 +610,7 @@ Function /S NMDuplicate( wList [ folder, xWave, xbgn, xend, toFolder, newPrefix,
 		return NM2ErrorStr( 21, "newPrefix", "" ) // cannot overwrite self
 	endif
 	
-	return NMDuplicate2( nm, xbgn = xbgn, xend = xend, toFolder = toFolder, newPrefix = newPrefix, overwrite = overwrite )
+	return NMDuplicate2( nm, xbgn=xbgn, xend=xend, toFolder=toFolder, newPrefix=newPrefix, overwrite=overwrite )
 	
 End // NMDuplicate
 
@@ -662,7 +662,7 @@ Function /S NMDuplicate2( nm [ xbgn, xend, toFolder, newPrefix, overwrite, copyS
 		if ( !DataFolderExists( toFolder ) )
 		
 			toFolder = NMChild( toFolder )
-			NMFolderNew( toFolder, setCurrent = 0 )
+			NMFolderNew( toFolder, setCurrent=0 )
 			
 			if ( IsNMDataFolder( toFolder ) )
 				toFolder = CheckNMFolderPath( toFolder )
@@ -736,7 +736,7 @@ Function /S NMDuplicate2( nm [ xbgn, xend, toFolder, newPrefix, overwrite, copyS
 			DuplicateDataFolder $fromF, $toF // copy channel graph configurations
 		endif
 		
-		setsList = NMSetsListAll( prefixFolder = nm.prefixFolder )
+		setsList = NMSetsListAll( prefixFolder=nm.prefixFolder )
 	
 		numSets = ItemsInList( setsList )
 	
@@ -935,7 +935,7 @@ Function /S NMSplit2( nm, outputWaveLength, newPrefix [ xbgn, xend, overwrite, h
 		
 		newPrefix2 = newPrefix + wName + "_"
 		
-		splitList = NMSplitWave( nm.folder + wName, newPrefix2, -1, xbgn, xend, outputWaveLength, overwrite = overwrite )
+		splitList = NMSplitWave( nm.folder + wName, newPrefix2, -1, xbgn, xend, outputWaveLength, overwrite=overwrite )
 		
 		if ( ItemsInList( splitList ) > 0 )
 			nm.successList += wName + ";"
@@ -1060,6 +1060,80 @@ End // NMSplitWave
 //****************************************************************
 //****************************************************************
 
+Function /S NMSplit2D( nm, columnsOrRows, newPrefix [ overwrite, history ] )
+	STRUCT NMParams &nm // uses nm.folder, nm.wList
+	String columnsOrRows // "columns" or "rows"
+	String newPrefix // prefix name of output wave
+	Variable overwrite, history
+	
+	Variable wcnt, numWaves, npnts
+	String wName, newPrefix2, splitList = ""
+	
+	if ( NMParamsError( nm ) != 0 )
+		return ""
+	endif
+	
+	SetNMstr( NMDF + "OutputWaveList", "" )
+	
+	numWaves = ItemsInList( nm.wList )
+	
+	if ( strlen( newPrefix ) == 0 )
+		return NM2ErrorStr( 21, "newPrefix", "" )
+	endif
+	
+	NMParamStrAdd( "prefix", newPrefix, nm )
+	
+	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
+	
+		if ( NMProgressTimer( wcnt, numWaves, "Splitting Waves..." ) == 1 )
+			break // cancel
+		endif
+	
+		wName = StringFromList( wcnt, nm.wList )
+		
+		Wave wtemp = $nm.folder + wName
+		
+		newPrefix2 = newPrefix + wName + "_"
+		
+		if ( DimSize( $nm.folder + wName, 1 ) == 0 )
+			continue // not a 2D wave
+		endif
+		
+		strswitch( columnsOrRows )
+			case "column":
+			case "columns":
+				splitList = NMMatrixColumns2Waves( nm.folder + wName, newPrefix2, chanNum=nm.chanNum, overwrite=overwrite )
+				break
+			case "row":
+			case "rows":
+				splitList = NMMatrixRows2Waves( nm.folder + wName, newPrefix2, chanNum=nm.chanNum, overwrite=overwrite )
+				break
+			default:
+				return NM2ErrorStr( 20, "columnsOrRows", columnsOrRows )
+		endswitch
+		
+		if ( ItemsInList( splitList ) > 0 )
+			nm.successList += wName + ";"
+			nm.newList += splitList
+		endif
+		
+	endfor
+	
+	NMParamsComputeFailures( nm )
+	
+	if ( history )
+		NMLoopHistory( nm )
+	endif
+	
+	SetNMstr( NMDF + "OutputWaveList", nm.newList )
+	
+	return nm.newList
+	
+End // NMSplit2D
+
+//****************************************************************
+//****************************************************************
+
 Function /S NMRenameWavesSafely( find, replacement, wList [ folder, updateSets, deprecation ] )
 	String find // search string
 	String replacement // replace string
@@ -1083,7 +1157,7 @@ Function /S NMRenameWavesSafely( find, replacement, wList [ folder, updateSets, 
 		wList = NMFolderWaveList( folder, "*", ";", "", 0 )
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, fxn = fxn ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, fxn=fxn ) != 0 )
 		return ""
 	endif
 	
@@ -1095,7 +1169,7 @@ Function /S NMRenameWavesSafely( find, replacement, wList [ folder, updateSets, 
 		return NM2ErrorStr( 21, "find", find )
 	endif
 	
-	return NMRenameWavesSafely2( nm, find, replacement, updateSets = updateSets )
+	return NMRenameWavesSafely2( nm, find, replacement, updateSets=updateSets )
 
 End // NMRenameWavesSafely
 
@@ -1113,7 +1187,7 @@ Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] 
 	String wName, newName
 	String paramList, oldList = "", newList = ""
 	
-	if ( NMParamsError( nm, skipWaveList = 1, skipXwave = 1 ) != 0 )
+	if ( NMParamsError( nm, skipWaveList=1, skipXwave=1 ) != 0 )
 		return ""
 	endif
 	
@@ -1171,7 +1245,7 @@ Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] 
 		NMLoopWaveNote( newName, paramList )
 		
 		if ( updateSets )
-			NMPrefixFoldersRenameWave( wName, newName, folder = nm.folder )
+			NMPrefixFoldersRenameWave( wName, newName, folder=nm.folder )
 		endif
 		
 		nm.successList += wName + ";"
@@ -1219,7 +1293,7 @@ Function /S NMRenumberWavesSafely( [ fromNum, folder, wList, increment, updateSe
 		wList = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, fxn = fxn ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, fxn=fxn ) != 0 )
 		return ""
 	endif
 	
@@ -1231,7 +1305,7 @@ Function /S NMRenumberWavesSafely( [ fromNum, folder, wList, increment, updateSe
 		updateSets = 1
 	endif
 	
-	return NMRenumberWavesSafely2( nm, fromNum = fromNum, increment = increment, updateSets = updateSets )
+	return NMRenumberWavesSafely2( nm, fromNum=fromNum, increment=increment, updateSets=updateSets )
 
 End // NMRenumberWavesSafely
 
@@ -1281,10 +1355,10 @@ Function /S NMRenumberWavesSafely2( nm [ fromNum, increment, updateSets, history
 		updateSets = 1
 	endif
 	
-	NMParamVarAdd( "from", fromNum, nm, integer = 1 )
+	NMParamVarAdd( "from", fromNum, nm, integer=1 )
 	
 	if ( increment > 1 )
-		NMParamVarAdd( "+", increment, nm, integer = 1 )
+		NMParamVarAdd( "+", increment, nm, integer=1 )
 	endif
 	
 	jcnt = fromNum
@@ -1361,7 +1435,7 @@ Function /S NMRenumberWavesSafely2( nm [ fromNum, increment, updateSets, history
 		Rename $( nm.folder + wName ) $newName
 		
 		if ( updateSets )
-			NMPrefixFoldersRenameWave( wName, newName, folder = nm.folder, ignorePrefixMatch = 1 )
+			NMPrefixFoldersRenameWave( wName, newName, folder=nm.folder, ignorePrefixMatch=1 )
 		endif
 		
 		tempList += newName + ";"
@@ -1382,7 +1456,7 @@ Function /S NMRenumberWavesSafely2( nm [ fromNum, increment, updateSets, history
 		NMLoopWaveNote( newName, paramList )
 		
 		if ( updateSets )
-			NMPrefixFoldersRenameWave( wName, newName, folder = nm.folder, ignorePrefixMatch = 1 )
+			NMPrefixFoldersRenameWave( wName, newName, folder=nm.folder, ignorePrefixMatch=1 )
 		endif
 		
 		nm.successList += oldName + ";"
@@ -1464,7 +1538,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 		
 		if ( WaveExists( $nm.folder + nm.xWave ) )
 			
-			file = NMSaveWavesToDisk( nm.folder + nm.xWave, extFolderPath, fileType = fileType, overWrite = 1 )
+			file = NMSaveWavesToDisk( nm.folder + nm.xWave, extFolderPath, fileType=fileType, overWrite=1 )
 			
 			if ( StringMatch( file, NMCancel ) )
 				return ""
@@ -1479,7 +1553,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 			
 			if ( WaveExists( $nm.folder + xWave ) )
 				
-				file = NMSaveWavesToDisk( nm.folder + xWave, extFolderPath, fileType = fileType, overWrite = 1 )
+				file = NMSaveWavesToDisk( nm.folder + xWave, extFolderPath, fileType=fileType, overWrite=1 )
 				
 				KillWaves /Z $nm.folder + xWave
 			
@@ -1508,7 +1582,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 			if ( fType == 3 )
 				wList = AddListItem( nm.folder + wName, wList, ";", inf )
 			else
-				file = NMSaveWavesToDisk( nm.folder + wName, extFolderPath, fileType = fileType )
+				file = NMSaveWavesToDisk( nm.folder + wName, extFolderPath, fileType=fileType )
 			endif
 			
 		else
@@ -1532,7 +1606,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 			if ( fType == 3 )
 			
 				if ( saveXaxisWave == 1 )
-					file = NMSaveWavesToDisk( nm.folder + nm.xWave, extFolderPath, fileType = fileType )
+					file = NMSaveWavesToDisk( nm.folder + nm.xWave, extFolderPath, fileType=fileType )
 				elseif ( ( saveXaxisWave == 2 ) && ( wcnt == 0 ) )
 					wList = AddListItem( nm.folder + nm.xWave, wList, ";", inf )
 				endif
@@ -1542,10 +1616,10 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 			else
 			
 				if ( saveXaxisWave == 1 )
-					file = NMSaveWavesToDisk( nm.folder + nm.xWave, extFolderPath, fileType = fileType )
-					file = NMSaveWavesToDisk( nm.folder + wName, extFolderPath, fileType = fileType )
+					file = NMSaveWavesToDisk( nm.folder + nm.xWave, extFolderPath, fileType=fileType )
+					file = NMSaveWavesToDisk( nm.folder + wName, extFolderPath, fileType=fileType )
 				elseif ( saveXaxisWave == 2 )
-					file = NMSaveWavesToDisk( nm.folder + nm.xWave + ";" + nm.folder + wName + ";", extFolderPath, fileName = wName, fileType = fileType )
+					file = NMSaveWavesToDisk( nm.folder + nm.xWave + ";" + nm.folder + wName + ";", extFolderPath, fileName=wName, fileType=fileType )
 				endif
 			
 			endif
@@ -1566,11 +1640,11 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 	endfor
 	
 	if ( !cancel && ( fType == 3 ) )
-		file = NMSaveWavesToDisk( wList, extFolderPath, fileType = fileType )
+		file = NMSaveWavesToDisk( wList, extFolderPath, fileType=fileType )
 	endif
 	
 	if ( xKill )
-		NMKillWaves( wListKill, folder = nm.folder, noAlert = 1 )
+		NMKillWaves( wListKill, folder=nm.folder, noAlert=1 )
 	endif
 	
 	if ( !cancel && saveWaveNotes )
@@ -1607,7 +1681,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 	
 		if ( V_flag == 0 )
 	
-			NMXAxisStructInit( s, nm.wList, folder = nm.folder )
+			NMXAxisStructInit( s, nm.wList, folder=nm.folder )
 			NMXAxisStats2( s )
 		
 			Open /P=$path refNum as NMVariablesFileName + chanChar + ".txt" // open file for writing
@@ -1619,7 +1693,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 			if ( strlen( nm.xLabel ) > 0 )
 				xLabel = nm.xLabel
 			else
-				xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+				xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 			endif
 			
 			if ( strlen( xLabel ) > 0 )
@@ -1629,7 +1703,7 @@ Function /S NMSave2( nm [ extFolderPath, fileType, saveXaxisWave, saveWaveNotes,
 			if ( strlen( nm.yLabel ) > 0 )
 				yLabel = nm.yLabel
 			else
-				yLabel = NMNoteLabel( "y", nm.wList, "", folder = nm.folder )
+				yLabel = NMNoteLabel( "y", nm.wList, "", folder=nm.folder )
 			endif
 				
 			if ( strlen( yLabel ) > 0 )
@@ -1682,7 +1756,7 @@ Function /S NMKillWaves( wList [ folder, updateSets, noAlert, deprecation ] )
 		return ""
 	endif
 	
-	return NMKillWaves2( nm, updateSets = updateSets, noAlert = noAlert )
+	return NMKillWaves2( nm, updateSets=updateSets, noAlert=noAlert )
 
 End // NMKillWaves
 
@@ -1752,7 +1826,7 @@ Function /S NMKillWaves2( nm [ updateSets, history, noAlert ] )
 			txt = "Alert: " + num2istr( failures ) + " waves could not be killed. These waves may be currently displayed in a graph or table, or may be locked."
 		endif
 		
-		NMDoAlert( txt, title = fxn )
+		NMDoAlert( txt, title=fxn )
 		
 	endif
 	
@@ -1873,7 +1947,7 @@ Function /S NMGraph( [ folder, wList, xWave, matchStr, gName, gTitle, xLabel, yL
 		xWave = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -1886,11 +1960,11 @@ Function /S NMGraph( [ folder, wList, xWave, matchStr, gName, gTitle, xLabel, yL
 	endif
 	
 	if ( ParamIsDefault( xLabel ) )
-		xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+		xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 	endif
 	
 	if ( ParamIsDefault( yLabel ) )
-		yLabel = NMNoteLabel( "y", nm.wList,"", folder = nm.folder )
+		yLabel = NMNoteLabel( "y", nm.wList,"", folder=nm.folder )
 	endif
 	
 	if ( ParamIsDefault( color ) )
@@ -1959,7 +2033,7 @@ Function /S NMGraph2( nm, g [ history, STDV, SEM ] ) // see Igor Display
 		if ( strlen( nm.xLabel ) > 0 )
 			g.xLabel = nm.xLabel
 		else
-			g.xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+			g.xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 		endif
 	endif
 	
@@ -1967,7 +2041,7 @@ Function /S NMGraph2( nm, g [ history, STDV, SEM ] ) // see Igor Display
 		if ( strlen( nm.yLabel ) > 0 )
 			g.yLabel = nm.yLabel
 		else
-			g.yLabel = NMNoteLabel( "y", nm.wList, "", folder = nm.folder )
+			g.yLabel = NMNoteLabel( "y", nm.wList, "", folder=nm.folder )
 		endif
 	endif
 	
@@ -1982,7 +2056,7 @@ Function /S NMGraph2( nm, g [ history, STDV, SEM ] ) // see Igor Display
 		wName = StringFromList( wcnt, nm.wList )
 		
 		if ( g.plotErrors )
-			errorName = NMWaveNameError( nm.folder + wName, STDV = STDV, SEM = SEM )
+			errorName = NMWaveNameError( nm.folder + wName, STDV=STDV, SEM=SEM )
 		endif
 		
 		NMRGBbasic( g.color, c, wcnt = wcnt )
@@ -2086,7 +2160,7 @@ Function /S NMTable( [ folder, wList, xWave, matchStr, tName, tTitle, deprecatio
 		wList = NMFolderWaveList( folder, matchStr, ";", "", 0 )
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -2098,7 +2172,7 @@ Function /S NMTable( [ folder, wList, xWave, matchStr, tName, tTitle, deprecatio
 		tTitle = "NM Table : " + NMUtilityWaveListShort( nm.wList )
 	endif
 	
-	return NMTable2( nm, tName = tName, tTitle = tTitle )
+	return NMTable2( nm, tName=tName, tTitle=tTitle )
 	
 End // NMTable
 
@@ -2278,7 +2352,7 @@ Function /S NMWaveNotes( wList [ folder, matchStr, notestr, nbName, nbTitle ] ) 
 	if ( ParamIsDefault( notestr ) )
 		notestr = ""
 	else
-		return NMWaveNotes2( nm, notestr = notestr )
+		return NMWaveNotes2( nm, notestr=notestr )
 	endif
 	
 	if ( ParamIsDefault( nbName ) )
@@ -2289,20 +2363,23 @@ Function /S NMWaveNotes( wList [ folder, matchStr, notestr, nbName, nbTitle ] ) 
 		nbTitle = "NM Wave Notes : " + NMChild( nm.folder )
 	endif
 	
-	return NMWaveNotes2( nm, nbName = nbName, nbTitle = nbTitle )
+	return NMWaveNotes2( nm, nbName=nbName, nbTitle=nbTitle )
 	
 End // NMWaveNotes
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
+Function /S NMWaveNotes2( nm [ kill, notestr, toHistory, toNotebook, nbName, nbTitle, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
+	Variable kill // pass 1 to kill wave notes
 	String notestr // add note to wave notes
+	Variable toHistory // print wave notes to Igor history
+	Variable toNotebook // print wave notes to notebook
 	String nbName, nbTitle // notebook name and title
 	Variable history
 	
-	Variable wcnt, numWaves, toNotebook
+	Variable wcnt, numWaves, success = 0
 	String wName, wNote
 	
 	STRUCT Rect w
@@ -2317,13 +2394,11 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 	
 	if ( ParamIsDefault( notestr ) )
 		notestr = ""
-	elseif ( strlen( notestr ) == 0 )
-		return "" // nothing to do
 	endif
 	
 	if ( ParamIsDefault( nbName ) )
 		nbName = ""
-	else
+	elseif ( strlen( nbName ) > 0 )
 		toNotebook = 1
 	endif
 	
@@ -2331,19 +2406,25 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 		nbTitle = "NM Wave Notes : " + NMChild( nm.folder ) // also used with Igor history
 	endif
 	
-	if ( strlen( notestr ) > 0 )
+	if ( kill || ( strlen( notestr ) > 0 ) )
 	
 		for ( wcnt = 0; wcnt < numWaves; wcnt += 1 )
 	
 			wName = StringFromList( wcnt, nm.wList )
 			
+			if ( kill )
+				Note /K $wName
+			endif
+			
 			notestr = ReplaceString( "  ", notestr, " " )
 			notestr = ReplaceString( "  ", notestr, " " )
 			
-			Note $wName, "NMNote:" + notestr
+			if ( strlen( notestr ) > 0 )
+				Note $wName, "NMNote:" + notestr
+			endif
 			
 			nm.successList += wName + ";"
-		
+
 		endfor
 		
 		NMParamsComputeFailures( nm )
@@ -2354,11 +2435,15 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 		
 		SetNMstr( NMDF + "OutputWaveList", nm.successList )
 		
-		return nm.successList
+		if ( !toNotebook && !toHistory )
+			return nm.successList // finished
+		endif
+		
+		success = 1
 	
 	endif
 	
-	if ( toNotebook == 0 ) // print notes to Igor history
+	if ( toHistory ) // print wave notes to Igor history
 	
 		if ( numWaves > 1 )
 			Print nbTitle + NMCR + NMCR
@@ -2377,7 +2462,9 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 				Print " "
 			endif
 			
-			nm.successList += wName + ";"
+			if ( !success )
+				nm.successList += wName + ";"
+			endif
 		
 		endfor
 		
@@ -2385,11 +2472,23 @@ Function /S NMWaveNotes2( nm [ notestr, nbName, nbTitle, history ] )
 		
 		SetNMstr( NMDF + "OutputWaveList", nm.successList )
 		
-		return nm.successList
+		if ( !toNotebook )
+			return nm.successList // finished
+		endif
+		
+		success = 1
 	
 	endif
 	
+	if ( !toNotebook )
+		return ""
+	endif
+	
 	// write wave notes to a notebook
+	
+	if ( strlen( nbName ) == 0)
+		nbName = UniqueName("NM_WaveNotes", 10, 0)
+	endif
 	
 	if ( WinType( nbName ) == 5 )
 		
@@ -2661,17 +2760,17 @@ Function /S NMSetScale( wList [ folder, dim, start, startWaveName, delta, deprec
 	if ( strlen( startWaveName ) > 0 )
 		
 		if ( strlen( dim ) > 0 )
-			return NMSetScale2( nm, dim = dim, startWaveName = startWaveName, delta = delta )
+			return NMSetScale2( nm, dim=dim, startWaveName=startWaveName, delta=delta )
 		else
-			return NMSetScale2( nm, startWaveName = startWaveName, delta = delta )
+			return NMSetScale2( nm, startWaveName=startWaveName, delta=delta )
 		endif
 	
 	endif
 	
 	if ( strlen( dim ) > 0 )
-		return NMSetScale2( nm, dim = dim, start = start, delta = delta )
+		return NMSetScale2( nm, dim=dim, start=start, delta=delta )
 	else
-		return NMSetScale2( nm, start = start, delta = delta )
+		return NMSetScale2( nm, start=start, delta=delta )
 	endif
 	
 End // NMSetScale
@@ -2847,9 +2946,9 @@ Function /S NMXWaveMake( wList [ folder, xWave, multiple, newPrefix, overwrite, 
 	endif
 	
 	if ( multiple )
-		return NMXWaveMake2( nm, multiple = multiple, newPrefix = newPrefix, overwrite = overwrite )
+		return NMXWaveMake2( nm, multiple=multiple, newPrefix=newPrefix, overwrite=overwrite )
 	else
-		return NMXWaveMake2( nm, xWave = xWave, overwrite = overwrite )
+		return NMXWaveMake2( nm, xWave=xWave, overwrite=overwrite )
 	endif
 	
 End // NMXWaveMake
@@ -2884,7 +2983,7 @@ Function /S NMXWaveMake2( nm [ xWave, multiple, newPrefix, overwrite, history ] 
 	if ( strlen( nm.xLabel ) > 0 )
 		xLabel = nm.xLabel
 	else
-		xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+		xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 	endif
 	
 	if ( !multiple )
@@ -2903,7 +3002,7 @@ Function /S NMXWaveMake2( nm [ xWave, multiple, newPrefix, overwrite, history ] 
 		
 		NMParamStrAdd( "xWave", xWave, nm )
 	
-		NMXAxisStructInit( s, nm.wList, folder = nm.folder )
+		NMXAxisStructInit( s, nm.wList, folder=nm.folder )
 		NMXAxisStats2( s )
 		
 		if ( numtype( s.points * s.dx * s.leftx ) > 0 )
@@ -3001,7 +3100,7 @@ Function /S NMRedimension( points, wList [ folder, xWave, value, deprecation ] )
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -3009,7 +3108,7 @@ Function /S NMRedimension( points, wList [ folder, xWave, value, deprecation ] )
 		value = NaN
 	endif
 	
-	return NMRedimension2( nm, points, value = value )
+	return NMRedimension2( nm, points, value=value )
 	
 End // NMRedimension
 
@@ -3037,7 +3136,7 @@ Function /S NMRedimension2( nm, points [ value, history ] ) // see Igor Redimens
 		value = NaN // different from Igor, which uses 0s
 	endif
 	
-	NMParamVarAdd( "pnts", points, nm, integer = 1 )
+	NMParamVarAdd( "pnts", points, nm, integer=1 )
 	paramList2 = NMCmdNumOptional( "value", value, nm.paramList )
 	
 	numWaves = ItemsInList( nm.wList )
@@ -3133,8 +3232,8 @@ Function /S NMDeletePoints2( nm, from, points [ history ] ) // see Igor DeletePo
 		return "" // error
 	endif
 	
-	NMParamVarAdd( "from", from, nm, integer = 1 )
-	NMParamVarAdd( "pnts", points, nm, integer = 1 )
+	NMParamVarAdd( "from", from, nm, integer=1 )
+	NMParamVarAdd( "pnts", points, nm, integer=1 )
 	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
@@ -3216,8 +3315,8 @@ Function /S NMInsertPoints2( nm, at, points [ value, history ] ) // see Igor Ins
 		value = NaN
 	endif
 	
-	NMParamVarAdd( "at", at, nm, integer = 1 )
-	NMParamVarAdd( "pnts", points, nm, integer = 1 )
+	NMParamVarAdd( "at", at, nm, integer=1 )
+	NMParamVarAdd( "pnts", points, nm, integer=1 )
 	NMParamVarAdd( "value", value, nm )
 		
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
@@ -3284,7 +3383,7 @@ Function /S NMResample( wList [ folder, upSamples, downSamples, rate, deprecatio
 	
 	if ( ( numtype( rate ) == 0 ) && ( rate > 0 ) )
 		
-		return NMResample2( nm, rate = rate )
+		return NMResample2( nm, rate=rate )
 		
 	else
 	
@@ -3308,7 +3407,7 @@ Function /S NMResample( wList [ folder, upSamples, downSamples, rate, deprecatio
 			return "" // nothing to do
 		endif
 		
-		return NMResample2( nm, upSamples = upSamples, downSamples = downSamples )
+		return NMResample2( nm, upSamples=upSamples, downSamples=downSamples )
 	
 	endif
 	
@@ -3368,11 +3467,11 @@ Function /S NMResample2( nm [ upSamples, downSamples, rate, history ] ) // see I
 		endif
 		
 		if ( upSamples != 1 )
-			NMParamVarAdd( "up", upSamples, nm, integer = 1 )
+			NMParamVarAdd( "up", upSamples, nm, integer=1 )
 		endif
 		
 		if ( downSamples != 1 )
-			NMParamVarAdd( "down", downSamples, nm, integer = 1 )
+			NMParamVarAdd( "down", downSamples, nm, integer=1 )
 		endif
 	
 	endif
@@ -3466,7 +3565,7 @@ Function /S NMDecimate( wList [ folder, xWave, downSamples, rate, algorithm, alg
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -3487,12 +3586,12 @@ Function /S NMDecimate( wList [ folder, xWave, downSamples, rate, algorithm, alg
 		if ( ParamIsDefault( rate ) )
 			return NM2ErrorStr( 11, "downSamples", "" )
 		else
-			return NMDecimate2( nm, rate = rate, alg = alg )
+			return NMDecimate2( nm, rate=rate, alg=alg )
 		endif	
 	
 	else
 	
-		return NMDecimate2( nm, downSamples = downSamples, alg = alg )
+		return NMDecimate2( nm, downSamples=downSamples, alg=alg )
 		
 	endif
 	
@@ -3531,7 +3630,7 @@ Function /S NMDecimate2( nm [ downSamples, rate, algorithm, alg, history ] ) // 
 		
 	else
 	
-		NMParamVarAdd( "down", downSamples, nm, integer = 1 )
+		NMParamVarAdd( "down", downSamples, nm, integer=1 )
 		
 	endif
 	
@@ -3747,7 +3846,7 @@ Function /S NMInterpolate( wList [ folder, xWave, algorithm, alg, xmode, xWaveNe
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -3772,9 +3871,9 @@ Function /S NMInterpolate( wList [ folder, xWave, algorithm, alg, xmode, xWaveNe
 	endif
 	
 	if ( xmode == 1 )
-		return NMInterpolate2( nm, alg = alg, xmode = xmode )
+		return NMInterpolate2( nm, alg=alg, xmode=xmode )
 	else
-		return NMInterpolate2( nm, alg = alg, xmode = xmode, xWaveNew = xWaveNew )
+		return NMInterpolate2( nm, alg=alg, xmode=xmode, xWaveNew=xWaveNew )
 	endif
 
 End // NMInterpolate
@@ -3829,7 +3928,7 @@ Function /S NMInterpolate2( nm [ algorithm, alg, xmode, xWaveNew, history ] ) //
 	endif
 	
 	NMParamStrAdd( "alg", alg, nm )
-	NMParamVarAdd( "mode", xmode, nm, integer = 1 )
+	NMParamVarAdd( "mode", xmode, nm, integer=1 )
 	
 	if ( ( xmode == 2 ) || ( xmode == 3 ) )
 		NMParamStrAdd( "xwave", xWaveNew, nm )
@@ -3853,7 +3952,7 @@ Function /S NMInterpolate2( nm [ algorithm, alg, xmode, xWaveNew, history ] ) //
 				newDX = NMXwaveMinDX( nm.folder + nm.xWave )
 			else
 				
-				NMXAxisStructInit( s, nm.wList, folder = nm.folder )
+				NMXAxisStructInit( s, nm.wList, folder=nm.folder )
 				NMXAxisStats2( s )
 				
 				//newDX = s.maxDX
@@ -4234,11 +4333,12 @@ End // NMTimeScaleConvert2
 //****************************************************************
 //****************************************************************
 
-Function /S NMBaseline( wList [ folder, xWave, xbgn, xend, allWavesAvg, DFOF, deprecation ] )
+Function /S NMBaseline( wList [ folder, xWave, xbgn, xend, allWavesAvg, DFOF, Zscore, deprecation ] )
 	String wList, folder, xWave // see description at top
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable allWavesAvg // ( 0 ) no, baseline to each wave's mean ( 1 ) baseline to mean of all selected waves
 	Variable DFOF // compute dF/Fo baseline ( 0 ) no ( 1 ) yes
+	Variable Zscore // compute z-score ( 0 ) no ( 1 ) yes
 	Variable deprecation
 	
 	STRUCT NMParams nm
@@ -4263,18 +4363,19 @@ Function /S NMBaseline( wList [ folder, xWave, xbgn, xend, allWavesAvg, DFOF, de
 		xend = inf
 	endif
 	
-	return NMBaseline2( nm, xbgn = xbgn, xend = xend, allWavesAvg = allWavesAvg, DFOF = DFOF )
+	return NMBaseline2( nm, xbgn=xbgn, xend=xend, allWavesAvg=allWavesAvg, DFOF=DFOF, Zscore=Zscore )
 	
 End // NMBaseline
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
+Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, Zscore, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList, nm.xWave
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable allWavesAvg // ( 0 ) no, baseline to each wave's mean ( 1 ) baseline to mean of all selected waves
-	Variable DFOF // compute dF/Fo baseline ( 0 ) no ( 1 ) yes
+	Variable DFOF // compute dF/Fo ( 0 ) no ( 1 ) yes
+	Variable Zscore // compute z-score ( 0 ) no ( 1 ) yes
 	Variable history
 	
 	Variable wcnt, numWaves, pbgn, pend, xflag
@@ -4309,7 +4410,11 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 	endif
 	
 	if ( DFOF )
-		NMParamVarAdd( "DFOF", DFOF, nm, integer = 1 )
+		NMParamVarAdd( "DFOF", DFOF, nm, integer=1 )
+	endif
+	
+	if ( Zscore )
+		NMParamVarAdd( "Zscore", Zscore, nm, integer=1 )
 	endif
 	
 	if ( allWavesAvg )
@@ -4330,10 +4435,12 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 			WaveStats /Q/R=[ pbgn, pend ] wtemp
 			
 			avg += V_avg
+			stdv += V_sdev
 			
 		endfor
 		
 		avg /= numWaves
+		stdv /= numWaves
 		
 		if ( numtype( avg ) > 0 )
 			if ( history )
@@ -4366,6 +4473,7 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 			WaveStats /Q/R=[ pbgn, pend ] wtemp
 			
 			avg = V_avg
+			stdv = V_sdev
 			
 		endif
 		
@@ -4386,6 +4494,17 @@ Function /S NMBaseline2( nm [ xbgn, xend, allWavesAvg, DFOF, history ] )
 			endif
 		
 			MatrixOp /O wtemp = ( wtemp - avg ) / avg
+			
+		elseif ( Zscore )
+		
+			if ( ( numtype( stdv ) > 0 ) || ( stdv == 0 ) )
+				if ( history )
+					NMHistory( thisFxn + " Error Zscore : encountered bad stdv for wave " + wName )
+				endif
+				continue // not allowed
+			endif
+			
+			MatrixOp /O wtemp = ( wtemp - avg ) / stdv
 			
 		else
 			
@@ -4426,7 +4545,7 @@ Function NMNormalizeCall( df [ promptStr, all, n ] )
 	String df // data folder where normalize variables are stored
 	String promptStr
 	Variable all
-	STRUCT NMNormalizeStruct &n // or use this structure instead of fxn1, xbgn1, etc
+	STRUCT NMNormalizeStruct &n // structure where values are stored
 
 	Variable avgWin1, avgWin2, xbgn1, xend1, xbgn2, xend2, minValue, maxValue, allWavesAvg
 	String fxn1, fxn2, mdf = NMMainDF
@@ -4630,19 +4749,23 @@ Function NMNormalizeCall( df [ promptStr, all, n ] )
 	SetNMvar( df+"Norm_AllWavesAvg", allWavesAvg )
 	SetNMvar( mdf+"Norm_AllWavesAvg", allWavesAvg )
 	
-	n.fxn1 = fxn1
-	n.avgWin1 = avgWin1
-	n.xbgn1 = xbgn1
-	n.xend1 = xend1
-	n.minValue = minValue
+	if ( !ParamIsDefault( n ) )
 	
-	n.fxn2 = fxn2
-	n.avgWin2 = avgWin2
-	n.xbgn2 = xbgn2
-	n.xend2 = xend2
-	n.maxValue = maxValue
+		n.fxn1 = fxn1
+		n.avgWin1 = avgWin1
+		n.xbgn1 = xbgn1
+		n.xend1 = xend1
+		n.minValue = minValue
+		
+		n.fxn2 = fxn2
+		n.avgWin2 = avgWin2
+		n.xbgn2 = xbgn2
+		n.xend2 = xend2
+		n.maxValue = maxValue
+		
+		n.allWavesAvg = allWavesAvg
 	
-	n.allWavesAvg = allWavesAvg
+	endif
 	
 	return 0
 	
@@ -4768,7 +4891,7 @@ Function /S NMNormalize( wList [ folder, xWave, fxn1, avgWin1, xbgn1, xend1, min
 		xWave = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -5008,19 +5131,19 @@ Static Function zNMNormalizeAmp( select, wName, xWave, n )
 	strswitch( fxn )
 	
 		case "Avg":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMWaveStatsXY2( s )
 			amp = s.avg
 			break
 			
 		case "Min":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMWaveStatsXY2( s )
 			amp = s.min
 			break
 			
 		case "Max":
-			NMWaveStatsStructInit( s, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMWaveStatsXY2( s )
 			amp = s.max
 			break
@@ -5028,7 +5151,7 @@ Static Function zNMNormalizeAmp( select, wName, xWave, n )
 		case "MinAvg":
 		
 			STRUCT NMMinAvgStruct mn
-			NMMinAvgStructInit( mn, avgWin, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMMinAvgStructInit( mn, avgWin, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMMinAvg2( mn )
 			amp = mn.avg
 			
@@ -5037,7 +5160,7 @@ Static Function zNMNormalizeAmp( select, wName, xWave, n )
 		case "MaxAvg":
 		
 			STRUCT NMMaxAvgStruct mx
-			NMMaxAvgStructInit( mx, avgWin, wName, xWave = xWave, xbgn = xbgn, xend = xend )
+			NMMaxAvgStructInit( mx, avgWin, wName, xWave=xWave, xbgn=xbgn, xend=xend )
 			NMMaxAvg2( mx )
 			amp = mx.avg
 			
@@ -5072,7 +5195,7 @@ Function /S NMScale( op, wList [ folder, xWave, factor, waveOfFactors, wavePntBy
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -5089,15 +5212,15 @@ Function /S NMScale( op, wList [ folder, xWave, factor, waveOfFactors, wavePntBy
 	endif
 	
 	if ( !ParamIsDefault( factor ) )
-		return NMScale2( nm, op, factor = factor, xbgn = xbgn, xend = xend, history = history )
+		return NMScale2( nm, op, factor=factor, xbgn=xbgn, xend=xend, history=history )
 	endif
 	
 	if ( !ParamIsDefault( waveOfFactors ) )
-		return NMScale2( nm, op, waveOfFactors = waveOfFactors, xbgn = xbgn, xend = xend, history = history )
+		return NMScale2( nm, op, waveOfFactors=waveOfFactors, xbgn=xbgn, xend=xend, history=history )
 	endif
 	
 	if ( !ParamIsDefault( wavePntByPnt ) )
-		return NMScale2( nm, op, wavePntByPnt = wavePntByPnt, xbgn = xbgn, xend = xend, history = history )
+		return NMScale2( nm, op, wavePntByPnt=wavePntByPnt, xbgn=xbgn, xend=xend, history=history )
 	endif
 	
 End // NMScale
@@ -5236,7 +5359,7 @@ Function /S NMScale2( nm, op [ factor, waveOfFactors, wavePntByPnt, xbgn, xend, 
 		history2 = 1
 	endif
 	
-	nm.successList = NMMatrixArithmetic( matrixName, xbgn = xbgn, xend = xend, xWave = nm.xWave, history = history2 )
+	nm.successList = NMMatrixArithmetic( matrixName, xbgn=xbgn, xend=xend, xWave=nm.xWave, history=history2 )
 	
 	nm.successList = NMChild( nm.successList )
 	
@@ -5399,7 +5522,7 @@ Function /S NMSmooth( num, wList [ folder, algorithm, deprecation ] ) // see NMS
 		algorithm = "binomial"
 	endif
 	
-	return NMSmooth2( nm, num, algorithm = algorithm )
+	return NMSmooth2( nm, num, algorithm=algorithm )
 
 End // NMSmooth
 
@@ -5433,11 +5556,11 @@ Function /S NMSmooth2( nm, num [ algorithm, history ] ) // see Igor Smooth
 	
 	strswitch( algorithm )
 		case "binomial":
-			NMParamVarAdd( "n", num, nm, integer = 1 )
+			NMParamVarAdd( "n", num, nm, integer=1 )
 			break
 		case "boxcar":
 		case "polynomial":
-			NMParamVarAdd( "pnts", num, nm, integer = 1 )
+			NMParamVarAdd( "pnts", num, nm, integer=1 )
 			break
 		default:
 			return NM2ErrorStr( 20, "algorithm", algorithm )
@@ -5570,7 +5693,7 @@ Function /S NMFilterFIR( wList [ folder, algorithm, f1, f2, n, fc, fw, deprecati
 		algorithm = ""
 	endif
 	
-	return NMFilterFIR2( nm, algorithm = algorithm, f1 = f1, f2 = f2, n = n, fc = fc, fw = fw )
+	return NMFilterFIR2( nm, algorithm=algorithm, f1=f1, f2=f2, n=n, fc=fc, fw=fw )
 	
 End // NMFilterFIR
 
@@ -5719,7 +5842,7 @@ Function /S NMFilterIIR( wList [ folder, fLow, fHigh, fNotch, notchQ, deprecatio
 		return ""
 	endif
 
-	return NMFilterIIR2( nm, fLow = fLow, fHigh = fHigh, fNotch = fNotch, notchQ = notchQ )
+	return NMFilterIIR2( nm, fLow=fLow, fHigh=fHigh, fNotch=fNotch, notchQ=notchQ )
 	
 End // NMFilterIIR
 
@@ -5806,25 +5929,41 @@ Function /S NMFilterIIR2( nm [ fLow, fHigh, fNotch, notchQ, history ] ) // see I
 	
 End // NMFilterIIR2
 
-
 //****************************************************************
 //****************************************************************
 //
 //	"Software-based correction of single compartment series resistance errors"
 //	Stephen F. Traynelis
-//	J Neurosci Methods. 1998 Dec 31;86(1):25-34.
+//	J Neurosci Methods. 1998 Dec 31;86(1):25-34
+// doi: 10.1016/s0165-0270(98)00140-x
+// https://www.sciencedirect.com/science/article/abs/pii/S016502709800140X?via%3Dihub
 //
 //****************************************************************
 //****************************************************************
 //
-// computer algorithm that corrects capacitative filtering that results from pipette
+// Computer algorithm that corrects capacitative filtering that results from pipette
 // series resistance as well as the voltage error for current responses with linear 
-//	current–voltage curve
+//	current–voltage curve.
+//
+//	Page 27:
+//	"This correction is also applied with a lag
+//	time equal to the digitization interval. Longer lag times
+//	for Eqs. (8) and (10) can be achieved by applying a 1
+//	pole RC filter to the capacitative current correction,
+//	which delays and smooths this correction before it is
+//	added to the raw current."
+//
+// Fc = 1 / ( 2 * pi * tlag )
+// tlag = 1 / ( 2 * pi * Fc )
+// tlag = dt = 1 / ( 2 * pi * Fc )
+// Fc = 1 / ( 2 * pi * dt )
+//
+// For dt = 0.01, Fc = 15.9155, tlag = 0.01
 //
 //****************************************************************
 //****************************************************************
 
-Structure NMRsCorr
+Structure NMRsCorrParams
 
 	Variable Vhold // mV
 	Variable Vrev // mV
@@ -5834,54 +5973,92 @@ Structure NMRsCorr
 	Variable Ccomp // fraction 0 - 1
 	Variable Fc // kHz
 	
-	String dataUnits // A, mA, uA, nA, pA
+	String dataUnitsX // s, ms, us
+	String dataUnitsY // A, mA, uA, nA, pA
 
-EndStructure
+EndStructure // NMRsCorrParams
 
 //****************************************************************
 //****************************************************************
 
-Function NMRsCorrError( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnits )
-	Variable Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc
-	String dataUnits
+Function NMRsCorrParamsSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY, rc )
+	Variable Vhold // mV
+	Variable Vrev // mV
+	Variable Rs // MOhms
+	Variable Cm // pF
+	Variable Vcomp // fraction 0 - 1
+	Variable Ccomp // fraction 0 - 1
+	Variable Fc // kHz
+	String dataUnitsX
+	String dataUnitsY
 	
-	if ( numtype( Vhold ) > 0 )
-		return NM2Error( 10, "Vhold", num2str( Vhold ) )
+	STRUCT NMRsCorrParams &rc
+	
+	rc.Vhold = Vhold
+	rc.Vrev = Vrev
+	rc.Rs = Rs
+	rc.Cm = Cm
+	rc.Vcomp = Vcomp
+	rc.Ccomp = Ccomp
+	rc.Fc = Fc
+	
+	rc.dataUnitsX = dataUnitsX
+	rc.dataUnitsY = dataUnitsY
+	
+End // NMRsCorrParamsSet
+
+//****************************************************************
+//****************************************************************
+
+Function NMRsCorrError( rc )
+	STRUCT NMRsCorrParams &rc
+	
+	if ( numtype( rc.Vhold ) > 0 )
+		return NM2Error( 10, "Vhold", num2str( rc.Vhold ) )
 	endif
 	
-	if ( numtype( Vrev ) > 0 )
-		return NM2Error( 10, "Vrev", num2str( Vrev ) )
+	if ( numtype( rc.Vrev ) > 0 )
+		return NM2Error( 10, "Vrev", num2str( rc.Vrev ) )
 	endif
 	
-	if ( ( numtype( Rs ) > 0 ) || ( Rs <= 0 ) )
-		return NM2Error( 10, "Rs", num2str( Rs ) )
+	if ( ( numtype( rc.Rs ) > 0 ) || ( rc.Rs <= 0 ) )
+		return NM2Error( 10, "Rs", num2str( rc.Rs ) )
 	endif
 	
-	if ( ( numtype( Cm ) > 0 ) || ( Cm <= 0 ) )
-		return NM2Error( 10, "Cm", num2str( Cm ) )
+	if ( ( numtype( rc.Cm ) > 0 ) || ( rc.Cm <= 0 ) )
+		return NM2Error( 10, "Cm", num2str( rc.Cm ) )
 	endif
 	
-	if ( ( numtype( Vcomp ) > 0 ) || ( Vcomp < 0 ) || ( Vcomp > 1 ) )
-		return NM2Error( 10, "Vcomp", num2str( Vcomp ) )
+	if ( ( numtype( rc.Vcomp ) > 0 ) || ( rc.Vcomp < 0 ) || ( rc.Vcomp > 1 ) )
+		return NM2Error( 10, "Vcomp", num2str( rc.Vcomp ) )
 	endif
 	
-	if ( ( numtype( Ccomp ) > 0 ) || ( Ccomp < 0 ) || ( Ccomp > 1 ) )
-		return NM2Error( 10, "Ccomp", num2str( Ccomp ) )
+	if ( ( numtype( rc.Ccomp ) > 0 ) || ( rc.Ccomp < 0 ) || ( rc.Ccomp > 1 ) )
+		return NM2Error( 10, "Ccomp", num2str( rc.Ccomp ) )
 	endif
 	
-	if ( ( numtype( Fc ) > 0 ) || ( Fc <= 0 ) )
-		return NM2Error( 10, "Fc", num2str( Fc ) )
+	if ( ( numtype( rc.Fc ) > 0 ) || ( rc.Fc <= 0 ) )
+		//return NM2Error( 10, "Fc", num2str( rc.Fc ) )
 	endif
 	
-	strswitch( dataUnits )
+	strswitch( rc.dataUnitsX )
+		case "s":
+		case "ms":
+		case "us":
+			break // ok
+		default:
+			return NM2Error( 20, "dataUnitsX", rc.dataUnitsX )
+	endswitch
+	
+	strswitch( rc.dataUnitsY )
 		case "A":
 		case "mA":
 		case "uA":
 		case "nA":
 		case "pA":
-			break
+			break // ok
 		default:
-			return NM2Error( 20, "dataUnits", dataUnits )
+			return NM2Error( 20, "dataUnitsY", rc.dataUnitsY )
 	endswitch
 	
 	return 0
@@ -5891,22 +6068,149 @@ End // NMRsCorrError
 //****************************************************************
 //****************************************************************
 
-Function /S NMRsCorrection2( nm, rc [ history ] )
+Function NMRsCorrectionCall( df [ promptStr, xLabel, yLabel, dx, warning, rc ] )
+	String df // data folder where Rs correction variables are stored
+	String promptStr
+	String xLabel // data x-label that should include units (e.g. "ms" or "s")
+	String yLabel // data y-label that should include units (e.g. "pA" or "A")
+	Variable dx // sample interval of data // ms
+	Variable warning
+	STRUCT NMRsCorrParams &rc
+
+	String txt, title = "Traynelis Rs Correction"
+	
+	Variable Fc = 100 // kHz // default value
+
+	if ( warning )
+	
+		txt = "Warning: this series-resistance correction assumes your voltage-clamp data "
+		txt += "is recorded from a single-compartment cell containing a linear membrane conductance. "
+		txt += "Do you want to continue?"
+	
+		DoAlert /T="Traynelis Series-Resistance Correction" 1, txt
+		
+		if ( V_flag == 2 )
+			return -1 // cancel
+		endif
+		
+	endif
+	
+	if ( ParamIsDefault( promptStr ) )
+		promptStr = ""
+	endif
+	
+	if ( ParamIsDefault( xLabel ) )
+		xLabel = ""
+	endif
+	
+	if ( ParamIsDefault( yLabel ) )
+		yLabel = ""
+	endif
+	
+	if ( !ParamIsDefault( dx ) && ( numtype( dx ) == 0 ) && (dx > 0) )
+		Fc = 1 / dx
+	endif
+	
+	String dataUnitsX = " "
+	String dataUnitsY = " "
+	
+	String unitsListX = " ;s;ms;us;"
+	String unitsListY = " ;A;mA;uA;nA;pA;"
+	
+	if ( strsearch( xLabel, "ms", 0 ) >= 0 )
+		dataUnitsX = "ms"
+	elseif ( strsearch( xLabel, "us", 0 ) >= 0 )
+		dataUnitsX = "us"
+	elseif ( StringMatch( xLabel, "s" ) )
+		dataUnitsX = "s"
+	endif
+	
+	if ( strsearch( yLabel, "mA", 0 ) >= 0 )
+		dataUnitsY = "mA"
+	elseif ( strsearch( yLabel, "uA", 0 ) >= 0 )
+		dataUnitsY = "uA"
+	elseif ( strsearch( yLabel, "nA", 0 ) >= 0 )
+		dataUnitsY = "nA"
+	elseif ( strsearch( yLabel, "pA", 0 ) >= 0 )
+		dataUnitsY = "pA"
+	elseif ( StringMatch( yLabel, "A" ) )
+		dataUnitsY = "A"
+	endif
+	
+	Prompt dataUnitsX, "select timescale units of your voltage-clamp data", popup unitsListX
+	Prompt dataUnitsY, "select current units of your voltage-clamp data", popup unitsListY
+	
+	Doprompt title + " : " + promptStr, dataUnitsX, dataUnitsY
+	
+	if ( ( V_flag == 1 ) || StringMatch( dataUnitsX, " " ) || StringMatch( dataUnitsY, " " ) )
+		return -1 // cancel
+	endif
+	
+	Variable Vhold = NumVarOrDefault( df + "RsCorrVhold", -100 ) // mV
+	Variable Vrev = NumVarOrDefault( df + "RsCorrVrev", 0 ) // mV
+	Variable Rs = NumVarOrDefault( df + "RsCorrRs", 10 ) // MOhms
+	Variable Cm = NumVarOrDefault( df + "RsCorrCm", 10 ) // pF
+	
+	Variable Vcomp = NumVarOrDefault( df + "RsCorrVcomp", 1 ) // 0 - 1
+	Variable Ccomp = NumVarOrDefault( df + "RsCorrCcomp", 1 ) // 0 - 1
+	
+	Fc = NumVarOrDefault( df + "RsCorrFc", Fc ) // kHz
+	
+	Prompt Vhold, "voltage-clamp holding potential (Vhold; mV)"
+	Prompt Vrev, "membrane conductance reversal potential (Vrev; mV)"
+	Prompt Rs, "electrode series resistance (Rs; MOhms)"
+	Prompt Cm, "membrane capacitance (Cm; pF)"
+	Doprompt title + " : " + promptStr, Vhold, Vrev, Rs, Cm
+	
+	if ( V_flag == 1 )
+		return -1 // cancel
+	endif
+	
+	SetNMvar( df + "RsCorrVhold", Vhold )
+	SetNMvar( df + "RsCorrVrev", Vrev )
+	SetNMvar( df + "RsCorrRs", Rs )
+	SetNMvar( df + "RsCorrCm", Cm )
+	
+	Prompt Vcomp,"fraction of steady-state voltage correction to apply (0-1)"
+	Prompt Ccomp,"fraction of capacitative filtering correction to apply (0-1)"
+	Prompt Fc,"filter cutoff frequency (Fc; kHz)"
+	Doprompt title + " : " + promptStr,  Vcomp, Ccomp, Fc
+	
+	if ( V_flag == 1 )
+		return -1 // cancel
+	endif
+	
+	SetNMvar( df + "RsCorrVcomp", Vcomp )
+	SetNMvar( df + "RsCorrCcomp", Ccomp )
+	SetNMvar( df + "RsCorrFc", Fc )
+	
+	if ( !ParamIsDefault( rc ) )
+		NMRsCorrParamsSet( Vhold, Vrev, Rs, Cm, Vcomp, Ccomp, Fc, dataUnitsX, dataUnitsY, rc )
+	endif
+	
+	return 0
+	
+End // NMRsCorrectionCall
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMRsCorrection( nm, rc [ history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
-	STRUCT NMRsCorr &rc
+	STRUCT NMRsCorrParams &rc
 	
 	Variable history
 	
-	Variable icnt, wcnt, numWaves, iAmps, dt
-	Variable icap, vThisPnt, vLastPnt, vCorrect
-	Variable vhold, vrev, Rs, Cm, Fc, dataSCale
-	String wName, dataUnits
+	Variable icnt, wcnt, numWaves, pnts, dt, dt_s
+	Variable iCap, vThisPnt, vLastPnt, vCorrect, vDrive
+	Variable vHold, vRev, Rs, Cm, Fc, dataScaleX, dataScaleY
+	String wName
 	
 	if ( NMParamsError( nm ) != 0 )
 		return ""
 	endif
 	
-	if ( NMRsCorrError( rc.Vhold, rc.Vrev, rc.Rs, rc.Cm, rc.Vcomp, rc.Ccomp, rc.Fc, rc.dataUnits ) != 0 )
+	if ( NMRsCorrError( rc ) != 0 )
 		return ""
 	endif
 	
@@ -5917,90 +6221,73 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 	NMParamVarAdd( "Vcomp", rc.Vcomp, nm )
 	NMParamVarAdd( "Ccomp", rc.Ccomp, nm )
 	NMParamVarAdd( "Fc", rc.Fc, nm )
-	NMParamStrAdd( "dataUnits", rc.dataUnits, nm )
+	NMParamStrAdd( "dataUnitsX", rc.dataUnitsX, nm )
+	NMParamStrAdd( "dataUnitsY", rc.dataUnitsY, nm )
 	
-	vhold = rc.Vhold * 1e-3 // volts
-	vrev = rc.Vrev * 1e-3 // volts
+	vHold = rc.Vhold * 1e-3 // volts
+	vRev = rc.Vrev * 1e-3 // volts
 	Rs = rc.Rs * 1e6 // Ohms
 	Cm = rc.Cm * 1e-12 // F
 	Fc = rc.Fc * 1e3 // Hz
 	
-	// Fc = 1 / ( 2 * pi * tlag )
-	
-	strswitch( dataUnits )
-		case "A":
-			dataSCale = 1
+	strswitch( rc.dataUnitsX )
+		case "s":
+			dataScaleX = 1
 			break
-		case "mA":
-			dataSCale = 1e-3
+		case "ms":
+			dataScaleX = 1e-3
 			break
-		case "uA":
-			dataSCale = 1e-6
-			break
-		case "nA":
-			dataSCale = 1e-9
-			break
-		case "pA":
-			dataSCale = 1e-12
+		case "us":
+			dataScaleX = 1e-6
 			break
 		default:
 			return ""
 	endswitch
 	
+	strswitch( rc.dataUnitsY )
+		case "A":
+			dataScaleY = 1
+			break
+		case "mA":
+			dataScaleY = 1e-3
+			break
+		case "uA":
+			dataScaleY = 1e-6
+			break
+		case "nA":
+			dataScaleY = 1e-9
+			break
+		case "pA":
+			dataScaleY = 1e-12
+			break
+		default:
+			return ""
+	endswitch
+	
+	vDrive = vHold - vRev
+	
 	numWaves = ItemsInList( nm.wList )
 	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
-		if ( NMProgressTimer( wcnt, numWaves, "Computing Rs correction..." ) == 1 )
+		if ( ( numWaves > 1 ) && NMProgressTimer( wcnt, numWaves, "Computing Rs correction..." ) == 1 )
 			break // cancel
 		endif
 	
 		wName = StringFromList( wcnt, nm.wList )
 		
-		Wave wtemp = $nm.folder + wName
+		Wave i_data = $nm.folder + wName
 		
-		dt = deltax( wtemp ) // ms
-		dt *= 1e-3 // seconds
+		dt = deltax( i_data )
+		dt_s = dt * dataScaleX
 		
-		wtemp *= dataSCale // A
+		//Setscale /P x 0, dt_s, wtemp // not necessary
+		i_data *= dataScaleY // Amps
 		
-		iAmps = wtemp[ 0 ]
+		NMRsCorrTraynelis( i_data, dt_s, vDrive, Rs, Cm, rc.Vcomp, rc.Ccomp, Fc )
 		
-		vLastPnt = vhold - iAmps * Rs
-		
-		if ( vLastPnt == vrev )
-			vCorrect = 0 // divide by 0
-		else
-			vCorrect = rc.Vcomp * ( 1 - ( vhold - vrev ) / ( vLastPnt - vrev ) )
-		endif
-		
-		wtemp[ 0 ] = iAmps - iAmps * vCorrect
-		
-		for ( icnt = 1 ; icnt < numpnts( wtemp ) ; icnt += 1 )
-		
-			iAmps = wtemp[ icnt ]
-			
-			vThisPnt = vhold - iAmps * Rs
-			
-			if ( vThisPnt == vrev )
-				vCorrect = 0 // divide by 0
-			else
-				vCorrect = rc.Vcomp * ( 1 - ( vhold - vrev ) / ( vThisPnt - vrev ) )	
-			endif
-		
-			//wtemp[ icnt ] = iAmps - iAmps * vCorrect // not in Traynelis code
-			
-			icap = Cm * ( vThisPnt - vLastPnt ) / dt
-			icap = icap * ( 1 - exp( -2 * pi * dt * Fc ) ) // if tlag = dt, this equals 0.632121
-			
-			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - rc.Ccomp * icap
-			wtemp[ icnt - 1 ] = wtemp[ icnt - 1 ] - wtemp[ icnt - 1 ] * vCorrect
-			
-			vLastPnt = vThisPnt
-		
-		endfor
-		
-		wtemp /= dataSCale
+		//Setscale /P x 0, dt, i_data // not necessary
+		i_data /= dataScaleY // back to original units
 		
 		NMLoopWaveNote( nm.folder + wName, nm.paramList )
 		
@@ -6016,7 +6303,57 @@ Function /S NMRsCorrection2( nm, rc [ history ] )
 
 	return nm.successList
 
-End // NMRsCorrection2
+End // NMRsCorrection
+
+//****************************************************************
+//****************************************************************
+
+Function NMRsCorrTraynelis( i_data, dt, vDrive, Rs, Cm, Vcomp, Ccomp, Fc )
+	Wave i_data // Amps
+	Variable dt // seconds
+	Variable vDrive // volts
+	Variable Rs // Ohms
+	Variable Cm // Farads
+	Variable Vcomp, Ccomp // 0 - 1
+	Variable Fc // Hz
+	
+	Variable icnt, vLastPnt, vThisPnt, pnts, iCap
+	
+	vLastPnt = vDrive - i_data[ 0 ] * Rs
+	
+	if ( ( Vcomp > 0 ) && ( vLastPnt != 0 ) )
+		i_data[ 0 ] -= i_data[ 0 ] * Vcomp * ( 1 - vDrive / vLastPnt ) // Traynelis Eq 8
+	endif
+	
+	pnts = numpnts( i_data )
+	
+	for ( icnt = 1 ; icnt < pnts ; icnt += 1 )
+	 
+		vThisPnt = vDrive - i_data[ icnt ] * Rs
+		
+		if ( Ccomp > 0 ) // Icap compensation
+		
+			iCap = Cm * ( vThisPnt - vLastPnt ) / dt // Traynelis Eq 11
+			
+			if ( ( numtype( Fc ) == 0 ) && ( Fc > 0 ) )
+				iCap *= 1 - exp( -2 * pi * dt * Fc ) // Traynelis Eq 12
+			endif
+			
+			i_data[ icnt - 1 ] -= Ccomp * iCap // Traynelis Eq 9
+			
+		endif
+		
+		if ( ( Vcomp > 0 ) && ( vThisPnt != 0 ) ) // Vcomp compensation
+			i_data[ icnt - 1 ] -= i_data[ icnt - 1 ] * Vcomp * ( 1 - vDrive / vThisPnt ) // Traynelis Eq 8
+		endif
+		
+		vLastPnt = vThisPnt
+	
+	endfor
+	
+	i_data[ pnts - 1 ] = NaN // JSR // null last data point
+
+End // NMRsCorrTraynelis
 
 //****************************************************************
 //****************************************************************
@@ -6116,35 +6453,35 @@ Function /S NMAddNoise( wList [ folder, nbin, nexp, ngamma, ngauss, nlog, nlor, 
 	endif
 	
 	if ( !ParamIsDefault( nbin ) )
-		return NMAddNoise2( nm, nbin = nbin )
+		return NMAddNoise2( nm, nbin=nbin )
 	endif
 	
 	if ( !ParamIsDefault( nexp ) )
-		return NMAddNoise2( nm, nexp = nexp )
+		return NMAddNoise2( nm, nexp=nexp )
 	endif
 	
 	if ( !ParamIsDefault( ngamma ) )
-		return NMAddNoise2( nm, ngamma = ngamma )
+		return NMAddNoise2( nm, ngamma=ngamma )
 	endif
 	
 	if ( !ParamIsDefault( ngauss ) )
-		return NMAddNoise2( nm, ngauss = ngauss )
+		return NMAddNoise2( nm, ngauss=ngauss )
 	endif
 	
 	if ( !ParamIsDefault( nlog ) )
-		return NMAddNoise2( nm, nlog = nlog )
+		return NMAddNoise2( nm, nlog=nlog )
 	endif
 	
 	if ( !ParamIsDefault( nlor ) )
-		return NMAddNoise2( nm, nlor = nlor )
+		return NMAddNoise2( nm, nlor=nlor )
 	endif
 	
 	if ( !ParamIsDefault( npois ) )
-		return NMAddNoise2( nm, npois = npois )
+		return NMAddNoise2( nm, npois=npois )
 	endif
 	
 	if ( !ParamIsDefault( nuni ) )
-		return NMAddNoise2( nm, nuni = nuni )
+		return NMAddNoise2( nm, nuni=nuni )
 	endif
 	
 End // NMAddNoise
@@ -6448,7 +6785,7 @@ Function /S NMRotate2( nm, points [ history ] ) // see Igor Rotate
 		return NM2ErrorStr( 10, "points", "" )
 	endif
 	
-	NMParamVarAdd( "pnts", points, nm, integer = 1 )
+	NMParamVarAdd( "pnts", points, nm, integer=1 )
 		
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
@@ -6525,7 +6862,7 @@ Function /S NMSort2( nm, sortKeyWave [ history ] ) // see Igor Sort
 		return NM2ErrorStr( 1, "sortKeyWave", sortKeyWave )
 	endif
 	
-	npnts = GetXstats( "numPnts" , nm.wList, folder = nm.folder )
+	npnts = GetXstats( "numPnts" , nm.wList, folder=nm.folder )
 	
 	if ( numpnts( $sortKeyWave ) != npnts )
 		return NM2ErrorStr( 5, "sortKeyWave", sortKeyWave )
@@ -6623,8 +6960,10 @@ End // SortWaveListByCreation
 //****************************************************************
 //****************************************************************
 
-Function /S NMIntegrate( wList [ folder, xWave, deprecation ] ) // see NMIntegrate2
+Function /S NMIntegrate( wList [ folder, xWave, method, deprecation ] ) // see NMIntegrate2
 	String wList, folder, xWave // see description at top
+	Variable method // see /Meth of Igor Integrate ( 0 ) Rectangular, default ( 1 ) Trapezoid
+	// best to use trapezoid if using x-wave
 	Variable deprecation
 	
 	STRUCT NMParams nm
@@ -6637,19 +6976,21 @@ Function /S NMIntegrate( wList [ folder, xWave, deprecation ] ) // see NMIntegra
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
-	return NMIntegrate2( nm )
+	return NMIntegrate2( nm, method=method )
 
 End // NMIntegrate
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMIntegrate2( nm [ history ] ) // see Igor Integrate
+Function /S NMIntegrate2( nm [ method, history ] ) // see Igor Integrate
 	STRUCT NMParams &nm // uses nm.folder, nm.wList, nm.xWave
+	Variable method // see /Meth of Igor Integrate ( 0 ) Rectangular, default ( 1 ) Trapezoid
+	// best to use trapezoid if using x-wave
 	Variable history
 	
 	Variable wcnt, numWaves, xflag
@@ -6665,6 +7006,10 @@ Function /S NMIntegrate2( nm [ history ] ) // see Igor Integrate
 		NMParamStrAdd( "xwave", nm.xWave, nm )
 		xflag = 1
 	endif
+	
+	if ( ( numtype( method ) > 0 ) || ( method < 0 ) || ( method > 1 ) )
+		return NM2ErrorStr( 10, "method", num2str( method ) )
+	endif
 		
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
@@ -6677,9 +7022,9 @@ Function /S NMIntegrate2( nm [ history ] ) // see Igor Integrate
 		Wave wtemp = $nm.folder + wName
 		
 		if ( xflag )
-			Integrate wtemp /X=$nm.folder + nm.xWave
+			Integrate /Meth=( method ) wtemp /X=$nm.folder + nm.xWave
 		else
-			Integrate wtemp
+			Integrate /Meth=( method ) wtemp
 		endif
 		
 		NMLoopWaveNote( nm.folder + wName, "" )
@@ -6715,7 +7060,7 @@ Function /S NMDifferentiate( wList [ folder, xWave, deprecation ] ) // see NMDif
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -6824,11 +7169,11 @@ Function /S NMFFT( wList [ folder, xWave, xbgn, xend, output, rotation, updateLa
 		folder = ""
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
-	return NMFFT2( nm, xbgn = xbgn, xend = xend, output = output, rotation = rotation, updateLabels = updateLabels )
+	return NMFFT2( nm, xbgn=xbgn, xend=xend, output=output, rotation=rotation, updateLabels=updateLabels )
 
 End // NMFFT
 
@@ -6915,7 +7260,7 @@ Function /S NMFFT2( nm [ xbgn, xend, output, rotation, updateLabels, history ] )
 		
 		notes = note( wtemp )
 		
-		xLabel = NMNoteLabel( "x", wName, "", folder = nm.folder )
+		xLabel = NMNoteLabel( "x", wName, "", folder=nm.folder )
 		
 		Duplicate /O $dName wtemp
 		
@@ -7135,15 +7480,15 @@ Function /S NMClipEvents( xwinBeforeEvent, xwinAfterEvent, wList [ folder, event
 	
 	if ( findEvents )
 		if ( clipMethod == 1 )
-			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, eventFindLevel = eventFindLevel, positiveEvents = positiveEvents, clipValue = clipValue )
+			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, eventFindLevel=eventFindLevel, positiveEvents=positiveEvents, clipValue=clipValue )
 		else
-			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, eventFindLevel = eventFindLevel, positiveEvents = positiveEvents )
+			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, eventFindLevel=eventFindLevel, positiveEvents=positiveEvents )
 		endif
 	else
 		if ( clipMethod == 1 )
-			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, waveOfEventTimes = waveOfEventTimes, clipValue = clipValue )
+			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, waveOfEventTimes=waveOfEventTimes, clipValue=clipValue )
 		else
-			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, waveOfEventTimes = waveOfEventTimes )
+			return NMClipEvents2( nm, xwinBeforeEvent, xwinAfterEvent, waveOfEventTimes=waveOfEventTimes )
 		endif
 	endif
 	
@@ -7383,7 +7728,7 @@ Function /S NMWaveStats( [ folder, wList, xWave, matchStr, chanTransforms, prefi
 		wList = NMFolderWaveList( folder, matchStr, ";", "", 0 )
 	endif
 	
-	if ( NMParamsInit( folder, wList, nm, xWave = xWave ) != 0 )
+	if ( NMParamsInit( folder, wList, nm, xWave=xWave ) != 0 )
 		return ""
 	endif
 	
@@ -7423,7 +7768,7 @@ Function /S NMWaveStats( [ folder, wList, xWave, matchStr, chanTransforms, prefi
 		case 0: // stats string list
 		case 1: // history
 		
-			return NMWaveStats2( nm, xbgn = xbgn, xend = xend, outputSelect = outputSelect )
+			return NMWaveStats2( nm, xbgn=xbgn, xend=xend, outputSelect=outputSelect )
 			
 		case 2: // notebook
 		
@@ -7435,7 +7780,7 @@ Function /S NMWaveStats( [ folder, wList, xWave, matchStr, chanTransforms, prefi
 				windowTitle = "Wave Stats : " + fName + " : n = " + num2istr( numWaves )
 			endif
 		
-			return NMWaveStats2( nm, xbgn = xbgn, xend = xend, outputSelect = outputSelect, windowName = windowName, windowTitle = windowTitle )
+			return NMWaveStats2( nm, xbgn=xbgn, xend=xend, outputSelect=outputSelect, windowName=windowName, windowTitle=windowTitle )
 			
 		case 3: // output waves / table
 		
@@ -7456,9 +7801,9 @@ Function /S NMWaveStats( [ folder, wList, xWave, matchStr, chanTransforms, prefi
 			endif
 			
 			if ( ParamIsDefault( subfolder ) )
-				return NMWaveStats2( nm, xbgn = xbgn, xend = xend, outputSelect = outputSelect, windowName = windowName, windowTitle = windowTitle, outputPrefix = outputPrefix, fullPath = fullPath )
+				return NMWaveStats2( nm, xbgn=xbgn, xend=xend, outputSelect=outputSelect, windowName=windowName, windowTitle=windowTitle, outputPrefix=outputPrefix, fullPath=fullPath )
 			else
-				return NMWaveStats2( nm, xbgn = xbgn, xend = xend, outputSelect = outputSelect, windowName = windowName, windowTitle = windowTitle, subfolder = subfolder, outputPrefix = outputPrefix, fullPath = fullPath )
+				return NMWaveStats2( nm, xbgn=xbgn, xend=xend, outputSelect=outputSelect, windowName=windowName, windowTitle=windowTitle, subfolder=subfolder, outputPrefix=outputPrefix, fullPath=fullPath )
 			endif
 			
 	endswitch
@@ -7535,7 +7880,7 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 			return NM2ErrorStr( 10, "chanNum", num2istr( nm.chanNum ) )
 		endif
 		
-		if ( !NMChanTransformExists( channel = nm.chanNum , prefixFolder = nm.prefixFolder ) )
+		if ( !NMChanTransformExists( channel=nm.chanNum , prefixFolder=nm.prefixFolder ) )
 			nm.transforms = 0
 		endif
 		
@@ -7566,9 +7911,9 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 			if ( nm.transforms )
 			
 				if ( xflag )
-					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 				else
-					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 				endif
 				
 				if ( returnVal < 0 )
@@ -7584,9 +7929,9 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 			endif
 			
 			if ( xflag )
-				nm.newList += NMWaveStatsXY( tName, xWave = nm.folder + nm.xWave, xbgn = xbgn, xend = xend, history = history )
+				nm.newList += NMWaveStatsXY( tName, xWave=nm.folder + nm.xWave, xbgn=xbgn, xend=xend, history=history )
 			else
-				nm.newList += NMWaveStatsXY( tName, xbgn = xbgn, xend = xend, history = history )
+				nm.newList += NMWaveStatsXY( tName, xbgn=xbgn, xend=xend, history=history )
 			endif
 			
 			nm.successList += wName + ";"
@@ -7639,9 +7984,9 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 			if ( nm.transforms )
 			
 				if ( xflag )
-					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 				else
-					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+					returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 				endif
 				
 				if ( returnVal < 0 )
@@ -7657,10 +8002,10 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 			endif
 			
 			if ( xflag )
-				NMWaveStatsStructInit( s, tName, xWave = nm.folder + nm.xWave, xbgn = xbgn, xend = xend )
+				NMWaveStatsStructInit( s, tName, xWave=nm.folder + nm.xWave, xbgn=xbgn, xend=xend )
 				txt = NMWaveStatsXY2( s )
 			else
-				NMWaveStatsStructInit( s, tName, xbgn = xbgn, xend = xend )
+				NMWaveStatsStructInit( s, tName, xbgn=xbgn, xend=xend )
 				txt = NMWaveStatsXY2( s )
 			endif
 			
@@ -7725,13 +8070,13 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 	if ( strlen( nm.xLabel ) > 0 )
 		xLabel = nm.xLabel
 	else
-		xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+		xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 	endif
 	
 	if ( strlen( nm.yLabel ) > 0 )
 		yLabel = nm.yLabel
 	else
-		yLabel = NMNoteLabel( "y", nm.wList, "", folder = nm.folder )
+		yLabel = NMNoteLabel( "y", nm.wList, "", folder=nm.folder )
 	endif
 	
 	xLabel2 = "Wave #"
@@ -7825,9 +8170,9 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 		if ( nm.transforms )
 		
 			if ( xflag )
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 			else
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 			endif
 			
 			if ( returnVal < 0 )
@@ -7843,10 +8188,10 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 		endif
 		
 		if ( xflag )
-			NMWaveStatsStructInit( s, tName, xWave = nm.folder + nm.xWave, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, tName, xWave=nm.folder + nm.xWave, xbgn=xbgn, xend=xend )
 			txt = NMWaveStatsXY2( s )
 		else
-			NMWaveStatsStructInit( s, tName, xbgn = xbgn, xend = xend )
+			NMWaveStatsStructInit( s, tName, xbgn=xbgn, xend=xend )
 			txt = NMWaveStatsXY2( s )
 		endif
 		
@@ -7887,7 +8232,7 @@ Function /S NMWaveStats2( nm [ xbgn, xend, outputSelect, windowName, windowTitle
 	NMParamsComputeFailures( nm )
 	
 	if ( history )
-		NMLoopHistory( nm, includeOutputSubfolder = 1 )
+		NMLoopHistory( nm, includeOutputSubfolder=1 )
 	endif
 	
 	KillWaves /Z $tName2
@@ -8212,7 +8557,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 			return NM2ErrorStr( 10, "chanNum", num2istr( nm.chanNum ) )
 		endif
 		
-		if ( !NMChanTransformExists( channel = nm.chanNum , prefixFolder = nm.prefixFolder ) )
+		if ( !NMChanTransformExists( channel=nm.chanNum , prefixFolder=nm.prefixFolder ) )
 			nm.transforms = 0
 		endif
 		
@@ -8277,9 +8622,9 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 		if ( nm.transforms )
 		
 			if ( xflag )
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 			else
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 			endif
 			
 			if ( returnVal < 0 )
@@ -8344,7 +8689,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 		endif
 		
 		if ( interpToSameDX )
-			NMInterpolate( tName1, algorithm = 2, xmode = 2, xWaveNew = xWaveNew )
+			NMInterpolate( tName1, algorithm=2, xmode=2, xWaveNew=xWaveNew )
 		endif
 		
 		if ( numpnts( $tName1 ) != points )
@@ -8436,7 +8781,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 		zNMMatrixStatsDouble2Single( s.stdv )
 		zNMMatrixStatsDouble2Single( s.sums )
 		zNMMatrixStatsDouble2Single( s.sumsqrs )
-		zNMMatrixStatsDouble2Single( s.count, integer = 1 )
+		zNMMatrixStatsDouble2Single( s.count, integer=1 )
 	endif
 	
 	nm.newList += nm.folder + "U_Avg;"
@@ -8455,7 +8800,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 		if ( strlen( nm.xLabel ) > 0 )
 			yLabel = nm.xLabel
 		else
-			yLabel = NMNoteLabel( "x", nm.xWave, "", folder = nm.folder )
+			yLabel = NMNoteLabel( "x", nm.xWave, "", folder=nm.folder )
 		endif
 		
 		NMNoteType( nm.folder + "U_Xwave", "NMXscale", xLabel, yLabel, fxn )
@@ -8465,7 +8810,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 		if ( strlen( nm.xLabel ) > 0 )
 			xLabel = nm.xLabel
 		else
-			xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+			xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 		endif
 	
 	endif
@@ -8473,7 +8818,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 	if ( strlen( nm.yLabel ) > 0 )
 		yLabel = nm.yLabel
 	else
-		yLabel = NMNoteLabel( "y", nm.wList, "", folder = nm.folder )
+		yLabel = NMNoteLabel( "y", nm.wList, "", folder=nm.folder )
 	endif
 	
 	NMNoteType( nm.folder + "U_Avg", "NMAvg", xLabel, yLabel, fxn )
@@ -8511,7 +8856,7 @@ Function /S NMMatrixStats2( nm, s [ history ] )
 	NMParamsComputeFailures( nm )
 	
 	if ( history )
-		NMLoopHistory( nm, includeOutputs = 0 )
+		NMLoopHistory( nm, includeOutputs=0 )
 	endif
 	
 	SetNMstr( NMDF + "OutputWaveList", nm.newList )
@@ -8679,7 +9024,7 @@ Function /S NMTTest( wList [ folder, wName, meanValue, sigLevel, DFM, PAIR, TAIL
 			endif
 		endif
 		
-		return NMTTest2( nm, meanValue = meanValue, sigLevel = sigLevel, DFM = DFM, PAIR = PAIR, TAIL = TAIL, subfolder = subfolder, outputPrefix = outputPrefix, fullPath = fullPath, table = table )
+		return NMTTest2( nm, meanValue=meanValue, sigLevel=sigLevel, DFM=DFM, PAIR=PAIR, TAIL=TAIL, subfolder=subfolder, outputPrefix=outputPrefix, fullPath=fullPath, table=table )
 		
 	else
 	
@@ -8687,7 +9032,7 @@ Function /S NMTTest( wList [ folder, wName, meanValue, sigLevel, DFM, PAIR, TAIL
 			return NM2ErrorStr( 1, "wName", wName )
 		endif
 	
-		return NMTTest2( nm, wName = wName, sigLevel = sigLevel, DFM = DFM, PAIR = PAIR, TAIL = TAIL, subfolder = subfolder, outputPrefix = outputPrefix, fullPath = fullPath, table = table )
+		return NMTTest2( nm, wName=wName, sigLevel=sigLevel, DFM=DFM, PAIR=PAIR, TAIL=TAIL, subfolder=subfolder, outputPrefix=outputPrefix, fullPath=fullPath, table=table )
 		
 	endif
 
@@ -8806,13 +9151,13 @@ Function /S NMTTest2( nm [ wName, meanValue, sigLevel, DFM, PAIR, TAIL, subfolde
 	if ( strlen( nm.xLabel ) > 0 )
 		xLabel = nm.xLabel
 	else
-		xLabel = NMNoteLabel( "x", nm.wList, "", folder = nm.folder )
+		xLabel = NMNoteLabel( "x", nm.wList, "", folder=nm.folder )
 	endif
 	
 	if ( strlen( nm.yLabel ) > 0 )
 		yLabel = nm.yLabel
 	else
-		yLabel = NMNoteLabel( "y", nm.wList, "", folder = nm.folder )
+		yLabel = NMNoteLabel( "y", nm.wList, "", folder=nm.folder )
 	endif
 	
 	xLabel2 = "Wave #"
@@ -8985,9 +9330,9 @@ Function NMHistrogramBinsAuto( nm, h [ all, paddingBins, numBinsMin, xbgn, xend 
 		if ( nm.transforms )
 		
 			if ( strlen( nm.xWave ) > 0 )
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 			else
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 			endif
 			
 			if ( returnVal < 0 )
@@ -9051,12 +9396,13 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 	
 	Variable binStart, binWidth, numBins // pass nothing for auto bin computation
 	Variable xbgn, xend
-	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help )
+	String optionStr // e.g. "/C/P/Cum" ( see Igor Histogram Help ), or "/F" for frequency
 	String newPrefix // wave prefix for output histograms
 	Variable overwrite, history
 	
-	Variable wcnt, numWaves, numChannels, normalize, cumulative, incomplete, returnVal
-	String wName, fxn, fxn2
+	Variable wcnt, numWaves, numChannels
+	Variable cumulative, incomplete, returnVal, normalize, dx
+	String wName, optionStr2, fxn, fxn2
 	String xLabel, yLabel, histoName, tName, tName2
 	String thisFxn = GetRTStackInfo( 1 )
 	
@@ -9111,8 +9457,12 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 	if ( strsearch( optionStr, "/P", 0 ) >= 0 )
 		yLabel = "Probability"
 		normalize = 1
+	elseif ( strsearch( optionStr, "/F", 0 ) >= 0 )
+		yLabel = "Frequency"
+		normalize = 2
 	else
 		yLabel = "Count"
+		normalize = 0
 	endif
 	
 	if ( strsearch( optionStr, "/Cum", 0 ) >= 0 )
@@ -9131,7 +9481,7 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 			return NM2ErrorStr( 10, "chanNum", num2istr( nm.chanNum ) )
 		endif
 		
-		if ( !NMChanTransformExists( channel = nm.chanNum , prefixFolder = nm.prefixFolder ) )
+		if ( !NMChanTransformExists( channel=nm.chanNum , prefixFolder=nm.prefixFolder ) )
 			nm.transforms = 0 // found no transforms
 		endif
 		
@@ -9147,7 +9497,7 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 		
 	else
 		
-		if ( NMHistrogramBinsAuto( nm, h, all = 1, paddingBins = paddingBins, numBinsMin = 10 ) < 0 )
+		if ( NMHistrogramBinsAuto( nm, h, all=1, paddingBins=paddingBins, numBinsMin=10 ) < 0 )
 			return ""
 		endif
 		
@@ -9161,13 +9511,16 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 		
 		optionStr = "/B={" + num2str( binStart ) + "," + num2str( binWidth ) + "," + num2str( numBins ) + "}" + optionStr
 		
-		//NMHistory( "binStart = " + num2str( binStart ) + ", binWidth = " + num2str( binWidth ) + ", numBins = " + num2str( numBins ) )
+		//NMHistory( "binStart=" + num2str( binStart ) + ", binWidth=" + num2str( binWidth ) + ", numBins=" + num2str( numBins ) )
 	
 	endif
 	
 	if ( ( numtype( xbgn ) == 0 ) || ( numtype ( xend ) == 0 ) )
 		optionStr += "/R=(" + num2str( xbgn ) + "," + num2str( xend ) + ")"
 	endif
+	
+	optionStr2 = optionStr
+	optionStr2 = ReplaceString( "/F", optionStr2, "/P" ) // for frequency, compute probability and multiply by binwidth
 	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
@@ -9198,9 +9551,9 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 		if ( nm.transforms )
 		
 			if ( strlen( nm.xWave ) > 0 )
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 			else
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 			endif
 			
 			if ( returnVal < 0 )
@@ -9215,7 +9568,7 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 			
 		endif
 		
-		fxn = "Histogram " + optionStr + " " + tName + ", " + histoName
+		fxn = "Histogram " + optionStr2 + " " + tName + ", " + histoName
 		fxn2 = "Histogram " + optionStr + " " + wName + ", " + NMChild( histoName ) // short notation for notes
 		
 		Execute /Q/Z fxn
@@ -9252,6 +9605,18 @@ Function /S NMHistogram2( nm [ binStart, binWidth, numBins, xbgn, xend, optionSt
 				incomplete = 1
 			endif
 		
+		elseif ( normalize == 2 )
+		
+			// convert probability to frequency
+		
+			Wave htemp = $histoName
+			
+			dx = deltax( htemp )
+			
+			if ( dx != 1 )
+				htemp *= dx
+			endif
+		
 		endif
 		
 	endfor
@@ -9279,17 +9644,23 @@ End // NMHistogram2
 //****************************************************************
 //****************************************************************
 
-Function /S NMInequality2( nm [ xbgn, xend, greaterThan, lessThan, binaryOutput, newPrefix, overwrite, history ] )
+Function /S NMInequality2( nm [ xbgn, xend, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, equal, notEqual, binaryOutput, newPrefix, overwrite, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList // nm.transforms uses nm.chanNum and nm.prefixFolder
 	Variable xbgn, xend
-	Variable greaterThan // test if y-value is greater than this value
-	Variable lessThan // test if y-value is less than this value
-	Variable binaryOutput // ( 0 ) output wave will contain NaN for false or corresponding input wave value for true ( 1 ) output wave will contain '0' for false or '1' for true
+	Variable greaterThan // y-value > greaterThan
+	Variable greaterThanOrEqual // y-value ≥ greaterThanOrEqual
+	Variable lessThan // y-value < lessThan
+	Variable lessThanOrEqual // y-value ≤ lessThanOrEqual
+	Variable equal // y-value == equal
+	Variable notEqual // y-value != notEqual
+	Variable binaryOutput
+				// ( 0 ) output wave will contain NaN for false or corresponding input wave value for true
+				// ( 1 ) output wave will contain '0' for false or '1' for true
 	String newPrefix
 	Variable overwrite, history
 	
 	Variable wcnt, numWaves, numChannels, alert, pbgn, pend, xflag, returnVal
-	String wName, newName, tName, tName2, fxn2, fxn = "NMInequality"
+	String wName, newName, tName, tName2, fxn = "", fxn2
 	
 	if ( NMParamsError( nm ) != 0 )
 		return ""
@@ -9321,17 +9692,55 @@ Function /S NMInequality2( nm [ xbgn, xend, greaterThan, lessThan, binaryOutput,
 		xflag = 1
 	endif
 	
-	if ( ParamIsDefault( greaterThan ) )
-		greaterThan = NaN
+	if ( !ParamIsDefault( greaterThan ) )
+		fxn = "y > a"
+		fxn2 = "y > " + num2str( greaterThan )
 	endif
 	
-	if ( ParamIsDefault( lessThan ) )
-		lessThan = NaN
+	if ( !ParamIsDefault( greaterThanOrEqual ) )
+		fxn = "y ≥ a"
+		fxn2 = "y ≥ " + num2str( greaterThanOrEqual )
 	endif
 	
-	if ( ( numtype( greaterThan ) > 0 ) && ( numtype( lessThan ) > 0 ) )
+	if ( !ParamIsDefault( lessThan ) )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y < b"
+			fxn2 = num2str( greaterThan ) + " < y < " + num2str( lessThan )
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y < b"
+			fxn2 = num2str( greaterThanOrEqual ) + " ≤ y < " + num2str( lessThan )
+		else
+			fxn = "y < b"
+			fxn2 = "y < " + num2str( lessThan )
+		endif
+	endif
+	
+	if ( !ParamIsDefault( lessThanOrEqual ) )
+		if ( StringMatch( fxn, "y > a" ) )
+			fxn = "a < y < b"
+			fxn2 = num2str( greaterThan ) + " < y < " + num2str( lessThanOrEqual )
+		elseif ( StringMatch( fxn, "y ≥ a" ) )
+			fxn = "a ≤ y ≤ b"
+			fxn2 = num2str( greaterThanOrEqual ) + " ≤ y ≤ " + num2str( lessThanOrEqual )
+		else
+			fxn = "y ≤ b"
+			fxn2 = "y ≤ " + num2str( lessThanOrEqual )
+		endif
+	endif
+	
+	if ( !ParamIsDefault( equal ) )
+		fxn = "y = a"
+		fxn2 = "y = " + num2str( equal )
+	endif
+	
+	if ( !ParamIsDefault( notEqual ) )
+		fxn = "y ≠ a"
+		fxn2 = "y ≠ " + num2str( notEqual )
+	endif
+	
+	if ( strlen( fxn ) == 0 )
 		return "" // nothing to do
-	endif 
+	endif
 	
 	if ( ParamIsDefault( binaryOutput ) )
 		binaryOutput = 1
@@ -9355,7 +9764,7 @@ Function /S NMInequality2( nm [ xbgn, xend, greaterThan, lessThan, binaryOutput,
 			return NM2ErrorStr( 10, "chanNum", num2istr( nm.chanNum ) )
 		endif
 		
-		if ( !NMChanTransformExists( channel = nm.chanNum , prefixFolder = nm.prefixFolder ) )
+		if ( !NMChanTransformExists( channel=nm.chanNum , prefixFolder=nm.prefixFolder ) )
 			nm.transforms = 0
 		endif
 		
@@ -9365,7 +9774,7 @@ Function /S NMInequality2( nm [ xbgn, xend, greaterThan, lessThan, binaryOutput,
 		
 	endif
 	
-	fxn2 = NMInequalityFxn( greaterThan, lessThan )
+	//fxn2 = NMInequalityFxn( greaterThan, lessThan )
 	
 	for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
 	
@@ -9388,9 +9797,9 @@ Function /S NMInequality2( nm [ xbgn, xend, greaterThan, lessThan, binaryOutput,
 		if ( nm.transforms )
 		
 			if ( xflag )
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = nm.folder + nm.xWave )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave=nm.folder + nm.xWave )
 			else
-				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder = nm.prefixFolder, xWave = "" )
+				returnVal = ChanWaveMake( nm.chanNum, nm.folder + wName, tName2, prefixFolder=nm.prefixFolder, xWave="" )
 			endif
 			
 			if ( returnVal < 0 )
@@ -9418,7 +9827,34 @@ Function /S NMInequality2( nm [ xbgn, xend, greaterThan, lessThan, binaryOutput,
 		
 		Wave otemp = $newName
 		
-		otemp = NMInequality( wtemp, greaterThan = greaterThan, lessThan = lessThan, binaryOutput = binaryOutput )
+		strswitch( fxn ) // "y > a;y ≥ a;y < b;y ≤ b;a < y < b;a ≤ y ≤ b;y = a;y ≠ a;"
+			case "y > a":
+				otemp = NMInequality( wtemp, greaterThan=greaterThan, binaryOutput=binaryOutput )
+				break
+			case "y ≥ a":
+				otemp = NMInequality( wtemp, greaterThanOrEqual=greaterThanOrEqual, binaryOutput=binaryOutput )
+				break
+			case "y < b":
+				otemp = NMInequality( wtemp, lessThan=lessThan, binaryOutput=binaryOutput )
+				break
+			case "y ≤ b":
+				otemp = NMInequality( wtemp, lessThanOrEqual=lessThanOrEqual, binaryOutput=binaryOutput )
+				break
+			case "a < y < b":
+				otemp = NMInequality( wtemp, greaterThan=greaterThan, lessThan=lessThan, binaryOutput=binaryOutput )
+				break
+			case "a ≤ y ≤ b":
+				otemp = NMInequality( wtemp, greaterThanOrEqual=greaterThanOrEqual, lessThanOrEqual=lessThanOrEqual, binaryOutput=binaryOutput )
+				break
+			case "y = a":
+				otemp = NMInequality( wtemp, equal=equal, binaryOutput=binaryOutput )
+				break
+			case "y ≠ a":
+				otemp = NMInequality( wtemp, notEqual=notEqual, binaryOutput=binaryOutput )
+				break
+			default:
+				return ""
+		endswitch
 		
 		if ( binaryOutput )
 			NMNoteStrReplace( newName, "yLabel", "True/False" )
@@ -9482,8 +9918,8 @@ Function NMXaxisStatsTest()
 	endif
 	
 	STRUCT NMXaxisStruct s
-	NMXaxisStructInit( s, wList, folder = folder )
-	NMXaxisStats2( s, history = 1 )
+	NMXaxisStructInit( s, wList, folder=folder )
+	NMXaxisStats2( s, history=1 )
 
 End // NMXaxisStatsTest
 
@@ -9558,7 +9994,7 @@ Function GetXstats( select, wList [ folder ] )
 		folder = ""
 	endif
 	
-	NMXaxisStructInit( s, wList, folder = folder, select = select )
+	NMXaxisStructInit( s, wList, folder=folder, select=select )
 	NMXaxisStats2( s )
 	
 	return s.selectValue
@@ -9583,9 +10019,9 @@ Function /S NMXaxisStats( wList [ folder, select, history ] )
 		select = ""
 	endif
 	
-	NMXaxisStructInit( s, wList, folder = folder, select = select )
+	NMXaxisStructInit( s, wList, folder=folder, select=select )
 	
-	return NMXaxisStats2( s, history = history )
+	return NMXaxisStats2( s, history=history )
 	
 End // NMXaxisStats
 

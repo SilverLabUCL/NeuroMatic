@@ -1,13 +1,13 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 #pragma version = 3.0
 #pragma hide = 1
-#pragma IgorVersion = 6.2
+#pragma IgorVersion = 6.3
 
 //****************************************************************
 //****************************************************************
 //
 //	NeuroMatic: data aquisition, analyses and simulation software that runs with the Igor Pro environment
-//	Copyright (C) 2017 Jason Rothman
+//	Copyright (C) 2019 Jason Rothman
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -49,15 +49,15 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0c"
-StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
-StrConstant NMRights = "Copyright (c) 2017 Jason Rothman"
-StrConstant NMEmail = "Jason@ThinkRandom.com"
-StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
+StrConstant NMVersionStr = "3.0l"
+Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
+Static StrConstant NMRights = "Copyright (c) 2020 Jason Rothman"
+Static StrConstant NMEmail = "Jason@ThinkRandom.com"
+Static StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
 
 StrConstant NMDF = "root:Packages:NeuroMatic:"
 StrConstant NMClampDF = "root:Packages:NeuroMatic:Clamp:"
-StrConstant NMWavePrefixList = "Record;Wave;Avg_;Pulse_;ST_;SP_;EV_;Fit_;Histo_;Sort_;Sim_;ROI;"
+StrConstant NMWavePrefixList = "Record;Wave;NMWave;Avg_;Pulse_;ST_;SP_;EV_;Fit_;Histo_;Sort_;Sim_;ROI;"
 StrConstant NMXscalePrefix = "xScale_"
 StrConstant NMTabList = "Main;Stats;Spike;Event;Fit;"
 
@@ -74,6 +74,16 @@ StrConstant NMWinColor2 = "47360,40960,40704" // highlight color of panel and gr
 Static Constant NMAutoStart = 1 // auto start NM ( 0 ) no ( 1 ) yes
 
 Static Constant NMHideProcedureFiles = 1
+
+Static Constant MakeNMPanelOnFolderChange = 0
+// JSR: this parameter is for a bug fix, when set to 1. cannot remember what bug is. however this fix causes annoying flashing of NM panel.
+// 7 Aug 2019, setting to 0. perhaps with latest Igor version this is not necessary.
+
+Static Constant NMPanelResolution = 72 // for Windows OS // NM Panel was designed for 72 panel resolution
+// NM uses this parameter to execute the following Igor command: SetIgorOption PanelResolution = <resolution>
+// 0:	Coordinates and sizes are treated as points regardless of the screen resolution.
+// 1:	Coordinates and sizes are treated as pixels if the screen resolution is 96 DPI, points otherwise. This is the default setting in effect when Igor starts.
+// 72:	Coordinates and sizes are treated as pixels regardless of the screen resolution (Igor6 mode).
 
 Constant NMBaselineXbgn = 0 // default x-scale baseline window begin
 Constant NMBaselineXend = 10 // default x-scale baseline window end
@@ -96,6 +106,8 @@ Static Constant NMCascadeIncMac = 28 // window cascade increment Macs
 Static Constant NMKillWinNoDialog = 1 // kill window ( 0 ) with dialog ( 1 ) without dialog
 
 Static Constant NMHistogramPaddingBins = 4 // extra bins on each side of histogram ( auto bin sizing )
+
+Static Constant ConfigsEditByPrompt = 1 // edit configs ( 0 ) directly via listbox ( 1 ) by user prompts
 
 Static StrConstant NMDeprecationIPF = "NM_Deprecated.ipf"
 
@@ -540,6 +552,8 @@ Function CheckNM()
 		
 	endif
 	
+	CheckNMPanelResolution()
+	
 	KillGlobals( "root:", "V_*", "110" ) // clean root directory
 	KillGlobals( "root:", "S_*", "110" )
 	
@@ -563,7 +577,7 @@ Function UpdateNM( forceMakeNewPanel )
 	
 	if ( WinType( NMPanelName ) == 7 )
 	
-		if ( forceMakeNewPanel )
+		if ( forceMakeNewPanel && MakeNMPanelOnFolderChange )
 			MakeNMPanel()
 		else
 			UpdateNMPanel( 1 )
@@ -571,7 +585,7 @@ Function UpdateNM( forceMakeNewPanel )
 	
 	else
 	
-		//MakeNMPanel() causes bug
+		// MakeNMPanel() // causes bug
 	
 	endif
 	
@@ -625,9 +639,9 @@ End // NMKill
 Function NMProceduresHideUpdate()
 	
 	if ( NMHideProcedureFiles )
-		Execute /Z "SetIgorOption IndependentModuleDev = 0"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 0"
 	else
-		Execute /Z "SetIgorOption IndependentModuleDev = 1"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	endif
 
 End // NMProceduresHideUpdate
@@ -640,10 +654,10 @@ Function NMProceduresHide( hide )
 
 	if ( hide )
 		NMHistory( "SetIgorOption IndependentModuleDev = 0" )
-		Execute /Z "SetIgorOption IndependentModuleDev = 0"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 0"
 	else
 		NMHistory( "SetIgorOption IndependentModuleDev = 1" )
-		Execute /Z "SetIgorOption IndependentModuleDev = 1"
+		Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide
 	endif
 	
 	NMMenuBuild()
@@ -661,7 +675,7 @@ Function /S NMProceduresList()
 	
 	Variable saveIMD = NumVarOrDefault( "V_Flag", NaN )
 	
-	Execute /Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	
 	pList = SortList( WinList( "NM_*", ";", "WIN:128" ), ";", 16 ) // all procedures
 	
@@ -689,6 +703,8 @@ Function NMProceduresKill( [ quiet ] )
 		endif
 		
 	endif
+	
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	
 	windowList = NMProceduresList()
 	
@@ -1022,6 +1038,10 @@ Function NMVarGet( varName )
 			defaultVal = 1
 			break
 			
+		case "PanelResolution":
+			defaultVal = NMPanelResolution
+			break
+			
 		case "NMPanelUpdate":
 			defaultVal = 1
 			break
@@ -1154,6 +1174,10 @@ Function NMVarGet( varName )
 			defaultVal = NMHistogramPaddingBins
 			break
 			
+		case "ConfigsEditByPrompt":
+			defaultVal = ConfigsEditByPrompt
+			break
+			
 		default:
 			NMDoAlert( thisfxn + " Error: no variable called " + NMQuotes( varName ) )
 			return Nan
@@ -1266,20 +1290,20 @@ End // NMStrGet
 
 Function NeuroMaticConfigs()
 	
-	NeuroMaticConfigVar( "WriteHistory", "analysis history ( 0 ) off ( 1 ) Igor history ( 2 ) notebook ( 3 ) both", "off;Igor history;notebook;both;" )
-	NeuroMaticConfigVar( "CmdHistory", "NM command history ( 0 ) off ( 1 ) Igor history ( 2 ) notebook ( 3 ) both", "off;Igor history;notebook;both;" )
+	NeuroMaticConfigVar( "WriteHistory", "analysis history (0) off (1) Igor history (2) notebook (3) both", "off;Igor history;notebook;both;" )
+	NeuroMaticConfigVar( "CmdHistory", "NM command history (0) off (1) Igor history (2) notebook (3) both", "off;Igor history;notebook;both;" )
 	NeuroMaticConfigVar( "CmdHistoryLongFormat", "include folder, wave prefix, channel and wave select in NM command history", "boolean" )
 	
-	NeuroMaticConfigStr( "OpenDataPath", "open data file path ( e.g. C:Jason:TestData: )", "DIR" )
-	NeuroMaticConfigStr( "SaveDataPath", "save data file path ( e.g. C:Jason:TestData: )", "DIR" )
+	NeuroMaticConfigStr( "OpenDataPath", "open data file path (e.g. C:Jason:TestData:)", "DIR" )
+	NeuroMaticConfigStr( "SaveDataPath", "save data file path (e.g. C:Jason:TestData:)", "DIR" )
 	
 	NeuroMaticConfigVar( "ImportPrompt", "display user-input panel while importing data", "boolean" )
 	NeuroMaticConfigVar( "LoadWithPrefixDF", "attach wave-prefix DF when loading waves from multiple files", "boolean" )
-	NeuroMaticConfigStr( "FileNameReplaceStringList", "replace string list when opening files ( e.g. " + NMQuotes( "_ChA,_A;_ChB,_B;_Trial-,;" ) + " )", "" )
-	NeuroMaticConfigVar( "ABF_GapFreeConcat", "concat Pclamp gap-free waves ( for ReadPClampDataXOP only )", "boolean" )
+	NeuroMaticConfigStr( "FileNameReplaceStringList", "replace string list when opening files (e.g. " + NMQuotes( "_ChA,_A;_ChB,_B;_Trial-,;" ) + ")", "" )
+	NeuroMaticConfigVar( "ABF_GapFreeConcat", "concat Pclamp gap-free waves (for ReadPClampDataXOP only)", "boolean" )
 	NeuroMaticConfigVar( "ABF_HeaderReadAll", "read all header parameters", "boolean" )
 	
-	NeuroMaticConfigVar( "AlertUser", "alert user ( 0 ) never ( 1 ) by Igor alert prompt ( 2 ) by NM history", "never;by DoAlert Prompt;by NM history;" )
+	NeuroMaticConfigVar( "AlertUser", "alert user (0) never (1) by Igor alert prompt (2) by NM history", "never;by DoAlert Prompt;by NM history;" )
 	NeuroMaticConfigVar( "DeprecationAlert", "print deprecation alerts", "boolean" )
 	
 	NeuroMaticConfigStr( "NMTabList", "tabs to display", "" )
@@ -1289,11 +1313,12 @@ Function NeuroMaticConfigs()
 	NeuroMaticConfigStr( "PrefixList", "list of wave prefix names", "" )
 	NeuroMaticConfigStr( "WavePrefix", "default NM wave prefix", "" )
 	
-	NeuroMaticConfigVar( "NMPanelX0", "NM panel X0 pixel position, ( NAN ) for automatic placement", "pixels" )
-	NeuroMaticConfigVar( "NMPanelY0", "NM panel Y0 pixel position, ( NAN ) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "PanelResolution", "treat coordinates on Windows OS (0) as points (1) conditional 96 DPI (72) as pixels", "" )
+	NeuroMaticConfigVar( "NMPanelX0", "NM panel X0 pixel position, (NAN) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "NMPanelY0", "NM panel Y0 pixel position, (NAN) for automatic placement", "pixels" )
 	
-	NeuroMaticConfigVar( "xProgress", "progress window x pixel position, ( NAN ) for automatic placement", "pixels" )
-	NeuroMaticConfigVar( "yProgress", "progress window y pixel position, ( NAN ) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "xProgress", "progress window x pixel position, (NAN) for automatic placement", "pixels" )
+	NeuroMaticConfigVar( "yProgress", "progress window y pixel position, (NAN) for automatic placement", "pixels" )
 	NeuroMaticConfigVar( "ProgressTimerLimit", "minimum execution time for showing progress display", NMXunits )
 	
 	NeuroMaticConfigVar( "ForceNMFolderPrefix", "force " + NMQuotes( "nm" ) + " prefix for NM folders", "boolean" )
@@ -1309,12 +1334,14 @@ Function NeuroMaticConfigs()
 	NeuroMaticConfigStr( "ChanGraphGridColor", "default channel graph grid color", "RGB" )
 	NeuroMaticConfigStr( "ChanGraphTraceOverlayColor", "default channel graph overlay trace color", "RGB" )
 	NeuroMaticConfigStr( "ChanGraphTraceColor", "default channel graph trace color", "RGB" )
-	NeuroMaticConfigVar( "ChanGraphTraceMode", "default channel graph trace mode ( 0 - 8 )", "" )
-	NeuroMaticConfigVar( "ChanGraphTraceMarker", "default channel graph trace marker ( 0 - 62 )", "" )
-	NeuroMaticConfigVar( "ChanGraphTraceLineStyle", "default channel graph trace line style ( 0 - 17 )", "" )
+	NeuroMaticConfigVar( "ChanGraphTraceMode", "default channel graph trace mode (0 - 8)", "" )
+	NeuroMaticConfigVar( "ChanGraphTraceMarker", "default channel graph trace marker (0 - 62)", "" )
+	NeuroMaticConfigVar( "ChanGraphTraceLineStyle", "default channel graph trace line style (0 - 17)", "" )
 	NeuroMaticConfigVar( "ChanGraphTraceLineSize", "default channel graph trace line size", "" )
 	
-	NeuroMaticConfigVar( "HistogramPaddingBins", "extra bins on each side of histogram ( auto bin sizing )", "" )
+	NeuroMaticConfigVar( "HistogramPaddingBins", "extra bins on each side of histogram (auto bin sizing)", "" )
+	
+	NeuroMaticConfigVar( "ConfigsEditByPrompt", "edit configs via prompts", "boolean" )
 	
 	NeuroMaticConfigStr( "D3D_UnpackWavePrefix", "wave prefix of unpacked D3D data file", "" )
 			
@@ -1474,6 +1501,17 @@ Function IsNMon()
 	endif
 
 End // IsNMon
+
+//****************************************************************
+//****************************************************************
+
+Function CheckNMPanelResolution()
+
+	if ( StringMatch( NMComputerType(), "PC" ) )
+		Execute /Q/Z "SetIgorOption PanelResolution = " + num2istr( NMVarGet( "PanelResolution" ) )
+	endif
+
+End // CheckNMPanelResolution
 
 //****************************************************************
 //****************************************************************
@@ -1695,58 +1733,58 @@ Function /S NMLoopExecute( nm, cmdHistory, deprecation )
 		endif
 		
 	endif
+		
+	if ( NMVarGet( "CmdHistoryLongFormat" ) )
 	
-	if ( cmdHistory )
-		
-		if ( NMVarGet( "CmdHistoryLongFormat" ) )
-		
-			if ( !StringMatch( nm.folderList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
-			else
-				nm.folderList = ""
-			endif
-			
-			if ( !StringMatch( nm.wavePrefixList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
-			else
-				nm.wavePrefixList = ""
-			endif
-			
-			if ( !StringMatch( nm.chanSelectList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
-			else
-				nm.chanSelectList = ""
-			endif
-			
-			if ( !StringMatch( nm.waveSelectList, "RemoveFromHistory" ) )
-				vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
-			else
-				nm.waveSelectList = ""
-			endif
-			
+		if ( !StringMatch( nm.folderList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
 		else
-		
-			if ( WhichListItem( "ForceHistory", nm.folderList ) >= 0 )
-				nm.folderList = RemoveFromList( "ForceHistory", nm.folderList )
-				vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
-			endif
-			
-			if ( WhichListItem( "ForceHistory", nm.wavePrefixList ) >= 0 )
-				nm.wavePrefixList = RemoveFromList( "ForceHistory", nm.wavePrefixList )
-				vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
-			endif
-			
-			if ( WhichListItem( "ForceHistory", nm.chanSelectList ) >= 0 )
-				nm.chanSelectList = RemoveFromList( "ForceHistory", nm.chanSelectList )
-				vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
-			endif
-			
-			if ( WhichListItem( "ForceHistory", nm.waveSelectList ) >= 0 )
-				nm.waveSelectList = RemoveFromList( "ForceHistory", nm.waveSelectList )
-				vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
-			endif
-			
+			nm.folderList = ""
 		endif
+		
+		if ( !StringMatch( nm.wavePrefixList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
+		else
+			nm.wavePrefixList = ""
+		endif
+		
+		if ( !StringMatch( nm.chanSelectList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
+		else
+			nm.chanSelectList = ""
+		endif
+		
+		if ( !StringMatch( nm.waveSelectList, "RemoveFromHistory" ) )
+			vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
+		else
+			nm.waveSelectList = ""
+		endif
+		
+	else
+	
+		if ( WhichListItem( "ForceHistory", nm.folderList ) >= 0 )
+			nm.folderList = RemoveFromList( "ForceHistory", nm.folderList )
+			vlist = NMCmdStrOptional( "folderList", nm.folderList, vlist )
+		endif
+		
+		if ( WhichListItem( "ForceHistory", nm.wavePrefixList ) >= 0 )
+			nm.wavePrefixList = RemoveFromList( "ForceHistory", nm.wavePrefixList )
+			vlist = NMCmdStrOptional( "wavePrefixList", nm.wavePrefixList, vlist )
+		endif
+		
+		if ( WhichListItem( "ForceHistory", nm.chanSelectList ) >= 0 )
+			nm.chanSelectList = RemoveFromList( "ForceHistory", nm.chanSelectList )
+			vlist = NMCmdStrOptional( "chanSelectList", nm.chanSelectList, vlist )
+		endif
+		
+		if ( WhichListItem( "ForceHistory", nm.waveSelectList ) >= 0 )
+			nm.waveSelectList = RemoveFromList( "ForceHistory", nm.waveSelectList )
+			vlist = NMCmdStrOptional( "waveSelectList", nm.waveSelectList, vlist )
+		endif
+		
+	endif
+		
+	if ( cmdHistory )
 		
 		NMCmdHistory( fxnName, vlist + nm.paramList )
 	
@@ -1761,6 +1799,8 @@ Function /S NMLoopExecute( nm, cmdHistory, deprecation )
 	endif
 	
 	nm.paramList = NMCmdVarListConvert( nm.paramList )
+	
+	NMProgressCancel( reset = 1 )
 	
 	for ( fcnt = 0 ; fcnt < ItemsInList( nm.folderList ) ; fcnt += 1 ) // loop thru folders
 	
@@ -2417,9 +2457,9 @@ Function NMTab( tabName ) // change NMPanel tab
 	if ( ( tab != lastTab ) || configsOn )
 	
 		SetNMvar( NMDF + "CurrentTab", tab )
-		NMConfigsListBoxWavesUpdate( "" )
 		
 		if ( configsOn )
+			NMConfigsListBoxWavesUpdate( "" )
 			Execute /Z "NM" + tabName + "ConfigEdit()"
 		endif
 		
@@ -3095,44 +3135,98 @@ End // NextGraphName
 //****************************************************************
 //****************************************************************
 
-Function NMComputerPixelsX()
+Function NMScreenPixelsX([igorFrame])
+	Variable igorFrame
 
-	Variable d0, x0, y0, x1, x2, xPixels = 1000
-
-	String s0 = IgorInfo( 0 )
+	Variable d0, x0, y0, x1, y1, defaultPixels = 1000
+	String s0
 	
+	if ( igorFrame && StringMatch( NMComputerType(), "pc" ) )
+		GetWindow kwFrameInner wsizeDC // frames on Windows only
+		return v_right - v_left
+	endif
+
+	s0 = IgorInfo( 0 )
 	s0 = StringByKey( "SCREEN1", s0, ":" )
 	
-	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, x2
+	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, y1
 	
-	if ( ( numtype( x1 ) == 0 ) && ( x1 > xPixels ) )
-		xPixels = x1
+	if ( numtype( x1 ) == 0 )
+		return x1
 	endif
 	
-	return xPixels
+	return defaultPixels
 
-End // NMComputerPixelsX
+End // NMScreenPixelsX
 
 //****************************************************************
 //****************************************************************
 
-Function NMComputerPixelsY()
+Function NMScreenPixelsY([igorFrame])
+	Variable igorFrame
 
-	Variable d0, x0, y0, x1, x2, yPixels = 800
-
-	String s0 = IgorInfo( 0 )
+	Variable d0, x0, y0, x1, y1, defaultPixels = 800
+	String s0
 	
-	s0 = StringByKey( "SCREEN1", s0, ":" )
-	
-	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, x2
-	
-	if ( ( numtype( x2 ) == 0 ) && ( x2 > yPixels ) )
-		yPixels = x2
+	if ( igorFrame && StringMatch( NMComputerType(), "pc" ) )
+		GetWindow kwFrameInner wsizeDC // frames on Windows only
+		return v_bottom - v_top
 	endif
 	
-	return yPixels
+	s0 = IgorInfo( 0 )
+	s0 = StringByKey( "SCREEN1", s0, ":" )
+	
+	sscanf s0, "%*[ DEPTH= ]%d%*[ ,RECT= ]%d%*[ , ]%d%*[ , ]%d%*[ , ]%d", d0, x0, y0, x1, y1
+	
+	if ( numtype( y1 ) == 0 )
+		return y1
+	endif
+	
+	return defaultPixels
 
-End // NMComputerPixelsY
+End // NMScreenPixelsY
+
+//****************************************************************
+//****************************************************************
+
+Function NMScreenPointsX([igorFrame])
+	Variable igorFrame
+	
+	return NMScreenPixelsX(igorFrame=igorFrame) * NMPointsPerPixel()
+	
+End // NMScreenPointsX
+
+//****************************************************************
+//****************************************************************
+
+Function NMScreenPointsY([igorFrame])
+	Variable igorFrame
+	
+	return NMScreenPixelsY(igorFrame=igorFrame) * NMPointsPerPixel()
+	
+End // NMScreenPointsY
+
+//****************************************************************
+//****************************************************************
+
+Function NMPointsPerPixel()
+
+	// Display - coordinates in points
+	// Edit - coordinates in points
+	// MoveWindow - coordinates in points
+	// NewPanel - coordinates in pixels
+	// GetWindow wsize - coordinates in points (Windows only)
+	// GetWindow wsizeDC - coordinates in pixels (Windows only)
+
+	Variable panelRes = PanelResolution( "" ) // points per inch (usually 72)
+	
+	Variable screenRes = ScreenResolution // pixels (dots) per inch (DPI)
+	// Mac, 72 DPI
+	// Windows, 96 (small fonts) or 120 (large fonts)
+	
+	return panelRes / screenRes
+
+End // NMPointsPerPixel
 
 //****************************************************************
 //****************************************************************
@@ -3193,8 +3287,8 @@ Function NMWinCascadeRect( w [ width, height, increment ] ) // cascade graph siz
 	
 	Variable offsetPC = 75, offsetMac = 50
 	
-	Variable xPixels = NMComputerPixelsX()
-	Variable yPixels = NMComputerPixelsY()
+	Variable xpoints = NMScreenPointsX()
+	Variable ypoints = NMScreenPointsY()
 	
 	Variable cascade = NMVarGet( "Cascade" )
 	String computer = NMComputerType()
@@ -3236,7 +3330,7 @@ Function NMWinCascadeRect( w [ width, height, increment ] ) // cascade graph siz
 	
 	if ( increment )
 	
-		if ( ( w.left > xPixels * 0.4 ) || ( w.top > yPixels * 0.4 ) )
+		if ( ( w.left > xpoints * 0.5 ) || ( w.top > ypoints * 0.5 ) )
 			cascade = 0 // reset Cascade counter
 		else
 			cascade += 1 // increment Cascade counter
@@ -3384,33 +3478,39 @@ End // NMHistory
 
 Function NMCommandWindowReposition()
 
-	Variable vleft, vright, vtop, vbottom
-
-	String ctype = NMComputerType()
+	Variable vleft, vtop, vright, vbottom // points
+	Variable yheight, yoffset // points
 	
 	DoWindow /F/H/Hide=0
 	
-	if ( StringMatch( ctype, "pc" ) )
+	Variable xpoints = NMScreenPointsX(igorFrame=1)
+	Variable ypoints = NMScreenPointsY(igorFrame=1)
 	
-		GetWindow kwFrameInner wsize
-	
-		MoveWindow /C V_left + 6, V_bottom - 120, V_right - 6, V_bottom + 12
+	if ( StringMatch( NMComputerType(), "pc" ) )
+		
+		yheight = 150
+		yoffset = 13
+		
+		vleft = 6
+		vright = xpoints - 6
+		vbottom = ypoints + yoffset
+		vtop = vbottom - yheight
 	
 	else
 	
-		MoveWindow /C 0, 0, 1000, 150
+		yheight = 180
+		yoffset = 50
+	
+		vleft = 0
+		vright = xpoints
+		vbottom = ypoints - yoffset
+		vtop = vbottom - yheight
 	
 	endif
 	
+	MoveWindow /C vleft, vtop, vright, vbottom
+	
 End // NMCommandWindowReposition
-
-//****************************************************************
-//****************************************************************
-
-Function NMCommandWindowSave()
-
-
-End // NMCommandWindowSave
 
 //****************************************************************
 //****************************************************************
@@ -3795,7 +3895,7 @@ Function NMDoAlert( promptStr [ title, alertType ] )
 		// 0:	Dialog with an OK button.
 		// 1:	Dialog with Yes and No buttons.
 		// 2:	Dialog with Yes, No, and Cancel buttons.
-	
+		
 	Variable alert = NMVarGet( "AlertUser" )
 	
 	if ( ( alert == 0 ) || ( strlen( promptStr ) == 0 ) )
@@ -3817,6 +3917,9 @@ Function NMDoAlert( promptStr [ title, alertType ] )
 		DoAlert /T=( title ) alertType, promptStr
 		
 		return V_flag
+		// 1:	Yes clicked.
+		// 2:	No clicked.
+		// 3:	Cancel clicked.
 	
 	elseif  ( alert == 2 ) // print to command window
 	
@@ -5218,7 +5321,7 @@ Function NMDeprecatedAlert( newFunction [ oldFunction ] )
 	NMHistory( alert )
 	NMDeprecationNotebook( alert )
 	
-	Execute "SetIgorOption IndependentModuleDev = 1"
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	DisplayProcedure oldFunction
 
 End // NMDeprecatedAlert
@@ -5243,7 +5346,7 @@ Function NMDeprecatedFatalError( newFunction [ oldFunction ] )
 	NMHistory( alert )
 	NMDeprecationNotebook( alert )
 	
-	Execute "SetIgorOption IndependentModuleDev = 1"
+	Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 	DisplayProcedure oldFunction
 	
 	DoAlert /T=( "NeuroMatic Deprecation" ) 0, alert
@@ -5578,7 +5681,7 @@ Function /S NMDeprecationFind( [ windowList, NM, fatal, noHistory, d ] )
 					
 					NMHistory( pstr )
 
-					Execute "SetIgorOption IndependentModuleDev = 1"
+					Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide procedures
 					DisplayProcedure /W=$windowName fxn
 				
 				endif

@@ -14,11 +14,11 @@
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //    GNU General Public License for more details.
 //
 //    You should have received a copy of the GNU General Public License
-//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//    along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 //	Contact Jason@ThinkRandom.com
 //	www.NeuroMatic.ThinkRandom.com
@@ -35,6 +35,15 @@
 //	"Grid Enabled Modeling Tools and Databases for NeuroInformatics"
 //
 //	Began 1 July 2003
+//****************************************************************
+//****************************************************************
+//
+//	Variable mode:
+//		(-1) Kill. Kill waves/variables. Called when user removes macro from stim macro list. 
+//		(0) Run. Do computation. Called during acquisition. 
+//		(1) Config. Prompt user for parameter values. Called when user adds macro to stim macro list.
+//		(2) Init. Init computation. Called before acquisition starts.
+//		(3) Finish. Finilize computation. Called after acquisition ends.
 //
 //****************************************************************
 //****************************************************************
@@ -61,7 +70,7 @@ End // ClampUtilityList
 
 Function /S ClampUtilityPreList()
 
-	return "ReadTemp;TModeCheck;TcapRead;TfreqRead;RandomOrder;"
+	return "ReadTemp;TModeCheck;MultiClampCmRs;" // TcapRead;TfreqRead;
 	
 End // ClampUtilityPreList
 
@@ -71,8 +80,7 @@ End // ClampUtilityPreList
 
 Function /S ClampUtilityInterList()
 
-	//return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;ModelCell;"
-	return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;"
+	return "OnlineAvg;Rstep;RCstep;TempRead;StatsRatio;RandomOrder;" // ModelCell;
 	
 End // ClampUtilityInterList
 
@@ -128,7 +136,7 @@ End // ClampUtilityKill
 //****************************************************************
 
 Function OnlineAvg(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable ccnt, cbeg, cend
 	String wname, avgname, gname, sdf = StimDF()
@@ -238,11 +246,10 @@ End // OnlineAvgConfig
 //	ReadTemp()
 //	read temperature from ADC input (read once)
 //
-//
 //****************************************************************
 
 Function ReadTemp(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable telValue
 	String cdf = NMClampDF
@@ -276,7 +283,7 @@ Function ReadTemp(mode)
 	
 	telValue = telValue * slope + offset
 	
-	NMHistory(NMCR + "Temperature: " + num2str(telValue))
+	NMHistory("Temperature: " + num2str(telValue))
 	
 	NMNotesFileVar("F_Temp", telValue)
 	
@@ -314,11 +321,10 @@ End // ReadTempConfig
 //	TempRead()
 //	read temperature from ADC input (saves to a wave)
 //
-//
 //****************************************************************
 
 Function TempRead(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable telValue
 	String cdf = NMClampDF, sdf = StimDF()
@@ -389,13 +395,80 @@ End // TempRead
 
 //****************************************************************
 //
+//	MultiClampCmRs()
+//	read MultiClamp Cm and Rs
+//
+//****************************************************************
+
+Function MultiClampCmRs( mode )
+	Variable mode // see definition at top
+	
+	Variable cm, rs
+	
+	switch( mode )
+	
+		case 0:
+			break
+	
+		case 1:
+			MultiClampCmRsConfig()
+			break
+	
+		case 2:
+		case -1:
+		default:
+			return 0
+			
+	endswitch
+	
+	Variable chan = NumVarOrDefault( NMClampDF + "MultiClampCmRs", 0 )
+	
+	if ( ( chan <= 0 ) || ( chan > 2 ) )
+		return -1
+	endif
+	
+	cm = NMMultiClampValue( chan, "MembraneCap" ) // F
+	rs = NMMultiClampValue( chan, "SeriesResistance" ) // Ohms
+	
+	cm *= 1e12 // pF
+	rs *= 1e-6 // MOhms
+	
+	NMHistory( "Cm: " + num2str( cm ) + " pF" )
+	NMHistory( "Rs: " + num2str( rs ) + " MOhms" )
+	
+	NMNotesFileVar( "F_Cm", cm )
+	NMNotesFileVar( "F_Rs", rs )
+	
+End // MultiClampCmRs
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function MultiClampCmRsConfig()
+	
+	Variable chan = NumVarOrDefault( NMClampDF + "MultiClampCmRs", 0 )
+	
+	Prompt chan, "select MultiClamp channel:", popup "1;2;"
+	DoPrompt "Read MultiClamp Cm and Rs", chan
+	
+	if (V_flag == 1)
+		return 0 // cancel
+	endif
+	
+	SetNMvar( NMClampDF + "MultiClampCmRs", chan )
+
+End // MultiClampCmRs
+
+//****************************************************************
+//
 //	ModelCell()
 //	simulate a neuron using RC circuit in Demo Mode
 //
 //****************************************************************
 
 Function ModelCell( mode )
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	String clampMode, sdf = StimDF()
 	
@@ -551,7 +624,7 @@ Static Function ModelCellConfig( userInput )
 		
 	endif
 	
-	if ( strlen( clampMode )  == 0 )
+	if ( strlen( clampMode ) == 0 )
 	
 		NMDoAlert( "To run NM ModelCell function, voltage units need to be mV and current units need to be pA" )
 	
@@ -883,7 +956,7 @@ End // ModelCell_DYDT
 //****************************************************************
 
 Function Rstep( mode )
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable icnt, numWindows
 	String sdf = StimDF()
@@ -929,7 +1002,7 @@ End // Rstep
 Static Function RstepCompute( winNum )
 	Variable winNum // 1, 2, 3...
 	
-	Variable chan, base, output, input, tscale = 1
+	Variable chan, base, output, input
 	Variable /G CT_R_Electrode
 	
 	String outName, inName, gname, winStr, tagName
@@ -955,32 +1028,27 @@ Static Function RstepCompute( winNum )
 	
 	String ADClist = NMStimBoardOnList( "", "ADC" )
 	
-	Variable grp =  NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
+	Variable grp = NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
 	
-	outName = sdf + "DAC_" + num2istr( DACconfig ) + "_" + num2istr( grp )
+	outName = sdf + "uDAC_" + num2istr( DACconfig ) + "_" + num2istr( grp ) // unscaled DAC output
 	
 	chan = WhichListItem( num2istr( ADCconfig ), ADClist, ";" )
 	
-	//inName = GetWaveName( "default", chan, 0 )
 	inName = ChanDisplayWave( chan )
 	
 	if ( ( WaveExists( $outName ) == 0 ) || ( WaveExists( $inName ) == 0 ) )
 		return -1
 	endif
 	
-	if ( StringMatch( board, "NIDAQ" ) == 1 )
-		tscale = 0.001 // convert to seconds for NIDAQ boards
-	endif
-	
-	WaveStats /Q/R=( 0*tscale,2*tscale ) $outName
+	WaveStats /Q/R=( 0, 2 ) $outName
 	
 	base = V_avg
 	
-	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $outName
+	WaveStats /Q/R=( tbgn, tend ) $outName
 	
 	output = abs( V_avg - base )
 	
-	WaveStats /Q/R=( 0,1 ) $inName
+	WaveStats /Q/R=( 0, 2 ) $inName
 	
 	base = V_avg
 	
@@ -1065,8 +1133,12 @@ Static Function RstepConfig2( userInput, winNum )
 	Variable winNum // 1, 2, 3...
 	
 	Variable icnt, onset, width
-	String ADCstr, DACstr, ADCunit, DACunit, winStr, wName
+	String ADCstr, DACstr, ADCunit, DACunit
+	String winStr, wName, pList, shape
 	String sdf = StimDF(), bdf = NMStimBoardDF( sdf )
+	String ptitle = "Compute Resistance Window #" + num2str( winNum )
+	
+	Variable defaultMeasureWindow = 10
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1094,9 +1166,9 @@ Static Function RstepConfig2( userInput, winNum )
 
 		Prompt ADCstr, "ADC input configuration to measure:", popup ADClist
 		Prompt DACstr, "DAC output configuration to measure:", popup DAClist
-		Prompt tbgn, "measure time begin (ms):"
-		Prompt tend, "measure time end (ms):"
-		DoPrompt "Compute Resistance Window #" + num2str( winNum ), ADCstr, DACstr
+		Prompt tbgn, "measurment window begin (ms):"
+		Prompt tend, "measurment window end (ms):"
+		DoPrompt ptitle, ADCstr, DACstr
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1108,29 +1180,58 @@ Static Function RstepConfig2( userInput, winNum )
 		SetNMvar( sdf+"RstepADC" + winStr, ADCconfig )
 		SetNMvar( sdf+"RstepDAC" + winStr, DACconfig )
 		
-		if ( numtype( tbgn * tend ) > 0 )
+		wName = PulseWaveName( sdf, "DAC_" + DACstr )
+			
+		if ( WaveExists( $wName ) )
 		
-			wName = PulseWaveName( sdf, "DAC_" + DACstr )
+			Wave /T wtemp = $wName
 			
-			if ( WaveExists( $wName ) && ( numpnts( $wName ) > 8 ) )
+			onset = NaN
+			width = NaN
 			
-				Wave wtemp = $wName
+			for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+			
+				pList = wtemp[ icnt ]
+				shape = StringByKey( "pulse", pList, "=" )
 				
-				onset = wtemp[ 4 ]
-				width = wtemp[ 8 ]
+				if ( StringMatch( shape, "square" ) )
+					onset = str2num( StringByKey( "onset", pList, "=" ) )
+					width = str2num( StringByKey( "width", pList, "=" ) )
+					break
+				endif
 				
-				tend = onset + width
-				tbgn = tend - 10
+			endfor
+			
+			if ( numtype( onset * width ) == 0 )
+			
+				if ( ( numtype( tbgn * tend ) == 0 ) && ( tbgn > onset ) && ( tend <= onset + width ) )
+					// tbgn and tend or OK
+				else
 				
-				if ( tbgn < onset )
-					tbgn = ( onset + tend ) / 2
+					tend = onset + width
+					tbgn = tend - defaultMeasureWindow
+					
+					if ( tbgn < onset )
+						tbgn = ( onset + tend ) / 2
+					endif
+				
 				endif
 			
+			else
+			
+				tbgn = NaN
+				tend = NaN
+				
 			endif
+			
+		else
+		
+			tbgn = NaN
+			tend = NaN
 		
 		endif
 		
-		DoPrompt "Compute Resistance Window #" + num2str( winNum ), tbgn, tend
+		DoPrompt ptitle, tbgn, tend
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1142,8 +1243,6 @@ Static Function RstepConfig2( userInput, winNum )
 	endif
 	
 	SetNMvar( sdf+"RstepScale", NaN )
-	
-	Wave DACscale = $( bdf+"DACscale" )
 	
 	Wave /T ADCunits = $( bdf+"ADCunits" )
 	Wave /T DACunits = $( bdf+"DACunits" )
@@ -1175,9 +1274,9 @@ Static Function RstepConfig2( userInput, winNum )
 	ADCunit = ADCstr[ icnt, icnt ]
 	DACunit = DACstr[ icnt, icnt ]
 	
-	if ( ( StringMatch( ADCunit,"A" ) == 1 ) && ( StringMatch( DACunit,"V" ) == 1 ) )
+	if ( StringMatch( ADCunit,"A" ) && StringMatch( DACunit,"V" ) )
 		scale = -1
-	elseif ( ( StringMatch( ADCunit,"V" ) == 1 ) && ( StringMatch( DACunit,"A" ) == 1 ) )
+	elseif ( StringMatch( ADCunit,"V" ) && StringMatch( DACunit,"A" ) )
 		scale = 1
 	else
 		Print "Rstep Error: win #" + num2str( winNum ) + ": cannot compute resistance from ADC units (" + ADCunit + ") and DAC units (" + DACunit + ")"
@@ -1196,9 +1295,9 @@ Static Function RstepConfig2( userInput, winNum )
 	endif
 	
 	if ( scale == 1 ) // compute appropriate scale to get Mohms
-		scale *= 1e-6 * MetricValue( ADCunit ) / ( MetricValue( DACunit ) * DACscale[ DACconfig ] )
+		scale *= 1e-6 * MetricValue( ADCunit ) / MetricValue( DACunit )
 	else
-		scale *= 1e-6 * MetricValue( DACunit ) * DACscale[ DACconfig ] / MetricValue( ADCunit )
+		scale *= 1e-6 * MetricValue( DACunit ) / MetricValue( ADCunit )
 	endif
 	
 	SetNMvar( sdf+"RstepScale" + winStr, scale )
@@ -1213,7 +1312,7 @@ End // RstepConfig2
 //****************************************************************
 
 Function RCstep( mode )
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable icnt, numWindows
 	String sdf = StimDF()
@@ -1259,18 +1358,16 @@ End // RCstep
 Static Function RCstepCompute( winNum )
 	Variable winNum // 1, 2, 3...
 	
-	//Variable toffset = 0.02 // time after step to start curve fit
-	
 	Variable icnt, fbgn, fend, nwaves, numStimWaves, numStimReps
-	Variable chan, base, vstep, input, tbase, tscale = 1, negstep = 0
-	Variable Ipeak, Iss, tau, Rp, Rm, Cm
+	Variable chan, base, input, tbase, negstep = 0
+	Variable Vstep, Ipeak, Iss, tau, Rp, Rm, Cm
 	
 	String outName, inName, inName2, gname, winStr
 	String wName, wList
 	String cdf = NMClampDF, sdf = StimDF()
 	
 	Variable currentWave = NMVarGet( "CurrentWave" )
-	Variable grp =  NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
+	Variable grp = NumVarOrDefault( NMClampDF + "CurrentGrp", NaN )
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1293,10 +1390,6 @@ Static Function RCstepCompute( winNum )
 		return 0 // bad parameters
 	endif
 	
-	if ( StringMatch( board, "NIDAQ" ) == 1 )
-		tscale = 0.001 // convert to seconds for NIDAQ boards
-	endif
-	
 	if ( currentWave == 0 )
 	
 		numStimWaves = NumVarOrDefault( sdf+"NumStimWaves", 1 )
@@ -1314,7 +1407,7 @@ Static Function RCstepCompute( winNum )
 		
 	endif
 	
-	outName = sdf + "DAC_" + num2istr( DACconfig ) + "_" + num2istr( grp )
+	outName = sdf + "uDAC_" + num2istr( DACconfig ) + "_" + num2istr( grp ) // unscaled DAC output
 	
 	chan = WhichListItem( num2istr( ADCconfig ), ADClist, ";" )
 	
@@ -1324,43 +1417,27 @@ Static Function RCstepCompute( winNum )
 		return -1
 	endif
 	
-	tbase = tbgn - 0.5
+	tbase = min( 5, tbgn )
 	
-	WaveStats /Q/R=( 0, tbase*tscale ) $outName // baseline
+	WaveStats /Q/R=( 0, tbase ) $outName // baseline command
 	
-	base = V_avg // should be zero
+	base = V_avg
 	
-	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $outName
+	WaveStats /Q/R=( tbgn + 0.5, tend - 0.5 ) $outName
 	
-	vstep = abs( V_avg - base )
+	Vstep = abs( V_avg - base )
 	
 	if ( V_avg < base )
 		negstep = 1
 	endif
 	
-	WaveStats /Q/R=( tbgn*tscale, tend*tscale ) $inName
-	
-	//if ( negstep == 1 )
-	//	fbgn = V_minloc + toffset
-	//else
-	//	fbgn = V_maxloc + toffset
-	//endif
-	
-	fbgn = tbgn //+ toffset
+	fbgn = tbgn
 	fend = tend
 	
 	gName = ChanGraphName( chan )
 	inName2 = GetWaveName( "Display", chan, 0 )
 	
-	// prepare graph and do curve fit
-	
 	DoWindow /F $gName
-	
-	//if ( currentWave == 0 )
-		//ShowInfo /W=$gName
-		//Cursor /W=$gName A, $inName2, fbgn
-		//Cursor /W=$gName B, $inName2, fend
-	//endif
 	
 	Wave wtemp = $ChanDisplayWave( chan )
 	
@@ -1368,53 +1445,60 @@ Static Function RCstepCompute( winNum )
 	
 	base = V_avg
 	
+	WaveStats /Q/R=( tbgn, tbgn + 2 ) wtemp // onset transient, Rp
+	
+	if ( negstep )
+		Ipeak = V_min - base
+		fbgn = V_minloc
+	else
+		Ipeak = V_max - base
+		fbgn = V_maxloc
+	endif
+	
+	Rp = abs( Vstep / Ipeak )
+	
+	WaveStats /Q/R=( tend - 2, tend ) wtemp // steady state, Rp + Rm
+	
+	Iss = V_avg
+	Rm = abs( ( Vstep / Iss ) - Rp )
+	tau = ( tend - tbgn ) / 5 // assuming decay tau is reasonable sub-fraction of fit window
+	Cm = tau / Rp
+	
 	if ( WaveExists( $"RCparams" ) == 0 )
-		Make /N=4 RCparams
+		Make /N=6 RCparams = NaN
 	endif
 	
 	Wave RCparams
 	
-	RCparams[ 0 ] = tbgn
-	RCparams[ 1 ] = V_avg
-	RCparams[ 3 ] = ( fend - fbgn ) / 4
-	
-	if ( negstep == 1 )
-		RCparams[ 2 ] = V_min // probably a negative transient
-	else
-		RCparams[ 2 ] = V_max // probably a positive transient
-	endif
+	RCparams[ 0 ] = Vstep // hold
+	RCparams[ 1 ] = tbgn // hold
+	RCparams[ 2 ] = base // hold
+	RCparams[ 3 ] = Rp
+	RCparams[ 4 ] = Rm
+	RCparams[ 5 ] = Cm
 	
 	Variable /G V_fitOptions = 4 // suppress fit display
 	Variable /G V_FitError = 0 // prevents procedure aborts from error
 	String /G S_Info = ""
 	
-	FuncFit /Q/W=0/H="1000"/N RCfit RCparams wtemp( fbgn, fend ) /D
+	FuncFit /L=2000/Q/W=0/H="111000"/N NM_RCvstep RCparams wtemp( fbgn, fend ) /D
 	
 	if ( ( V_FitError == 0 ) && ( strlen( S_Info ) > 0 ) )
 	
-		Ipeak = abs( RCparams[ 1 ] + RCparams[ 2 ] - base )
-		Iss = abs( RCparams[ 1 ] - base )
-		tau = 1 / RCparams[ 3 ]
-		
-		Rp = Vstep * scale / Ipeak // recording pipette
-		Rm = ( Vstep * scale / Iss ) - Rp // membrane resistance
-		Cm = ( tau / 0.001 ) * ( 1 / Rp + 1 / Rm ) // membrane cap
+		Rp = RCparams[ 3 ]
+		Rm = RCparams[ 4 ]
+		Cm = RCparams[ 5 ]
 	
 	else
 	
 		wList = WaveList( "fit_Display*", ";", "" )
 		
 		for ( icnt = 0 ; icnt < ItemsInList( wList ) ; icnt += 1 )
-		
 			wName = StringFromList( icnt, wList )
 			Wave wtemp = $wName
 			wtemp = NaN
-			
 		endfor
 	
-		Ipeak = NaN
-		Iss = NaN
-		tau = NaN
 		Rp = NaN
 		Rm = NaN
 		Cm = NaN
@@ -1501,50 +1585,6 @@ End // RCstepDisplay
 //****************************************************************
 //****************************************************************
 
-Function RCfit( w, x ) : FitFunc
-	Wave w
-	Variable x
-	
-	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
-	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
-	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f( x ) = Yss + Y0 * exp( -( x - X0 ) * invTau )
-	//CurveFitDialog/ End of Equation
-	//CurveFitDialog/ Independent Variables 1
-	//CurveFitDialog/ x
-	//CurveFitDialog/ Coefficients 4
-	//CurveFitDialog/ w[ 0 ] = X0
-	//CurveFitDialog/ w[ 1 ] = Yss
-	//CurveFitDialog/ w[ 2 ] = Y0
-	//CurveFitDialog/ w[ 3 ] = invTau
-	
-	Variable y
-	
-	//if ( numpnts( w ) !=4 )
-	//	return Nan
-	//endif
-	
-	// w[ 0 ] = X0
-	// w[ 1 ] = Yss
-	// w[ 2 ] = Y0
-	// w[ 3 ] = invTau
-	
-	y = w[ 1 ] + w[ 2 ] * exp( -( x - w[ 0 ] ) * w[ 3 ] )
-	
-	return y
-	
-	//if ( ( x < w[ 0 ] ) || ( numtype( y ) > 0 ) )
-	//	return 0
-	//else
-		return y
-	//endif
-	
-End // RCfit
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
 Static Function RCstepConfig( userInput )
 	Variable userInput // ( 0 ) no ( 1 ) yes
 	
@@ -1599,8 +1639,10 @@ Static Function RCstepConfig2( userInput, winNum )
 	Variable winNum // 1, 2, 3...
 	
 	Variable icnt, onset, width, scale = 1
-	String ADCstr, DACstr, ADCunit, DACunit, winStr, wName
+	String ADCstr, DACstr, ADCunit, DACunit
+	String winStr, wName, pList, shape
 	String cdf = NMClampDF, sdf = StimDF(), bdf = NMStimBoardDF( sdf )
+	String ptitle = "Compute Rm and Cm Window #" + num2str( winNum )
 	
 	if ( winNum > 1 )
 		winStr = num2str( winNum )
@@ -1629,10 +1671,10 @@ Static Function RCstepConfig2( userInput, winNum )
 	
 		Prompt ADCstr, "ADC input configuration to measure:", popup ADClist
 		Prompt DACstr, "DAC output configuration to measure:", popup DAClist
-		Prompt tbgn, "exponential fit time begin (ms):"
-		Prompt tend, "exponential fit time end (ms):"
+		Prompt tbgn, "step time begin (ms):"
+		Prompt tend, "step time end (ms):"
 		Prompt dsply, "display results in:", popup "Igor history;graph;"
-		DoPrompt "Compute Rm and Cm Window #" + num2str( winNum ), ADCstr, DACstr, dsply
+		DoPrompt ptitle, ADCstr, DACstr, dsply
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1645,25 +1687,52 @@ Static Function RCstepConfig2( userInput, winNum )
 		SetNMvar( sdf+"RCstepDAC" + winStr, DACconfig )
 		SetNMvar( sdf+"RCstepDisplay" + winStr, dsply )
 		
-		if ( numtype( tbgn * tend ) > 0 )
+		wName = PulseWaveName( sdf, "DAC_" + DACstr )
 		
-			wName = PulseWaveName( sdf, "DAC_" + DACstr )
+		if ( WaveExists( $wName ) )
+		
+			Wave /T wtemp = $wName
 			
-			if ( WaveExists( $wName ) && ( numpnts( $wName ) > 8 ) )
+			onset = NaN
+			width = NaN
 			
-				Wave wtemp = $wName
+			for ( icnt = 0 ; icnt < numpnts( wtemp ) ; icnt += 1 )
+			
+				pList = wtemp[ icnt ]
+				shape = StringByKey( "pulse", pList, "=" )
 				
-				onset = wtemp[ 4 ]
-				width = wtemp[ 8 ]
+				if ( StringMatch( shape, "square" ) )
+					onset = str2num( StringByKey( "onset", pList, "=" ) )
+					width = str2num( StringByKey( "width", pList, "=" ) )
+					break
+				endif
 				
-				tbgn = onset
-				tend = onset + width
+			endfor
 			
+			if ( numtype( onset * width ) == 0 )
+			
+				if ( ( numtype( tbgn * tend ) == 0 ) && ( tbgn > onset ) && ( tend <= onset + width ) )
+					// tbgn and tend or OK
+				else
+					tbgn = onset
+					tend = onset + width					
+				endif
+			
+			else
+			
+				tbgn = NaN
+				tend = NaN
+				
 			endif
+			
+		else
+		
+			tbgn = NaN
+			tend = NaN
 		
 		endif
 		
-		DoPrompt "Compute Rm and Cm Window #" + num2str( winNum ), tbgn, tend
+		DoPrompt ptitle, tbgn, tend
 		
 		if ( V_flag == 1 )
 			return 0 // cancel
@@ -1673,8 +1742,6 @@ Static Function RCstepConfig2( userInput, winNum )
 		SetNMvar( sdf+"RCstepTend" + winStr, tend )
 		
 	endif
-	
-	Wave DACscale = $( bdf+"DACscale" )
 	
 	Wave /T ADCunits = $( bdf+"ADCunits" )
 	Wave /T DACunits = $( bdf+"DACunits" )
@@ -1706,7 +1773,7 @@ Static Function RCstepConfig2( userInput, winNum )
 	ADCunit = ADCstr[ icnt, icnt ]
 	DACunit = DACstr[ icnt, icnt ]
 	
-	if ( ( StringMatch( ADCunit,"A" ) == 1 ) && ( StringMatch( DACunit,"V" ) == 1 ) )
+	if ( StringMatch( ADCunit,"A" ) && StringMatch( DACunit,"V" ) )
 	
 		ADCunit = ""
 		DACunit = ""
@@ -1719,7 +1786,7 @@ Static Function RCstepConfig2( userInput, winNum )
 			DACunit = DACstr[ 0, 0 ]
 		endif
 		
-		scale = 1e-6 * MetricValue( DACunit ) * DACscale[ DACconfig ] / MetricValue( ADCunit )
+		scale = 1e-6 * MetricValue( DACunit ) / MetricValue( ADCunit )
 		
 	else
 	
@@ -1742,7 +1809,7 @@ End // RCstepConfig2
 //****************************************************************
 
 Function StatsRatio(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
 	Variable currentWave
 	
@@ -1874,141 +1941,272 @@ End // MetricValue
 //****************************************************************
 
 Function RandomOrder(mode)
-	Variable mode // (-1) kill (0) run (1) config (2) init
+	Variable mode // see definition at top
 	
-	Variable icnt, jcnt, pcnt, grpNum
-	String wName1, wName2, wNameTemp, wPrefix, plist
+	Variable icnt, jcnt, pcnt, grpNum1, grpNum2, npnts, items, foundGrp
+	String wName1, wName2, wNameTemp, wPrefix
 	String sdf = StimDF()
+	String plist = StimPrefixListAll( sdf )
 	
-	switch(mode)
+	String grpStr, grpList = "", grpList2 = ""
 	
-		case -1:
-			RandomOrderKill()
+	Variable numStimWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
+	Variable numStimReps = NumVarOrDefault( sdf + "NumStimReps", 0 )
+	Variable currentWave = NumVarOrDefault( NMDF + "CurrentWave", 0 )
+	
+	Variable randomOrderReps = NumVarOrDefault( sdf + "RandomOrderReps", 1 )
+	
+	Variable randomize = 0
+	Variable firstRep = 0
+	Variable nextWave = currentWave + 1
+	
+	switch( mode )
+	
+		case -1: // kill
+			// nothing to do
 			return 0
 	
-		case 0:
-			break
+		case 0: // run, called via ClampAcquireNext()
 			
-		case 1:
-			DoAlert 0, "Warning: this function will randomize the order of your DAC waves."
+			// randomization needs to occur after acquisition of last group
+			// this is when:
+			// current wave, stim wave # = numStimReps - 1
+			// next wave, stim wave # = 0
+			
+			if ( nextWave >= numStimWaves * numStimReps )
+				return 0 // finished, no more reps
+			endif
+			
+			if ( mod( nextWave, numStimWaves ) != 0 )
+				return 0
+			endif
+			
+			// next wave will be stim wave #0
+			
+			firstRep = 0
+			
+			if ( randomOrderReps )
+				randomize = 1
+			endif
+			
+			break // this mode runs after first repetition
+			
+		case 1: // config
+			RandomOrderConfig()
 			return 0
 		
-		case 2:
+		case 2: // init, called via ClampAcquireStart()
+			randomize = 1
+			firstRep = 1
+			break
+			
+		case 3: // finish
+			StimWavesCheck(StimDF(), 1) // reset DAC order
+			return 0
+			
 		default:
 			return 0 // do nothing
 			
 	endswitch
 	
-	Variable numStimWaves = NMStimNumStimWaves( sdf )
+	if ( mode == 2 ) // save original Group #s to DAC waves when initializing
 	
-	wName1 = sdf + "CT_RandomOrder"
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
+			
+				wPrefix = StringFromList(pcnt, plist)
+				wName1 = wPrefix + "_" + num2str( icnt )
+				
+				grpNum1 = NMNoteVarByKey( sdf+wName1, "Group" )
+				
+				if ( numtype( grpNum1 ) > 0 )
+					NMNoteVarReplace( sdf+wName1, "Group", icnt ) 
+				endif
+				
+			endfor
+		endfor
+	
+	endif
+	
+	// randomize group order
+	
+	if ( randomize )
+	
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			grpList += num2istr( icnt ) + ";"
+		endfor
+		
+		// randomize group list
+			
+		for ( icnt = 0; icnt < numStimWaves * 2; icnt += 1 )
+		
+			items = ItemsInList( grpList )
+		
+			if ( items == 0 )
+				break // finished
+			endif
+			
+			jcnt = floor( abs( enoise( items ) ) )
+			grpStr = StringFromList( jcnt, grpList )
+			grpList = RemoveListItem( jcnt, grpList )
+			grpList2 += grpStr + ";"
+			
+		endfor
+		
+		if ( ItemsInList( grpList2 ) != numStimWaves )
+			return -1
+		endif
+	
+		// rename DAC waves with temporary names
+		
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
+			
+				wPrefix = StringFromList(pcnt, plist)
+				wName1 = wPrefix + "_" + num2str( icnt )
+				wNameTemp = "x_" + wName1
+				
+				if ( WaveExists( $sdf+wName1 ) == 0 )
+					Print "RandomOrder Error: wave does not exist: " + wName1
+					return -1
+				endif
+				
+				if ( WaveExists( $sdf+wNameTemp ) )
+					KillWaves /Z $sdf+wNameTemp
+				endif
+				
+				if ( WaveExists( $sdf+wNameTemp ) )
+					Print "RandomOrder Error: wave cannot be deleted: " + wNameTemp
+					return -1
+				endif
+				
+				Rename $sdf+wName1, $wNameTemp
+				
+				if ( WaveExists( $sdf+wName1 ) )
+					Print "RandomOrder Error: failed to rename " + wName1 + " to " + wNameTemp
+					return -1
+				endif
+				
+			endfor
+		endfor
+	
+		// rename temporary waves using random sequence in grpList2
+		
+		for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+		
+			grpStr = StringFromList( icnt, grpList2 )
+			grpNum2 = str2num( grpStr )
+			
+			for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
+			
+				wPrefix = StringFromList(pcnt, plist)
+				
+				wName2 = wPrefix + "_" + num2str( icnt )
+				
+				foundGrp = 0
+				
+				for ( jcnt = 0; jcnt < numStimWaves; jcnt += 1 )
+				
+					wName1 = "x_" + wPrefix + "_" + num2str( jcnt )
+					
+					if ( !WaveExists( $sdf+wName1 ) )
+						continue
+					endif
+					
+					grpNum1 = NMNoteVarByKey( sdf+wName1, "Group" )
+					
+					if ( numtype( grpNum1 ) > 0 )
+						Print "RandomOrder Error: failed to find group number for " + wName1
+						return -1 
+					endif
+					
+					if ( grpNum1 == grpNum2 )
+						foundGrp = 1
+						break
+					endif
+				
+				endfor
+				
+				if ( !foundGrp )
+					Print "RandomOrder Error: failed to find DAC wave for group #" + num2istr( grpNum2 )
+					return -1
+				endif
+				
+				if ( WaveExists( $sdf+wName1 ) == 0 )
+					Print "RandomOrder Error: wave does not exist: " + wName1
+					return -1
+				endif
+				
+				if ( WaveExists( $sdf+wName2 ) )
+					KillWaves /Z $sdf+wName2
+				endif
+				
+				if ( WaveExists( $sdf+wName2 ) )
+					Print "RandomOrder Error: wave cannot be deleted: " + wName2
+					return -1
+				endif
+				
+				Rename $sdf+wName1, $wName2
+				
+				if ( WaveExists( $sdf+wName1 ) )
+					Print "RandomOrder Error: failed to rename " + wName1 + " to " + wName2
+					return -1
+				endif
+				
+			endfor
+			
+		endfor
+		
+	endif
+	
+	// configure Groups wave to save group #s
+	
 	wName2 = "Groups"
 	
-	Make /O/N=( numStimWaves ) $wName1 = Nan
-	Make /O/N=( numStimWaves ) $wName2 = Nan
+	if ( WaveExists( $wName2 ) )
 	
-	Wave wtemp = $wName1
-	Wave gtemp = $wName2
+		npnts = numpnts( $wName2 )
+		
+		if ( npnts != numStimWaves * numStimReps )
+		
+			Redimension /N=( numStimWaves * numStimReps ) $wName2
+			
+			Wave grps = $wName2
+			
+			for ( icnt = npnts ; icnt < numpnts( grps ) ; icnt += 1 )
+				grps[ icnt ] = NaN
+			endfor
+			
+		endif
+		
+	else
 	
-	wtemp = p
+		Make /O/N=( numStimWaves * numStimReps ) $wName2 = NaN
+		
+	endif
 	
-	for ( icnt = 0 ; icnt < 5 ; icnt += 1 )
-		NMShuffleWave2( wName1 )
-	endfor
-	
-	plist = StimPrefixListAll( sdf )
+	Wave grps = $wName2
 	
 	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
-		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
 		
-			wPrefix = StringFromList(pcnt, plist)
-			
-			wName1 = wPrefix + "_" + num2str( icnt )
-			
-			grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
-			
-			if ( numtype( grpNum ) > 0 )
-				NMNoteVarReplace( sdf+wName1, "Group", icnt ) // save original Group number
-			endif
-			
-		endfor
+		pcnt = 0 // first one only
+		
+		wPrefix = StringFromList(pcnt, plist)
+		wName1 = wPrefix + "_" + num2str( icnt )
+		
+		grpNum1 = NMNoteVarByKey( sdf+wName1, "Group" )
+		
+		if ( firstRep )
+			grps[ icnt ] = grpNum1 // update Groups wave
+		else
+			grps[ icnt + nextWave ] = grpNum1 // update Groups wave
+		endif
+		
 	endfor
 	
-	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
+	//RandomOrderSave( grpList2 ) // for testing randomness
 	
-		jcnt = wtemp[ icnt ]
-	
-		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
-		
-			wPrefix = StringFromList(pcnt, plist)
-			
-			wName1 = wPrefix + "_" + num2str( icnt )
-			wName2 = wPrefix + "_" + num2str( jcnt )
-			wNameTemp = wName1 + "_Temp"
-			
-			if ( StringMatch( wName1, wName2 ) == 1 )
-				continue
-			endif
-			
-			if ( WaveExists( $sdf+wName1 ) == 0 )
-				Print "RandomOrder Error: wave does not exist: " + wName1
-				return -1
-			endif
-			
-			if ( WaveExists( $sdf+wName2 ) == 0 )
-				Print "RandomOrder Error: wave does not exist: " + wName2
-				return -1
-			endif
-			
-			if ( WaveExists( $sdf+wNameTemp ) == 1 )
-				KillWaves /Z $sdf+wNameTemp
-			endif
-			
-			if ( WaveExists( $sdf+wNameTemp ) == 1 )
-				Print "RandomOrder Error: wave cannot be deleted: " + wNameTemp
-				return -1
-			endif
-			
-			Rename $sdf+wName1, $wNameTemp
-			
-			if ( WaveExists( $sdf+wName1 ) == 1 )
-				Print "RandomOrder Error: failed to rename " + wName1 + " to " + wNameTemp
-				return -1
-			endif
-			
-			Rename $sdf+wName2, $wName1
-			
-			if ( WaveExists( $sdf+wName2) == 1 )
-				Print "RandomOrder Error: failed to rename " + wName2 + " to " + wName1
-				return -1
-			endif
-			
-			Rename $sdf+wNameTemp, $wName2
-			
-			if ( WaveExists( $sdf+wNameTemp) == 1 )
-				Print "RandomOrder Error: failed to rename " + wNameTemp + " to " + wName2
-				return -1
-			endif
-			
-		endfor
-	
-	endfor
-	
-	for ( icnt = 0; icnt < numStimWaves; icnt += 1 )
-		for (pcnt = 0; pcnt < ItemsInList(plist); pcnt += 1)
-		
-			wPrefix = StringFromList(pcnt, plist)
-			
-			wName1 = wPrefix + "_" + num2str( icnt )
-			
-			grpNum = NMNoteVarByKey( sdf+wName1, "Group" )
-			
-			if ( numtype( grpNum ) == 0 )
-				gtemp[ icnt ] = grpNum
-			endif
-			
-		endfor
-	endfor
+	NMHistory( "Randomized DAC/TTL stim waves to group sequence: " + grpList2 )
 	
 	return 0
 	
@@ -2018,13 +2216,64 @@ End // RandomOrder
 //****************************************************************
 //****************************************************************
 
-Function RandomOrderKill()
-	
-	StimWavesCheck(StimDF(), 1)
-	
-	KillWaves /Z Groups
+Function RandomOrderSave( grpList ) // for testing randomness. Use lots of reps.
+	String grpList
 
-End // RandomOrderKill
+	Variable icnt, npnts
+	String wName, grpStr
+	
+	String cdf = NMClampDF
+	String sdf = StimDF()
+
+	Variable numStimWaves = NumVarOrDefault( sdf + "NumStimWaves", 0 )
+	
+	for ( icnt = 0 ; icnt < numStimWaves ; icnt += 1 )
+		
+		wName = "CT_RO_" + num2istr( icnt )
+		
+		if ( !WaveExists( $cdf + wName ) )
+			Make /N=0 $cdf + wName = NaN
+		endif
+		
+		Wave wtemp = $cdf + wName
+		
+		npnts = numpnts( wtemp )
+		
+		Redimension /N=( npnts + 1 ) wtemp
+		
+		grpStr = StringFromList( icnt, grpList )
+		
+		wtemp[ npnts ] = str2num( grpStr )
+	
+	endfor
+
+
+End // RandomOrderSave
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function RandomOrderConfig()
+
+	String sdf = StimDF()
+	
+	Variable reps = NumVarOrDefault( sdf + "RandomOrderReps", 1 )
+	
+	reps += 1
+	
+	Prompt reps, "select when to randomize stimulus waves:", popup "once at the start of acquisition;before each repetition;"
+	DoPrompt "Random Order Configuration", reps
+	
+	if ( V_flag == 1 )
+		return 0 // cancel
+	endif
+	
+	reps -= 1
+	
+	SetNMvar( sdf+"RandomOrderReps", reps )
+
+End // RandomOrderConfig
 
 //****************************************************************
 //****************************************************************

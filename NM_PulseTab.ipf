@@ -30,6 +30,7 @@ Static Constant NumWavesDefault = 1
 Static Constant DeltaxDefault = 0.1
 Static Constant WaveLengthDefault = 100
 Static StrConstant WavePrefixDefault = "Pulse"
+Static StrConstant ConfigWaveName = "PulseParamLists"
 
 //****************************************************************
 //****************************************************************
@@ -339,11 +340,10 @@ Function NMPulseCheck() // declare global variables
 	CheckNMvar( sf + "WaveLength", WaveLengthDefault )
 	CheckNMstr( sf + "Xunits", NMXunits )
 	CheckNMstr( sf + "Yunits", "" )
-	CheckNMvar( sf + "ConfigNum", -1 )
+	CheckNMvar( sf + "PulseConfigNum", -1 )
 	
 	CheckNMvar( df + "AutoExecute", 0 )
 	CheckNMvar( df + "OverwriteMode", 1 )
-	CheckNMvar( df + "EditByPrompt", 1 )
 	CheckNMvar( df + "PromptBinomial", 1 )
 	CheckNMstr( df + "PromptTypeDSCG", "stdv" )
 	CheckNMvar( df + "PromptPlasticity", 1 )
@@ -352,12 +352,41 @@ Function NMPulseCheck() // declare global variables
 	CheckNMvar( df + "SavePlasticityWaves", 1 )
 	CheckNMvar( df + "TTL", 0 )
 	
-	NMPulseListBoxCheck()
-	NMPulseListBox2Check()
+	STRUCT NMPulseLBWaves lb
+	
+	NMPulseTabLBWavesDefault( lb )
 	
 	return 0
 	
 End // NMPulseCheck
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulseConfigWaveName()
+	
+	return NMPulseSubfolder() + ConfigWaveName
+
+End // NMPulseConfigWaveName
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseTabLBWavesDefault( lb )
+	STRUCT NMPulseLBWaves &lb
+	
+	String sf = NMPulseSubfolder()
+	
+	lb.pcwName = sf + ConfigWaveName // same as NMPulseConfigWaveName()
+	lb.lb1wName = sf + "LB1Configs"
+	lb.lb1wNameSel = sf + "LB1ConfigsEditable"
+	lb.lb2wName = sf + "LB2Configs"
+	lb.lb2wNameSel = sf + "LB2ConfigsEditable"
+	lb.pcvName = sf + "LB1ConfigNum"
+	
+	NMPulseLBWavesCheck( lb )
+	
+End // NMPulseTabLBWavesDefault
 
 //****************************************************************
 //****************************************************************
@@ -371,6 +400,7 @@ Function NMPulseVar( varName )
 	strswitch( varName )
 	
 		case "ConfigNum":
+		case "PulseConfigNum":
 			return NumVarOrDefault( sf + varName, -1 )
 	
 		case "NumWaves":
@@ -386,9 +416,6 @@ Function NMPulseVar( varName )
 			return NumVarOrDefault( df + varName, 1 )
 			
 		case "OverwriteMode":
-			return NumVarOrDefault( df + varName, 1 )
-			
-		case "EditByPrompt":
 			return NumVarOrDefault( df + varName, 1 )
 			
 		case "PromptBinomial":
@@ -430,7 +457,6 @@ Function /S NMPulseStr( varName )
 			//return StrVarOrDefault( xsf + varName, WavePrefixDefault )
 			return StrVarOrDefault( df + "CurrentPrefixPulse", WavePrefixDefault )
 			
-			
 		case "Xunits":
 			return StrVarOrDefault( sf + varName, NMXunits )
 			
@@ -453,7 +479,6 @@ Function NMPulseConfigs()
 
 	NMConfigVar( "Pulse", "AutoExecute", 1, "auto compute waves after adding/editing pulses", "boolean" )
 	NMConfigVar( "Pulse", "OverwriteMode", 1, "overwrite existing waves, tables and graphs if their is a name conflict", "boolean" )
-	NMConfigVar( "Pulse", "EditByPrompt", 1, "edit pulse listbox configs via user prompts", "boolean" )
 	NMConfigVar( "Pulse", "PromptBinomial", 1, "prompt for binomial pulses", "boolean" )
 	NMConfigVar( "Pulse", "PromptPlasticity", 1, "prompt for plasticity of pulse trains", "boolean" )
 	NMConfigStr( "Pulse", "PromptTypeDSCG", "stdv", "prompt for \"delta\" or \"stdv\" or \"cv\" or \"gamma\" of pulse parameters", "delta;stdv;cv;gamma;" )
@@ -467,287 +492,6 @@ End // NMPulseConfigs
 //****************************************************************
 //****************************************************************
 
-Function NMPulseListBoxCheck()
-
-	Variable nrows = 10, ncols = 2
-	
-	String wName = "Configs"
-	String ename = "ConfigsEditable"
-	String sf = NMPulseSubfolder()
-
-	if ( !WaveExists( $sf + wName ) )
-		Make /T/N=( nrows, ncols ) $( sf + wName ) = ""
-	endif
-	
-	if ( !WaveExists( $sf + ename ) )
-		Make /N=( nrows, ncols ) $( sf + ename ) = 0
-	endif
-
-End // NMPulseListBoxCheck
-
-//****************************************************************
-//****************************************************************
-
-Function NMPulseListBoxUpdate()
-	
-	Variable icnt, configNum, nrows = 10, ncols = 2
-	
-	String wName = "Configs"
-	String ename = "ConfigsEditable"
-	String sf = NMPulseSubfolder()
-	String pName = NMPulseConfigWaveName()
-	
-	NMPulseListBoxCheck()
-	
-	Wave /T configs = $sf + wName
-	Wave editable = $sf + ename
-	
-	if ( WaveExists( $pName ) )
-	
-		Wave /T configs2 = $pName
-		
-		nrows = numpnts( configs2 ) + 5
-		
-		Redimension /N=( nrows, ncols ) configs, editable
-		
-		configs[][ 0 ] = "+"
-		configs[][ 1 ] = ""
-		
-		for ( icnt = 0 ; icnt < numpnts( configs2 ) ; icnt += 1 )
-		
-			if ( ItemsInList( configs2[ icnt ] ) > 0 )
-				configs[ icnt ][ 0 ] = "-"
-				configs[ icnt ][ 1 ] = configs2[ icnt ]
-			endif
-			
-		endfor
-		
-		configNum = NMPulseVar( "ConfigNum" )
-		
-		if ( ( configNum <= 0 ) || ( configNum >= numpnts( $pName ) ) )
-			SetNMvar( sf + "ConfigNum", 0 )
-		endif
-		
-	else
-	
-		configs[ ][ 0 ] = "+"
-		configs[ ][ 1 ] = ""
-		
-		SetNMvar( sf + "ConfigNum", 0 )
-		
-	endif
-	
-	editable = 0
-
-End // NMPulseListBoxUpdate
-
-//****************************************************************
-//****************************************************************
-
-Function NMPulseListBox2Check()
-
-	Variable nrows = 20, ncols = 3
-
-	String wName = "Params"
-	String ename = "ParamsEditable"
-	String sf = NMPulseSubfolder()
-	
-	if ( !WaveExists( $sf + wName ) )
-		Make /T/N=( nrows, ncols ) $( sf + wName ) = ""
-		Make /N=( nrows, ncols ) $( sf + ename ) = 0
-	endif
-	
-	if ( DimSize( $sf + ename, 1 ) != ncols )
-		Redimension /N=( -1, ncols ) $( sf + wName )
-		Redimension /N=( -1, ncols ) $( sf + ename )
-	endif
-
-End // NMPulseListBox2Check
-
-//****************************************************************
-//****************************************************************
-
-Function NMPulseListBox2Update()
-	
-	Variable icnt, ipnt, jcnt, kcnt, numParams, slen, canedit, items
-	Variable nrows = 20, ncols = 3
-	String paramList, paramList2, paramName, pstr
-	
-	String wName = "Params", ename = "ParamsEditable"
-	String sf = NMPulseSubfolder()
-	
-	String pName = NMPulseConfigWaveName()
-	
-	Variable configNum = NMPulseVar( "ConfigNum" )
-	
-	NMPulseListBox2Check()
-	
-	Wave /T params = $sf + wName
-	Wave editable = $sf + ename
-	
-	params = ""
-	editable = 0
-	
-	nrows = DimSize( params, 0 )
-	
-	if ( WaveExists( $pName ) && ( configNum >= 0 ) && ( configNum < numpnts( $pName ) ) )
-	
-		Wave /T configs = $pName
-		
-		paramList = configs[ configNum ]
-		
-		if ( strlen( paramList ) == 0 )
-			return 0
-		endif
-		
-		numParams = ItemsInList( paramList )
-		
-		if ( nrows < numParams )
-			Redimension /N=( numParams + 1, ncols ) params, editable
-			nrows = numParams
-		endif
-		
-		params[ 0 ][ 0 ] = "config"
-		params[ 0 ][ 1 ] = num2istr( configNum )
-		
-		ipnt = 1
-		
-		for ( icnt = 0 ; icnt < numParams ; icnt += 1 )
-		
-			paramList2 = StringFromList( icnt, paramList )
-			
-			jcnt = strsearch( paramList2, "=", 0 )
-			
-			paramName = paramList2[ 0, jcnt - 1 ]
-			
-			params[ ipnt ][ 0 ] = paramName
-			
-			canedit = 3
-			
-			if ( StringMatch( paramName, "train" ) )
-				//canedit = 0
-			endif
-			
-			if ( StringMatch( paramName, "pulse" ) )
-				canedit = 0
-			endif
-			
-			if ( StringMatch( paramName, "off" ) )
-				canedit = 0
-			endif
-			
-			slen = strlen( paramList2 )
-			
-			paramList2 = paramList2[ jcnt + 1, slen - 1 ]
-			
-			paramList2 = ReplaceString( ",delta,", paramList2, ",delta=" )
-			paramList2 = ReplaceString( ",stdv,", paramList2, ",stdv=" )
-			paramList2 = ReplaceString( ",cv,", paramList2, ",cv=" )
-			paramList2 = ReplaceString( ",gammaA,", paramList2, ",gammaA=" )
-			paramList2 = ReplaceString( ",gammaB,", paramList2, ",gammaB=" )
-			
-			items = ItemsInList( paramList2, "," )
-			
-			pstr = StringFromList( 0, paramList2, "," )
-			
-			if ( strlen( pstr ) > 0 )
-				params[ ipnt ][ 1 ] = pstr
-				editable[ ipnt ][ 1 ] = canedit
-			endif
-			
-			pstr = ""
-			
-			for ( kcnt = 1 ; kcnt < items ; kcnt += 1 )
-				
-				pstr += StringFromList( kcnt, paramList2, "," )
-				
-				if ( kcnt < items - 1 )
-					pstr += ","
-				endif
-			
-			endfor
-			
-			if ( StringMatch( paramName, "pulse" ) )
-				params[ ipnt ][ 2 ] = ""
-			elseif ( strlen( pstr ) > 0 )
-				params[ ipnt ][ 2 ] = pstr
-			else
-				params[ ipnt ][ 2 ] = "+"
-			endif
-			
-			editable[ ipnt ][ 2 ] = 0
-			
-			ipnt += 1
-		
-		endfor
-	
-	endif
-
-End // NMPulseListBox2Update
-
-//****************************************************************
-//****************************************************************
-
-Function NMPulseListBox2save( [ update ] )
-	Variable update
-
-	Variable icnt, nrows, ncols
-	String pstr, paramList = "", wName = "Params"
-	
-	String sf = NMPulseSubfolder()
-	String pName = NMPulseConfigWaveName()
-
-	Variable configNum = NMPulseVar( "ConfigNum" )
-	
-	if ( ParamIsDefault( update ) )
-		update = 1
-	endif
-	
-	if ( !WaveExists( $sf + wName ) || !WaveExists( $pName ) )
-		return 0
-	endif
-	
-	if ( ( configNum < 0 ) || ( configNum >= numpnts( $pName ) ) )
-		return 0
-	endif
-	
-	Wave /T params = $sf + wName
-	Wave /T configs = $pName
-	
-	nrows = DimSize( params, 0 )
-	ncols = DimSize( params, 1 )
-	
-	if ( ncols != 3 )
-		return 0
-	endif
-
-	for ( icnt = 1 ; icnt < nrows ; icnt += 1 )
-	
-		if ( strlen( params[ icnt ][ 0 ] ) == 0 )
-			continue
-		endif
-	
-		pstr = params[ icnt ][ 0 ] + "=" + params[ icnt ][ 1 ]
-		
-		if ( strlen( params[ icnt ][ 2 ] ) > 1 )
-			pstr += "," + params[ icnt ][ 2 ]
-		endif
-		
-		paramList += pstr + ";"
-	
-	endfor
-	
-	configs[ configNum ] = paramList
-	
-	if ( update )
-		NMPulseUpdate()
-	endif
-
-End // NMPulseListBox2save
-
-//****************************************************************
-//****************************************************************
-
 Function NMPulseMake()
 
 	Variable x0 = 20, xinc = 140, yinc = 25, fs = NMPanelFsize
@@ -757,6 +501,10 @@ Function NMPulseMake()
 	
 	String df = NMPulseDF
 	String sf = NMPulseSubfolder()
+	
+	STRUCT NMPulseLBWaves lb
+	
+	NMPulseTabLBWavesDefault( lb )
 
 	ControlInfo /W=$NMPanelName $"PU_configs"
 	
@@ -789,26 +537,26 @@ Function NMPulseMake()
 	
 	y0 += 80
 	
-	ListBox PU_configs, title="Pulse Configs", pos={x0,y0}, size={260,100}, fsize=fs, listWave=$( sf + "Configs" ), selWave=$( sf + "ConfigsEditable" ), win=$NMPanelName
-	ListBox PU_configs, mode=1, userColumnResize=1, proc=NMPulseListbox, widths={25,1500}, win=$NMPanelName
+	ListBox PU_configs, pos={x0,y0}, size={260,100}, fsize=fs, listWave=$lb.lb1wName, selWave=$lb.lb1wNameSel, win=$NMPanelName
+	ListBox PU_configs, mode=1, userColumnResize=1, proc=NMPulseLB1Control, widths={25,1500}, win=$NMPanelName
 	
 	y0 += 115
 	
-	ListBox PU_params, title="Pulse Configs", pos={x0,y0}, size={260,120}, fsize=fs, listWave=$( sf + "Params" ), selWave=$( sf + "ParamsEditable" ), win=$NMPanelName
-	ListBox PU_params, mode=1, userColumnResize=1, selRow=-1, proc=NMPulseListbox2, widths={35,70,45}, win=$NMPanelName
+	ListBox PU_params, pos={x0,y0}, size={260,120}, fsize=fs, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, win=$NMPanelName
+	ListBox PU_params, mode=1, userColumnResize=1, selRow=-1, proc=NMPulseLB2Control, widths={35,70,45}, win=$NMPanelName
 	
-	y0 += 140
+	y0 += 135
 	yinc = 30
 	
-	Button PU_Execute, pos={x0+10,y0}, title="Execute", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Graph, pos={x0+95,y0}, title="Graph", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Table, pos={x0+180,y0}, title="Table", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Clear, pos={x0+55,y0+yinc}, title="Clear", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
-	Button PU_Model, pos={x0+140,y0+yinc}, title="Model", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Execute, pos={x0+20,y0}, title="Execute", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Model, pos={x0+140,y0}, title="Model", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Graph, pos={x0+20,y0+yinc}, title="Graph", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	Button PU_Table, pos={x0+140,y0+yinc}, title="Table", size={100,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
+	//Button PU_Clear, pos={x0+55,y0+yinc}, title="Remove", size={70,20}, proc=NMPulseButton, fsize=fs, win=$NMPanelName
 	
 	y0 += 65
 	
-	CheckBox PU_AutoExecute, title="auto execute", pos={x0+120,y0}, size={200,50}, value=0, proc=NMPulseCheckBox, fsize=fs, win=$NMPanelName
+	CheckBox PU_AutoExecute, title="auto execute", pos={x0+125,y0}, size={200,50}, value=0, proc=NMPulseCheckBox, fsize=fs, win=$NMPanelName
 	
 	NMPulseUpdate( stopAutoExecute = 1 )
 	
@@ -821,19 +569,23 @@ Function NMPulseUpdate( [ stopAutoExecute ] )
 	Variable stopAutoExecute
 
 	Variable configNum
-	String sf, wName, wavePrefix
+	String sf, wavePrefix
 	
 	Variable auto = NMPulseVar( "AutoExecute" )
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
+	STRUCT NMPulseLBWaves lb
 
 	NMPulseCheck()
 	
 	sf = NMPulseSubfolder()
-	wName = NMPulseConfigWaveName()
 	
-	configNum = NMPulseVar( "ConfigNum" )
+	NMPulseTabLBWavesDefault( lb )
 	
-	if ( !WaveExists( $wName ) || ( numpnts( $wName ) == 0 ) )
+	if ( !WaveExists( $lb.pcwName ) || ( numpnts( $lb.pcwName ) == 0 ) )
 		configNum = -1
+	else
+		configNum = NumVarOrDefault( lb.pcvName, 0 )
 	endif
 	
 	PopupMenu PU_PrefixMenu, mode=1, value=NMPulseWavePrefixMenu(), popvalue=CurrentNMPulseWavePrefix(), win=$NMPanelName
@@ -846,11 +598,11 @@ Function NMPulseUpdate( [ stopAutoExecute ] )
 	
 	CheckBox PU_AutoExecute, value=auto, win=$NMPanelName
 	
-	ListBox PU_configs, listWave=$( sf + "Configs" ), selWave=$( sf + "ConfigsEditable" ), selRow=( configNum ), win=$NMPanelName
-	ListBox PU_params, listWave=$( sf + "Params" ), selWave=$( sf + "ParamsEditable" ), selRow=-1, win=$NMPanelName
+	ListBox PU_configs, listWave=$lb.lb1wName, selWave=$lb.lb1wNameSel, selRow=( configNum ), win=$NMPanelName
+	ListBox PU_params, listWave=$lb.lb2wName, selWave=$lb.lb2wNameSel, selRow=-1, win=$NMPanelName
 	
-	NMPulseListBoxUpdate()
-	NMPulseListBox2Update()
+	NMPulseLB1Update( lb )
+	NMPulseLB2Update( lb, editByPrompt=editByPrompt )
 	
 	if ( !stopAutoExecute && auto )
 		NMPulseExecute()
@@ -936,6 +688,86 @@ Function NMPulsePopup(ctrlName, popNum, popStr) : PopupMenuControl
 	endif
 
 End // NMPulsePopup
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB1Control( ctrlName, row, col, event ) : ListboxControl
+	String ctrlName // name of this control
+	Variable row // row if click in interior, -1 if click in title
+	Variable col // column number
+	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
+	
+	String paramList, ood, titleStr, trainStr
+	String sf = NMPulseSubfolder()
+	
+	Variable editByPrompt = NMVarGet( "ConfigsEditByPrompt" )
+	
+	STRUCT NMPulseLBWaves lb
+	
+	NMPulseTabLBWavesDefault( lb )
+	
+	String estr = NMPulseLB1Event( row, col, event, lb )
+	
+	if ( StringMatch( estr, "+" ) )
+	
+		paramList = NMPulseLB1PromptNew()
+		
+		if ( ItemsInList( paramList ) > 0 )
+			return NMPulseConfigAdd( paramList, history = 1 )
+		endif
+	
+	elseif ( StringMatch( estr, "-" ) )
+
+		ood = NMPulseLB1PromptOODE( lb, sf )
+		NMPulseConfigOODE( lb, sf, ood )
+		
+	else
+		
+		NMPulseLB2Update( lb, editByPrompt=editByPrompt )
+		
+	endif
+	
+End // NMPulseLB1Control
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseLB2Control( ctrlName, row, col, event ) : ListboxControl
+	String ctrlName // name of this control
+	Variable row // row if click in interior, -1 if click in title
+	Variable col // column number
+	Variable event // event code
+		// 1 - mouse down
+		// 2 - mouse up
+		// 3 - double click
+		// 4 - cell selection
+		// 6 - begin cell edit
+		// 7 - end cell edit
+		// 13 - checkbox clicked
+	
+	Variable numWaves = NMPulseVar( "NumWaves" )
+	Variable TTL = NMPulseVar( "TTL" )
+	String sf = NMPulseSubfolder()
+	String timeUnits = NMPulseStr( "Xunits" )
+	String ampUnits = NMPulseStr( "Yunits" )
+	
+	STRUCT NMPulseLBWaves lb
+	
+	NMPulseTabLBWavesDefault( lb )
+	
+	NMPulseLB2Event( row, col, event, lb, numWaves=numWaves, TTL=TTL, timeUnits=timeUnits, ampUnits=ampUnits )
+	
+	NMPulseUpdate()
+	
+End // NMPulseLB2Control
 
 //****************************************************************
 //****************************************************************
@@ -1062,405 +894,47 @@ End // NMPulseSet
 //****************************************************************
 //****************************************************************
 
-Function NMPulseListbox( ctrlName, row, col, event ) : ListboxControl
-	String ctrlName // name of this control
-	Variable row // row if click in interior, -1 if click in title
-	Variable col // column number
-	Variable event // event code
+Function /S NMPulseLB1PromptNew()
 	
-	Variable value
-	String varName, valueStr, sf = NMPulseSubfolder()
-	
-	if ( WaveExists( $sf + "Configs" ) == 0 )
-		return -1
-	endif
-	
-	Wave /T configs = $sf + "Configs"
-	
-	varName = configs[ row ][ 0 ]
-	valueStr = configs[ row ][ 1 ]
-	value = str2num( valueStr )
-	
-	if ( StringMatch( varName, "+" ) )
-		
-		if ( event == 2 )
-			NMPulsePromptCall()
-		endif
-
-	elseif ( StringMatch( varName, "-" ) && ( event == 2 ) )
-	
-		SetNMvar( sf + "ConfigNum", row )
-	
-		if ( col == 0 )
-			NMPulsePromptCall( row = row, OOD = 1 )
-		endif
-		
-		NMPulseListBox2Update()
-
-	endif
-	
-End // NMPulseListbox
-
-//****************************************************************
-//****************************************************************
-
-Function NMPulseListbox2( ctrlName, row, col, event ) : ListboxControl
-	String ctrlName // name of this control
-	Variable row // row if click in interior, -1 if click in title
-	Variable col // column number
-	Variable event // event code
-	
-	Variable value, configNum, dscgValue, dscgValue2, icnt, numRows, fixPolarity, fix2positive
-	Variable Fratio, KF, F1, deltaF
-	String varName, valueStr, dscg, dscgList, paramList, pstr
-	
+	String titleEnding = ""
 	String sf = NMPulseSubfolder()
-	String pName = NMPulseConfigWaveName()
-	
-	Variable TTL = NMPulseVar( "TTL" )
-	
-	if ( WaveExists( $sf + "Params" ) == 0 )
-		return -1
-	endif
-	
-	Wave /T params = $sf + "Params"
-	
-	varName = params[ row ][ 0 ]
-	valueStr = params[ row ][ 1 ]
-	value = str2num( valueStr )
-	
-	configNum = NMPulseVar( "ConfigNum" )
-	
-	strswitch( varName )
-		case "width":
-		case "stdv":
-		case "tau":
-		case "tau1":
-		case "tau2":
-		case "tau3":
-		case "tauRise":
-		case "tauDecay":
-		case "power":
-		case "period":
-			fix2positive = 1
-			break
-	endswitch
-	
-	if ( ( event == 2 ) && ( row > 0 ) && ( col == 2 ) && ( configNum >= 0 ) && ( configNum < numpnts( $pName ) ) )
-	
-		if ( StringMatch( varName, "config" ) || StringMatch( varName, "off" ) || StringMatch( varName, "pulse" ) )
-			return 0
-		endif
-		
-		if ( StringMatch( varName, "train" ) || StringMatch( varName, "tbgn" ) || StringMatch( varName, "tend" ) )
-			return 0
-		endif
-		
-		if ( StringMatch( varName, "interval" ) || StringMatch( varName, "refrac" ) )
-			return 0
-		endif
-		
-		if ( TTL && StringMatch( varName, "amp" ) )
-			return 0
-		endif
-		
-		paramList = params[ row ][ 2 ]
-		
-		strswitch( paramList[ 0, 1 ] )
-			case "de":
-				dscg = "delta"
-				dscgValue = NumberByKey( "delta", paramList, "=", "," )
-				break
-			case "st":
-				dscg = "stdv"
-				dscgValue = NumberByKey( "stdv", paramList, "=", "," )
-				break
-			case "cv":
-				dscg = "cv"
-				dscgValue = NumberByKey( "cv", paramList, "=", "," )
-				break
-			case "ga":
-				dscg = "gamma"
-				dscgValue = NumberByKey( "gammaA", paramList, "=", "," )
-				dscgValue2 = NumberByKey( "gammaB", paramList, "=", "," )
-				break
-			default:
-				dscg = "none"
-				dscgValue = 1
-		endswitch
-		
-		if ( StringMatch( varName, "wave" ) )
-			dscgList = "none;delta;"
-		else
-			dscgList = "none;delta;stdv;cv;gamma;"
-		endif
-		
-		if ( strsearch( paramList, "FP", 0 ) > 0 )
-			fixPolarity = 2
-		else
-			fixPolarity = 1
-		endif
-	
-		Prompt dscg, "increment type:", popup dscgList
-		Prompt fixPolarity, "fix polarity of " + varName + " parameter?", popup "no;yes;"
-		
-		DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscg
-		
-		if ( V_flag == 0 )
-		
-			strswitch( dscg )
-			
-				case "none":
-					params[ row ][ 2 ] = ""
-					break
-					
-				case "delta":
-				case "stdv":
-				case "cv":
-				
-					Prompt dscgValue, dscg + " value"
-				
-					if ( fix2positive )
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
-						fixPolarity = 2
-					else
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue, fixPolarity
-					endif
-					
-					if ( V_flag == 0 )
-					
-						pstr = dscg + "=" + num2str( dscgValue )
-						
-						if ( fixPolarity == 2 )
-							pstr += ",FP"
-						endif
-						
-						params[ row ][ 2 ] = pstr
-						
-					endif
-					
-					break
-					
-				case "gamma":
-				
-					Prompt dscgValue, "gamma A"
-					
-					pstr = ""
-					
-					if ( fix2positive )
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
-					else
-						DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue
-					endif
-					
-					if ( V_flag == 0 )
-					
-						pstr = "gammaA=" + num2str( dscgValue )
-						
-						if ( dscgValue2 == 0 )
-							dscgValue2 = 1
-						endif
-						
-						Prompt dscgValue2, "gamma B"
-						
-						if ( fix2positive )
-							DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2
-							fixPolarity = 2
-						else
-							DoPrompt "Edit Pulse Config #" + num2istr( configNum ), dscgValue2, fixPolarity
-						endif
-						
-						if ( V_flag == 0 )
-						
-							pstr += ",gammaB=" + num2str( dscgValue2 )
-							
-							if ( fixPolarity == 2 )
-								pstr += ",FP"
-							endif
-						
-							params[ row ][ 2 ] = pstr
-							
-						else
-						
-							pstr = ""
-							
-						endif
-						
-					endif
-					
-					if ( strlen( pstr ) > 0 )
-						params[ row ][ 2 ] = pstr
-					endif
-					
-					break
-					
-			endswitch
-			
-			NMPulseListBox2save()
-			
-		endif
-		
-	elseif ( StringMatch( varName, "Fratio" ) && ( event == 7 ) )
-	
-		numRows = DimSize( params, 0 )
-		
-		Fratio = value
-		F1 = NaN
-		deltaF = NaN
-		
-		for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
-			
-			if ( StringMatch( params[ icnt ][ 0 ], "F1" ) )
-				F1 = str2num( params[ icnt ][ 1 ] )
-			endif
-			
-			if ( StringMatch( params[ icnt ][ 0 ], "deltaF" ) )
-				deltaF = str2num( params[ icnt ][ 1 ] )
-			endif
-			
-		endfor
-		
-		KF = NMPulseTrainDittmanKF( F1, Fratio, deltaF )
-		
-		for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
-			if ( StringMatch( params[ icnt ][ 0 ], "KF" ) )
-				params[ icnt ][ 1 ] = num2str( KF )
-			endif
-		endfor
-		
-	elseif ( StringMatch( varName, "KF" ) && ( event == 7 ) )
-	
-		numRows = DimSize( params, 0 )
-		
-		for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
-			if ( StringMatch( params[ icnt ][ 0 ], "Fratio" ) )
-				params[ icnt ][ 1 ] = num2str( NaN )
-			endif
-		endfor
-		
-	elseif ( ( event == 7 ) && fix2positive )
-	
-		params[ row ][ 1 ] = num2str( abs( value ) )
-		
-	endif
-	
-	if ( event == 7 )
-		NMPulseListBox2save()
-	endif
-	
-End // NMPulseListbox2
-
-//****************************************************************
-//****************************************************************
-
-Function /S NMPulsePromptCall( [ row, OOD ] )
-	Variable row
-	Variable OOD // on / off / delete
-	
-	Variable editExisting, select, off
-	String pList, paramList = "", titleEnding = ""
-	String wName = NMPulseConfigWaveName()
 	
 	Variable numWaves = NMPulseVar( "NumWaves" )
 	Variable waveLength = NMPulseVar( "WaveLength" )
-	String wavePrefix = NMPulseStr( "WavePrefix" )
 	
+	Variable TTL = NMPulseVar( "TTL" )
 	Variable binom = NMPulseVar( "PromptBinomial" )
 	Variable plasticity = NMPulseVar( "PromptPlasticity" )
-	Variable TTL = NMPulseVar( "TTL" )
+	
 	String DSCG = NMPulseStr( "PromptTypeDSCG" )
+	String timeUnits = NMPulseStr( "Xunits" )
+	String ampUnits = NMPulseStr( "Yunits" )
 	
-	if ( !ParamIsDefault( row ) && WaveExists( $wName ) )
-	
-		if ( row >= numpnts( $wName ) )
-			return ""
-		endif
-		
-		Wave /T wtemp = $wName
-		
-		paramList = wtemp[ row ]
-		
-		editExisting = 1
-		
-		if ( OOD )
-			
-			off = str2num( StringByKey( "off", paramList, "=" ) )
-			
-			if ( off )
-				pList = "turn on;delete;"
-				off = 0
-			else
-				pList = "turn off;delete;"
-				off = 1
-			endif
-			
-			select = 1
-		
-			Prompt select, " ", popup plist
-			DoPrompt "Remove Pulse Config #" + num2istr( row ), select
-			
-			if ( V_flag == 1 )
-				return "" // cancel
-			endif
-			
-			if ( select == 1 ) // on / off
-				
-				NMPulseConfigRemove( configNum = row, off = off, history = 1 )
-				
-			elseif ( select == 2 ) // delete
-			
-				NMPulseConfigRemove( configNum = row, history = 1 )
-				
-			endif
-			
-			return ""
-		
-		endif
-	
-	endif
-	
-	paramList = NMPulsePrompt( pdf = NMPulseDF, numWaves = numWaves, timeLimit = waveLength, paramList = paramList, TTL = TTL, titleEnding = titleEnding, binom = binom, DSC = DSCG, plasticity = plasticity )
+	return NMPulsePrompt( udf=sf, pdf=NMPulseDF, numWaves=numWaves, timeLimit=waveLength, TTL=TTL, titleEnding=titleEnding, binom=binom, DSC=DSCG, plasticity=plasticity, timeUnits=timeUnits, ampUnits=ampUnits )
 
-	if ( strlen( paramList ) == 0 )
-		return "" // cancel
-	endif
-	
-	if ( editExisting )
-		wtemp[ row ] = paramList
-	else
-		NMPulseConfigAdd( paramList, history = 1 )
-	endif
-	
-	NMPulseUpdate()
-	
-	return paramList
-
-End // NMPulsePromptCall
+End // NMPulseLB1PromptNew
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMPulseConfigWaveName()
-	
-	return NMPulseSubfolder() + "PulseParamLists"
-
-End // NMPulseConfigWaveName
-
-//****************************************************************
-//****************************************************************
-
-Function NMPulseConfigAdd( paramList [ update, history ] )
+Function NMPulseConfigAdd( paramList [ pcwName, update, history ] )
 	String paramList
+	String pcwName
 	Variable update
 	Variable history
 	
 	Variable error
 	String cmd
 	
-	String wName = NMPulseConfigWaveName()
+	String sf = NMPulseSubfolder()
+	
 	String bullet = NMCmdHistoryBullet()
 	
 	Variable cmdhistory = NMVarGet( "CmdHistory" )
+	
+	if ( ParamIsDefault( pcwName ) )
+		pcwName = NMPulseConfigWaveName()
+	endif
 	
 	if ( ParamIsDefault( update ) )
 		update = 1
@@ -1474,7 +948,7 @@ Function NMPulseConfigAdd( paramList [ update, history ] )
 		
 	endif
 	
-	error = NMPulseConfigWaveSave( wName, paramList )
+	error = NMPulseConfigWaveSave( pcwName, paramList )
 	
 	if ( update )
 		NMPulseUpdate()
@@ -1491,7 +965,9 @@ Function NMPulseConfigRemoveCall()
 
 	Variable select = 1
 	
-	Prompt select, " ", popup "clear all pulse configs;turn off all pulse configs;"
+	String pcwName = NMPulseConfigWaveName()
+	
+	Prompt select, " ", popup "clear all pulse configs;turn off all pulse configs;turn on all pulse configs;"
 	DoPrompt "NM Pulse Configs", select
 	
 	if ( V_flag == 1 )
@@ -1499,9 +975,11 @@ Function NMPulseConfigRemoveCall()
 	endif
 	
 	if ( select == 1 )
-		return NMPulseConfigRemove( all = 1, history = 1 )
+		return NMPulseConfigRemove( all = 1 )
 	elseif ( select == 2 )
-		return NMPulseConfigRemove( all = 1, off = 1, history = 1 )
+		return NMPulseConfigRemove( all = 1, off = 1 )
+	elseif ( select == 3 )
+		return NMPulseConfigRemove( all = 1, off = 0 )
 	endif
 
 End // NMPulseConfigRemoveCall
@@ -1509,56 +987,135 @@ End // NMPulseConfigRemoveCall
 //****************************************************************
 //****************************************************************
 
-Function NMPulseConfigRemove( [ configNum, all, off, update, history ] )
+Function NMPulseConfigOODE( lb, udf, ood [ noPrompt ] ) // code copied from NMPulseLB1OODE()
+	STRUCT NMPulseLBWaves &lb
+	String udf // data folder where user waves are located 
+	String ood // see NMPulseLB1PromptOOD
+	Variable noPrompt // for delete
+	
+	Variable configNum, deleteAll = 0
+	Variable deleteTrain = 2 // user prompt to delete
+	String trainStr, titleStr
+	
+	if ( !WaveExists( $lb.pcwName ) )
+		return -1
+	endif
+	
+	if ( noPrompt )
+		deleteTrain = 1 // delete w/o prompt
+	endif
+	
+	configNum = NumVarOrDefault( lb.pcvName, 0 )
+	
+	strswitch( ood )
+		
+			case "on":
+				//return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, off = 0 )
+				return NMPulseConfigRemove( configNum = configNum, off = 0, history = 1 )
+			case "off":
+				//return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, off = 1 )
+				return NMPulseConfigRemove( configNum = configNum, off = 1, history = 1 )
+			case "delete":
+				//return NMPulseConfigWaveRemove( lb.pcwName, configNum = configNum, deleteTrain = deleteTrain )
+				return NMPulseConfigRemove( configNum = configNum, deleteTrain = deleteTrain, history = 1 )
+			case "off all":
+				//return NMPulseConfigWaveRemove( lb.pcwName, all = 1, off = 1 )
+				return NMPulseConfigRemove( off = 1, all = 1, history = 1 )
+			case "on all":
+				//return NMPulseConfigWaveRemove( lb.pcwName, all = 1, off = 0 )
+				return NMPulseConfigRemove( off = 0, all = 1, history = 1 )
+				
+			case "delete all":
+			
+				if ( noPrompt )
+				
+					deleteAll = 1
+					
+				else
+			
+					DoAlert 2, "Are you sure you want to delete all pulse configurations?"
+					
+					if ( V_flag == 1 ) // yes
+						deleteAll = 1
+					endif
+				
+				endif
+				
+				if ( deleteAll )
+					//return NMPulseConfigWaveRemove( lb.pcwName, all = 1, deleteTrain = deleteTrain )
+					return NMPulseConfigRemove( all = 1, deleteTrain = deleteTrain, history = 1 )
+				endif
+				
+				break
+		
+			default:
+			
+				if ( StringMatch( ood[ 0, 3 ], "edit" ) )
+				
+					trainStr = ReplaceString( "edit ", ood, "" )
+				
+					if ( ( strlen( trainStr ) > 0 ) && ( WaveExists( $udf + trainStr ) ) )
+						titleStr = udf + trainStr
+						Edit /K=1 $udf + trainStr as titleStr
+					endif
+					
+				endif
+		
+		endswitch
+		
+		return 0
+	
+End // NMPulseConfigOODE
+
+//****************************************************************
+//****************************************************************
+
+Function NMPulseConfigRemove( [ configNum, all, off, deleteTrain, update, history ] )
+	// wrapper to NMPulseConfigWaveRemove(), this function adds history option
 	Variable configNum
 	Variable all
 	Variable off // ( 0 ) turn on config ( 1 ) turn off config
+	Variable deleteTrain // delete wave of random pulse times ( 0 ) no ( 1 ) yes ( 2 ) user prompt
 	Variable update
 	Variable history
 	
-	Variable success, error
+	Variable error
 	String vlist = ""
-	String wName = NMPulseConfigWaveName()
-	
-	if ( !WaveExists( $wName ) )
-		return 0
-	endif
+	String pcwName = NMPulseConfigWaveName()
 	
 	if ( ParamIsDefault( configNum ) )
 		configNum = -1
 	else
-		vlist = NMCmdNumOptional( "configNum", configNum, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "configNum", configNum, vlist )
 	endif
 	
 	if ( !ParamIsDefault( all ) )
-		vlist = NMCmdNumOptional( "all", all, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "all", all, vlist )
 	endif
 	
 	if ( ParamIsDefault( off ) )
 		off = -1
 	else
-		vlist = NMCmdNumOptional( "off", off, vlist, integer = 1 )
+		vlist = NMCmdNumOptional( "off", off, vlist )
 	endif
 	
 	if ( ParamIsDefault( update ) )
 		update = 1
+	else
+		vlist = NMCmdNumOptional( "update", update, vlist )
 	endif
 	
 	if ( history )
 		NMCommandHistory( vlist )
 	endif
 	
-	if ( all )
-		error = NMPulseConfigWaveRemove( wName, all = 1, off = off )
-	else
-		error = NMPulseConfigWaveRemove( wName, configNum = configNum, off = off )
-	endif
+	error = NMPulseConfigWaveRemove( pcwName, configNum = configNum, all = all, off = off, deleteTrain = deleteTrain )
 	
 	if ( update )
 		NMPulseUpdate()
 	endif
 	
-	return success
+	return error
 	
 End // NMPulseConfigRemove
 
@@ -1595,7 +1152,7 @@ End // NMPulseTableCall
 Function /S NMPulseConfigsTable( [ history ] )
 	Variable history
 
-	String wName = NMPulseConfigWaveName()
+	String pcwName = NMPulseConfigWaveName()
 	String folderPrefix = NMFolderListName( "" )
 	String wavePrefix = NMPulseStr( "WavePrefix" )
 	String tName = NMTabPrefix_Pulse() + "Configs_" + folderPrefix + "_" + wavePrefix
@@ -1609,7 +1166,7 @@ Function /S NMPulseConfigsTable( [ history ] )
 		NMCommandHistory( "" )
 	endif
 	
-	if ( !WaveExists( $wName ) )
+	if ( !WaveExists( $pcwName ) )
 		NMPulseConfigAdd( "" )
 	endif
 	
@@ -1617,12 +1174,12 @@ Function /S NMPulseConfigsTable( [ history ] )
 	
 		NMWinCascadeRect( w )
 		
-		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) $wName as title
+		Edit /K=1/N=$tName/W=(w.left,w.top,w.right,w.bottom) $pcwName as title
 		
-		Execute /Z "ModifyTable title( Point )= " + NMQuotes( "Config" )
-		Execute /Z "ModifyTable alignment=0"
-		Execute /Z "ModifyTable width=400"
-		Execute /Z "ModifyTable width( Point )=40"
+		ModifyTable /W=$tName title(Point)="Config"
+		ModifyTable /W=$tName alignment=0
+		ModifyTable /W=$tName width=400
+		ModifyTable /W=$tName width(Point)=40
 		
 		SetWindow $tName hook=NMPulseConfigsTableHook, hookevents=1
 		
@@ -1748,8 +1305,8 @@ Function /S NMPulseExecute( [ history ] )
 	Variable wcnt, wavesExist, waveLength, dx
 	String wName, wList
 	
-	String pulseWaveName = NMPulseConfigWaveName()
 	String sf = NMPulseSubfolder()
+	String pcwName = NMPulseConfigWaveName()
 	
 	String currentPrefix = CurrentNMWavePrefix()
 	Variable currentNumWaves = NMNumWaves()
@@ -1847,11 +1404,11 @@ Function /S NMPulseExecute( [ history ] )
 	
 		s.sf = sf
 	
-		NMPulseWavesMake2( pulseWaveName, nm, m, notes = wNotes, savePlasticityWaves = savePlasticity, s = s )
+		NMPulseWavesMake2( pcwName, nm, m, notes = wNotes, savePlasticityWaves = savePlasticity, s = s )
 	
 	else
 	
-		NMPulseWavesMake2( pulseWaveName, nm, m, notes = wNotes, savePlasticityWaves = savePlasticity )
+		NMPulseWavesMake2( pcwName, nm, m, notes = wNotes, savePlasticityWaves = savePlasticity )
 	
 	endif
 	
@@ -2075,7 +1632,7 @@ Function NMPulseGCBinomSyn( [ numWaves, dx, waveLength, Nsites, Pr, Q, latencyST
 	Variable history
 
 	Variable Qvalue, amp, site
-	String sf, paramList, wName
+	String sf, paramList, wName, pcwName
 	
 	String wavePrefix = "EPSC"
 	String df = NMPulseDF()
@@ -2152,13 +1709,14 @@ Function NMPulseGCBinomSyn( [ numWaves, dx, waveLength, Nsites, Pr, Q, latencyST
 		NMCommandHistory( "" )
 	endif
 	
-	NMPulseConfigRemove( all=1 )
-	
-	SetNMstr( df + "CurrentPrefixPulse", wavePrefix )
-	
 	NMPulseCheck()
 	
 	sf = NMPulseSubfolder()
+	pcwName = NMPulseConfigWaveName()
+	
+	NMPulseConfigWaveRemove( pcwName, all = 1 )
+	
+	SetNMstr( df + "CurrentPrefixPulse", wavePrefix )
 	
 	SetNMvar( sf + "NumWaves", numWaves )
 	SetNMvar( sf + "WaveLength", waveLength )
@@ -2166,8 +1724,6 @@ Function NMPulseGCBinomSyn( [ numWaves, dx, waveLength, Nsites, Pr, Q, latencyST
 	
 	SetNMstr( sf + "Xunits", NMXunits )
 	SetNMstr( sf + "Yunits", "pA" )
-	
-	NMPulseConfigRemove( all = 1 )
 	
 	if ( CVQ2 > 0 )
 	
@@ -2445,7 +2001,7 @@ Function /S NMPulseGCTrain( [ numWaves, dx, waveLength, type, AMPAmodel, NMDAmod
 	
 	Variable icnt, wcnt, amp1, amp2, pinf, RPmodel, BillingsModel, normValue
 	Variable AMPAnorm
-	String sf, wavePrefix, wName, wList = ""
+	String sf, pcwName, wavePrefix, wName, wList = ""
 	String trainList, trainList2, paramList, paramList2, paramList3
 	String directSTPlist, spillSTPlist, nmdaSTPlist 
 	
@@ -2507,11 +2063,12 @@ Function /S NMPulseGCTrain( [ numWaves, dx, waveLength, type, AMPAmodel, NMDAmod
 	
 	SetNMstr( df + "CurrentPrefixPulse", wavePrefix )
 	
-	NMPulseConfigRemove( all=1 )
-	
 	NMPulseCheck()
 	
 	sf = NMPulseSubfolder()
+	pcwName = NMPulseConfigWaveName()
+	
+	NMPulseConfigWaveRemove( pcwName, all = 1 )
 	
 	SetNMvar( sf + "NumWaves", numWaves )
 	SetNMvar( sf + "WaveLength", waveLength )
@@ -2572,12 +2129,15 @@ Function /S NMPulseGCTrain( [ numWaves, dx, waveLength, type, AMPAmodel, NMDAmod
 			if ( random )
 		
 				wName = "PU_Ran" + num2istr( round( freq * 1000 ) ) + "Hz_w" + num2istr( wcnt ) + "i" + num2istr( icnt )
-				
-				if ( !WaveExists( $wName ) || !useExistingRanTrains )
-					NMPulseTrainRandomTimes( "", wName, trainList, timeLimit )
+
+				if ( !WaveExists( $sf + wName ) || !useExistingRanTrains )
+					// wave of pulse times are saved where pulse config waves are located
+					// however, this may be problematic for using pulse-time waves to create other waveforms
+					// e.g. for creating both gAMPA and gNMDA waveforms using same pulse times
+					NMPulseTrainRandomTimes( sf, wName, trainList, timeLimit )
 				endif
 				
-				if ( !WaveExists( $ wName ) )
+				if ( !WaveExists( $sf + wName ) )
 					continue
 				endif
 				
@@ -2708,6 +2268,27 @@ Function /S NMPulseGCTrain( [ numWaves, dx, waveLength, type, AMPAmodel, NMDAmod
 	return wList
 
 End // NMPulseGCTrain
+
+//****************************************************************
+//****************************************************************
+
+Function /S NMPulsePromptCall( [ row, OOD ] ) // DEPRECATED // use NMPulseLB1PromptNew() and NMPulseLB1PromptOOD()
+	Variable row
+	Variable OOD // on / off / delete
+	
+	String sf = NMPulseSubfolder()
+	
+	STRUCT NMPulseLBWaves lb
+	
+	NMPulseTabLBWavesDefault( lb )
+	
+	if ( OOD )
+		return NMPulseLB1PromptOODE( lb, sf )
+	else
+		return NMPulseLB1PromptNew()
+	endif
+
+End // NMPulsePromptCall
 
 //****************************************************************
 //****************************************************************

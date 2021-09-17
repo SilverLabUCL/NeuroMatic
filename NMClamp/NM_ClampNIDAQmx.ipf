@@ -1,6 +1,7 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 //#pragma hide = 1
-
+// SetIgorOption IndependentModuleDev = 1
+//
 //****************************************************************
 //****************************************************************
 //****************************************************************
@@ -24,16 +25,19 @@
 //****************************************************************
 //****************************************************************
 
-Static Constant NM_NIDAQCounter = 0 // default counter number
-Static Constant NM_NidaqDIOPort = 0 // port with buffered DIO
-Static Constant NM_NidaqDACMinVoltage = -10 // DAC voltage range ( some users may need to change this to -5 volts )
-Static Constant NM_NidaqDACMaxVoltage = 10 // DAC voltage range ( some users may need to change this to 5 volts )
+#if exists("DAQmx_WaveformGen")
 
-Static StrConstant NM_NidaqADCChannelType = ""		// ""			NIDAQ device default
+Static Constant NIDAQ_COUNTER = 0 // default counter number
+Static Constant DIO_PORT = 0 // port with buffered DIO
+Static Constant DAC_MIN_VOLTAGE = -10 // DAC voltage range ( some users may need to change this to -5 volts )
+Static Constant DAC_MAX_VOLTAGE = 10 // DAC voltage range ( some users may need to change this to 5 volts )
+
+Static StrConstant ADC_CHANNEL_TYPE = ""	// ""			NIDAQ device default
 													// "Diff"		differential
 													// "RSE"		referenced singled-ended
 													// "NRSE"	non-referenced single-ended
 													// "PDIFF"	pseudo-differential
+Static StrConstant FIFO_FILE = "NMfifo_backup"
 
 //****************************************************************
 //****************************************************************
@@ -210,17 +214,19 @@ Function NidaqStimCheck()
 	
 	// check sample intervals
 	
-	for ( icnt = 0 ; icnt < ItemsInList( adcList ) ; icnt += 1 )
-		config = str2num( StringFromList( icnt, adcList ) )
-		bnum = WaveValOrDefault( bdf+"ADCboard", config, 0 )
-		minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
-	endfor
+	//for ( icnt = 0 ; icnt < ItemsInList( adcList ) ; icnt += 1 )
+		//config = str2num( StringFromList( icnt, adcList ) )
+		//bnum = WaveValOrDefault( bdf+"ADCboard", config, 0 )
+		//minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
+		//minintvl = min( minintvl, NMStimSampleInterval( sdf ) )
+	//endfor
 	
-	for ( icnt = 0 ; icnt < ItemsInList( dacList ) ; icnt += 1 )
-		config = str2num( StringFromList( icnt, dacList ) )
-		bnum = WaveValOrDefault( bdf+"DACboard", config, 0 )
-		minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
-	endfor
+	//for ( icnt = 0 ; icnt < ItemsInList( dacList ) ; icnt += 1 )
+		//config = str2num( StringFromList( icnt, dacList ) )
+		//bnum = WaveValOrDefault( bdf+"DACboard", config, 0 )
+		//minintvl = min( minintvl, StimIntervalGet( sdf, bnum ) )
+		//minintvl = min( minintvl, NMStimSampleInterval( sdf ) )
+	//endfor
 	
 	//NidaqIntervalCheck( minintvl )
 	
@@ -314,7 +320,7 @@ Function NidaqResetBoard( boardNum, resetType )
 		if ( resetType == 0 )
 			fDAQmx_ScanStop( bname )
 			fDAQmx_WaveformStop( bname )
-			fDAQmx_CTR_Finished( bname, NM_NIDAQCounter )
+			fDAQmx_CTR_Finished( bname, NIDAQ_COUNTER )
 		elseif ( resetType == 1 )
 			fDAQmx_ResetDevice( bname )
 		endif
@@ -362,7 +368,8 @@ Function NidaqAcquire( mode, saveWhen, WaveLength, NumStimWaves, InterStimTime, 
 	endif
 	
 	NidaqDacTimeScale( 0.001 ) // convert to seconds
-	NidaqWavesInput( nwaves )
+	//NidaqWavesInput( nwaves ) // moved to allow RandomOrder
+	NidaqMakeADCpre( nwaves )
 	
 	if ( ( NumStimWaves == 1 ) && ( NumStimReps > 1 ) )
 		NumStimWaves = NumStimReps
@@ -393,6 +400,7 @@ Function NidaqAcquire( mode, saveWhen, WaveLength, NumStimWaves, InterStimTime, 
 			
 		case 1: // continuous
 		case 4: // continuous triggered
+			NidaqMakeADC()
 			error = NIDAQAcqContinuous()
 			break
 
@@ -523,10 +531,12 @@ Function NidaqAcqEpics()
 	
 		// start scan clock on counter 0
 		if ( ( acqMode == 0 ) && ( rcnt == 0 ) || ( InterRepTime > 0 ) )
-			if ( NidaqStartCounter( driver, NM_NIDAQCounter, WaveLength, InterStimTime ) != 0 )
-				return ClampError( 1, "Error in configuration of NIDAQ Counter " + num2str( NM_NIDAQCounter ) )
+			if ( NidaqStartCounter( driver, NIDAQ_COUNTER, WaveLength, InterStimTime ) != 0 )
+				return ClampError( 1, "Error in configuration of NIDAQ Counter " + num2str( NIDAQ_COUNTER ) )
 			endif
 		endif
+		
+		NidaqMakeADC() // added this fxn here to allow RandomOrder
 
 		for ( wcnt = 0 ; wcnt < NumStimWaves ; wcnt += 1 ) // loop thru waves
 		
@@ -558,7 +568,7 @@ Function NidaqAcqEpics()
 						itemstr = StringFromList( 0, StringFromList( icnt, olist, ";" ), "," )
 						wlist = AddListItem( itemstr, wlist, ",", inf )
 						itemstr = StringFromList( 1, StringFromList( icnt, olist, ";" ), "," )
-						itemstr = "/" + bname + "/port" + num2istr( NM_NidaqDIOPort ) + "/line" + itemstr
+						itemstr = "/" + bname + "/port" + num2istr( DIO_PORT ) + "/line" + itemstr
 						xlist = AddListItem( itemstr, xlist, ",", inf )
 					endfor
 					
@@ -785,7 +795,7 @@ Function NidaqAcqEpics()
 			
 			ClampAcquireNext( mode, nwaves )
 	
-			//if ( ( acqMode == 2 ) && ( NidaqWait( driver, NM_NIDAQCounter, NM_NIDAQCounter+1, InterStimTime ) < 0 ) )
+			//if ( ( acqMode == 2 ) && ( NidaqWait( driver, NIDAQ_COUNTER, NIDAQ_COUNTER+1, InterStimTime ) < 0 ) )
 			if ( ( acqMode == 2 ) && ( ClampWaitMSTimer( InterStimTime ) < 0 ) )
 				return ClampError( 1, "NIDAQWait Clock Error" )
 			endif
@@ -797,7 +807,7 @@ Function NidaqAcqEpics()
 		endfor // waves
 
 		if ( rcnt < NumStimReps - 1 )
-			//if ( NidaqWait( driver, NM_NIDAQCounter, NM_NIDAQCounter+1, InterRepTime ) < 0 )
+			//if ( NidaqWait( driver, NIDAQ_COUNTER, NIDAQ_COUNTER+1, InterRepTime ) < 0 )
 			if ( ClampWaitMSTimer( InterRepTime ) < 0 )
 				return ClampError( 1, "NIDAQWait Clock Error" )
 			endif
@@ -856,7 +866,7 @@ Function NidaqPreScan( boardName, acqlist )
 		Wave wtemp = $wname
 		
 		for ( ncnt = 0 ; ncnt < npnts ; ncnt += 1 )
-			wtemp[ ncnt ] = fDAQmx_ReadChan( boardName, chan, NM_NidaqDACMinVoltage, NM_NidaqDACMaxVoltage, -1 ) / scale
+			wtemp[ ncnt ] = fDAQmx_ReadChan( boardName, chan, DAC_MIN_VOLTAGE, DAC_MAX_VOLTAGE, -1 ) / scale
 		endfor
 		
 		if ( NidaqErrorCheck( "NidaqPreScan" ) < 0 )
@@ -882,7 +892,7 @@ Function NidaqRead( board, chan, gain, npnts )
 	String bname = NidaqBoardName( board )
 	
 	for ( ncnt = 0 ; ncnt < npnts ; ncnt += 1 )
-		value = fDAQmx_ReadChan( bname, chan, NM_NidaqDACMinVoltage, NM_NidaqDACMaxVoltage, -1 )
+		value = fDAQmx_ReadChan( bname, chan, DAC_MIN_VOLTAGE, DAC_MAX_VOLTAGE, -1 )
 		if ( numtype( value ) > 0 )
 			return Nan
 		endif
@@ -924,16 +934,16 @@ Function NidaqDacTimeScale( tscale )
 			wname = sdf + StimWaveName( "DAC", config, wcnt )
 			
 			if ( WaveExists( $wname ) == 1 )
-				dt = tscale * StimIntervalGet( sdf, board )
+				dt = tscale * NMStimSampleInterval( sdf, DAC=1 )
 				Setscale /P x 0, dt, $wname
 			endif
 			
-			wname = sdf + StimWaveName( "pnDAC", config, wcnt )
+			//wname = sdf + StimWaveName( "pnDAC", config, wcnt )
 			
-			if ( WaveExists( $wname ) == 1 )
-				dt = tscale * StimIntervalGet( sdf, board )
-				Setscale /P x 0, dt, $wname
-			endif
+			//if ( WaveExists( $wname ) == 1 )
+				//dt = tscale * NMStimSampleInterval( sdf, DAC=1 )
+				//Setscale /P x 0, dt, $wname
+			//endif
 			
 		endfor
 	
@@ -945,14 +955,57 @@ End // NidaqDacTimeScale
 //****************************************************************
 //****************************************************************
 
-Function NidaqWavesInput( NumWaves )
-	Variable NumWaves
+Function NidaqMakeADCpre( numWaves )
+	Variable numWaves
 
-	Variable bcnt, wcnt, ccnt, wnum, samples
+	Variable bcnt, wcnt, ccnt
+	String wname, alist, xlist, oldlist = "", cdf = NMClampDF
+
+	Wave /T preADClist = $( cdf+"preADClist" )
+	
+	String precision = StrVarOrDefault( cdf+"WavePrecision", "D" )
+	
+	for ( wcnt = 0 ; wcnt < DimSize( preADClist, 0 ) ; wcnt += 1 )
+	for ( bcnt = 0 ; bcnt < DimSize( preADClist, 1 ) ; bcnt += 1 )
+		
+		alist = preADClist[wcnt][bcnt]
+		
+		if ( StringMatch( alist,oldlist ) == 0 )
+		
+			for ( ccnt = 0 ; ccnt < ItemsInList( alist ) ; ccnt += 1 )
+			
+				xlist = StringFromList( ccnt,alist )
+				wname = StringFromList( 0,xlist,"," )
+				
+				strswitch( precision )
+					case "S":
+						Make /O/N=( numWaves ) $wname = Nan
+						break
+					default:
+						Make /D/O/N=( numWaves ) $wname = Nan
+				endswitch
+				
+			endfor
+			
+		endif
+		
+		oldlist = alist
+		
+	endfor
+	endfor
+
+End // NidaqMakeADCpre
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NidaqMakeADC()
+	
+	Variable bcnt, wcnt, ccnt, samples
 	String wname, alist, xlist, oldlist = "", cdf = NMClampDF, sdf = StimDF()
 
 	Wave /T ADClist = $( cdf+"ADClist" )
-	Wave /T preADClist = $( cdf+"preADClist" )
 	
 	String precision = StrVarOrDefault( cdf+"WavePrecision", "D" )
 	Variable dt = NumVarOrDefault( StimDF()+"SampleInterval", 1 )
@@ -991,37 +1044,8 @@ Function NidaqWavesInput( NumWaves )
 		
 	endfor
 	endfor
-	
-	for ( wcnt = 0 ; wcnt < DimSize( preADClist, 0 ) ; wcnt += 1 )
-	for ( bcnt = 0 ; bcnt < DimSize( preADClist, 1 ) ; bcnt += 1 )
-		
-		alist = preADClist[wcnt][bcnt]
-		
-		if ( StringMatch( alist,oldlist ) == 0 )
-		
-			for ( ccnt = 0 ; ccnt < ItemsInList( alist ) ; ccnt += 1 )
-			
-				xlist = StringFromList( ccnt,alist )
-				wname = StringFromList( 0,xlist,"," )
-				
-				strswitch( precision )
-					case "S":
-						Make /O/N=( NumWaves ) $wname = Nan
-						break
-					default:
-						Make /D/O/N=( NumWaves ) $wname = Nan
-				endswitch
-				
-			endfor
-			
-		endif
-		
-		oldlist = alist
-		
-	endfor
-	endfor
 
-End // NidaqWavesInput
+End // NidaqMakeADC
 
 //****************************************************************
 //****************************************************************
@@ -1040,8 +1064,8 @@ Function NidaqUpdateLists()
 	
 	String tGainList = StrVarOrDefault( cdf+"TGainList", "" )
 	
-	String DACminmax = "," + num2str( NM_NidaqDACMinVoltage ) + "," + num2str( NM_NidaqDACMaxVoltage )
-	String ADCtype = NM_NidaqADCChannelType
+	String DACminmax = "," + num2str( DAC_MIN_VOLTAGE ) + "," + num2str( DAC_MAX_VOLTAGE )
+	String ADCtype = ADC_CHANNEL_TYPE
 	
 	if ( strlen( ADCtype ) > 0 )
 		
@@ -1102,9 +1126,9 @@ Function NidaqUpdateLists()
 
 		wlist = ""
 		bname = StringFromList( bcnt, bList )
-		numChan = fDAQmx_DIO_PortWidth( bname, NM_NidaqDIOPort )
+		numChan = fDAQmx_DIO_PortWidth( bname, DIO_PORT )
 		
-		if ( NM_NidaqDIOPort < fDAQmx_NumDIOPorts(bname) ) // DIO port number is OK
+		if ( DIO_PORT < fDAQmx_NumDIOPorts(bname) ) // DIO port number is OK
 		
 			for ( config = 0 ; config < numpnts( TTLname ) ; config += 1 )
 				
@@ -1653,11 +1677,11 @@ Function NIDAQAcqContinuous()
 		return ClampError( 1, "NIDAQ continuous acquisition error: cannot create external data path." )
 	endif
 					
-	Open /P=ClampSaveDataPath refnum as "NMfifo_backup"
+	Open /P=ClampSaveDataPath refnum as FIFO_FILE
 	
 	CtrlFIFO NMFIFO, deltaT=( SampleInterval/1000 ), size=fifosize, file=refnum
 	
-	NMHistory( "NIDAQmx continuous acquisition: data backed up in file " + S_path + "NMfifo_backup" )
+	NMHistory( "NIDAQmx continuous acquisition: data backed up in file " + S_path + FIFO_FILE )
 	
 	for ( bcnt = 0 ; bcnt < DimSize( TTLlist, 1 ) ; bcnt += 1 )
 			
@@ -1679,7 +1703,7 @@ Function NIDAQAcqContinuous()
 				itemstr = StringFromList( 0, StringFromList( icnt, olist, ";" ), "," )
 				wlist = AddListItem( itemstr, wlist, ",", inf )
 				itemstr = StringFromList( 1, StringFromList( icnt, olist, ";" ), "," )
-				itemstr = "/" + bname + "/port" + num2istr( NM_NidaqDIOPort ) + "/line" + itemstr
+				itemstr = "/" + bname + "/port" + num2istr( DIO_PORT ) + "/line" + itemstr
 				xlist = AddListItem( itemstr, xlist, ",", inf )
 			endfor
 			
@@ -1866,7 +1890,7 @@ Function NIDAQAcqContinuous_Stop()
 	endif
 	
 	NidaqResetBoard( -1, 0 )
-	fname = NIDAQ_FIFO_Read( "ClampSaveDataPath", "NMfifo_backup", "default" ) // open FIFO file and copy data to current NM data folder
+	fname = NIDAQ_FIFO_Read( "ClampSaveDataPath", FIFO_FILE, "default" ) // open FIFO file and copy data to current NM data folder
 	
 	ClampAcquireFinish( mode, saveWhen, 0 )
 	
@@ -2068,24 +2092,28 @@ Function /S NIDAQ_FIFO_Read( pathstr, filename, WavePrefix )
 	chunks = V_FIFOChunks
 	nchan = V_FIFOnchans
 	totchunks = Numberbykey( "DISKTOT", S_Info )
+	//print nchan, chunks, totchunks
 	
 	for ( ccnt = 0 ; ccnt < nchan ; ccnt += 1 )
 	
 		wname = GetWaveName( wavePrefix, ccnt, 0 )
-		dwname = ChanDisplayWave( ccnt )
-		gname = ChanGraphName( ccnt )
+		//dwname = ChanDisplayWave( ccnt )
+		//gname = ChanGraphName( ccnt )
 	
 		Make /O/N=( totchunks ) $wname
-		
 		//print wname, totchunks
 	
 		FIFO2Wave /S=1 NMFIFO, $( "chan" + num2istr( ccnt ) ), $wname
-	
-		Duplicate /O $wname, $dwname
 		
-		tstart = leftx( $wName ) * 1000
-		Setscale /P x tstart, SampleInterval, "", $dwname, $wName
-		SetAxis /A/W=$gname bottom 
+		if ( numpnts( $wname ) != totchunks )
+			ClampError( 1, "Failed to copy " + FIFO_FILE  + " to wave " + wname )
+		endif
+	
+		//Duplicate /O $wname, $dwname
+		
+		//tstart = leftx( $wName ) * 1000
+		//Setscale /P x tstart, SampleInterval, "", $dwname, $wName
+		//SetAxis /A/W=$gname bottom 
 	
 	endfor
 	
@@ -2231,6 +2259,8 @@ End // NIDAQ_DIO_TEST
 //****************************************************************
 //****************************************************************
 //****************************************************************
+
+#endif
 
 
 
