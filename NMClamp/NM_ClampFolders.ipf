@@ -327,11 +327,13 @@ Function ClampDataFolderUpdate(nwaves, mode)
 	Variable mode // (0) preview (1) record
 	
 	Variable config, ccnt, nchans, icnt
-	String wPrefix, wlist, name, units, modeStr
+	String wPrefix, wlist, name, units, modeStr, df
 	
 	String cdf = NMClampDF, sdf = StimDF(), ndf = NMNotesDF, gdf = cdf+"Temp:", bdf = NMStimBoardDF(sdf)
 
-	Variable CopyStim2Folder = NumVarOrDefault(cdf+"CopyStim2Folder", 1)
+	Variable CopyStim2Folder = NumVarOrDefault(cdf+"CopyStim2Folder", 1) 
+	Variable saveDACwaves = NumVarOrDefault(cdf+"SaveDACwaves", 1)
+	Variable saveTTLwaves = NumVarOrDefault(cdf+"SaveTTLwaves", 1)
 	
 	String CurrentStim = StimCurrent()
 	String prefixFolder = CurrentNMPrefixFolder()
@@ -422,23 +424,33 @@ Function ClampDataFolderUpdate(nwaves, mode)
 	
 	//CheckNMPrefixFolderWaves( "" ) // redimension NM waves
 	
-	if ((mode == 1) && (copyStim2Folder == 1))
+	if ((mode == 1) && copyStim2Folder)
 	
 		if (DataFolderExists(CurrentStim) == 1)
 			KillDataFolder $CurrentStim
 		endif
 		
-		//if (DataFolderExists(gdf) == 1)
-		//	KillDataFolder $(gdf) // shouldnt exist yet
+		NewDataFolder $CurrentStim
+		
+		df = GetDataFolder(1) + CurrentStim + ":"
+		
+		NMStimCopy(sdf, df, saveDACwaves=saveDACwaves, saveTTLwaves=saveTTLwaves )
+		
+		//if ( moveDACwaves || moveTTLwaves )
+		
+			//if (DataFolderExists(gdf) == 1)
+			//	KillDataFolder $gdf // kill temp folder if it already exists
+			//endif
+		
+			//StimWavesMove(sdf, gdf, moveDACwaves, moveTTLwaves) // temporarily move DAC/TTL waves beforing copying stim folder
+			
 		//endif
 		
-		//StimWavesMove(sdf, gdf)
+		//DuplicateDataFolder $sdf, $CurrentStim // save copy of stim protocol folder
 		
-		DuplicateDataFolder $sdf, $CurrentStim // save copy of stim protocol folder
-		
-		//if (DataFolderExists(gdf) == 1)
-		//	StimWavesMove(gdf, sdf)
-		//	KillDataFolder $(gdf)
+		//if ( moveDACwaves || moveTTLwaves )
+			//StimWavesMove(gdf, sdf, moveDACwaves, moveTTLwaves) // moves DAC/TTL waves back to stim folder
+			//KillDataFolder $gdf
 		//endif
 		
 	endif
@@ -458,6 +470,76 @@ Function ClampDataFolderUpdate(nwaves, mode)
 	endif
 
 End // ClampDataFolderUpdate
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Static Function NMStimCopy(from, to, [ saveDACwaves, saveTTLwaves ] ) // 10 Feb 2022
+	String from, to // paths
+	Variable saveDACwaves, saveTTLwaves
+	
+	Variable icnt, xNum
+	String xName, wList, wListRemove, pList, vList, sList, xStr
+	
+	if ( ParamIsDefault( saveDACwaves ) )
+		saveDACwaves = 1
+	endif
+	
+	if ( ParamIsDefault( saveTTLwaves ) )
+		saveTTLwaves = 1
+	endif
+	
+	if (DataFolderExists(from) == 0)
+		return -1
+	endif
+	
+	if (DataFolderExists(to) == 0)
+		return -1
+	endif
+	
+	DFREF savedDF= GetDataFolderDFR()	// Save current data folder
+	
+	SetDataFolder $LastPathColon(from, 0)
+	
+	wList = WaveList("*", ";", "")
+	pList = WaveList("*_pulse*", ";", "")
+	
+	if ( !saveDACwaves )
+		wListRemove = WaveList("DAC_*", ";", "") + WaveList("uDAC_*", ";", "")
+		wListRemove = RemoveFromList( pList, wListRemove )
+		wList = RemoveFromList( wListRemove, wList )
+	endif
+	
+	if ( !saveTTLwaves )
+		wListRemove = WaveList("TTL_*", ";", "") + WaveList("uTTL_*", ";", "")
+		wListRemove = RemoveFromList( pList, wListRemove )
+		wList = RemoveFromList( wListRemove, wList )
+	endif
+	
+	for ( icnt = 0 ; icnt < ItemsInList( wList ) ; icnt += 1 )
+		xName = StringFromList( icnt, wList )
+		Duplicate /O $xName $to+xName
+	endfor
+	
+	vList = VariableList("*",";",4)
+	sList = StringList("*",";")
+	
+	for ( icnt = 0 ; icnt < ItemsInList( vList ) ; icnt += 1 )
+		xName = StringFromList( icnt, vList )
+		xNum = NumVarOrDefault( xName, NaN )
+		SetNMvar( to + xName, xNum )
+	endfor
+	
+	for ( icnt = 0 ; icnt < ItemsInList( sList ) ; icnt += 1 )
+		xName = StringFromList( icnt, sList )
+		xStr = StrVarOrDefault( xName, "" )
+		SetNMstr( to + xName, xstr )
+	endfor
+	
+	SetDataFolder savedDF	// Restore current data folder
+
+End // NMStimCopy
 
 //****************************************************************
 //****************************************************************

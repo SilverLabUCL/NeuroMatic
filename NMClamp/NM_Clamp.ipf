@@ -261,6 +261,8 @@ Function NMClampCheck()
 	CheckNMvar( cdf+"SaveInSubfolder", 1 )			// save data in subfolders ( 0 ) no ( 1 ) yes
 	CheckNMvar( cdf+"AutoCloseFolder", 1 )			// auto delete data folder flag ( 0 ) no ( 1 ) yes
 	CheckNMvar( cdf+"CopyStim2Folder", 1 )			// copy stim to data folder flag ( 0 ) no ( 1 ) yes
+	CheckNMvar( cdf+"SaveDACwaves", 1 )				// copy stim DAC waves to data folder flag ( 0 ) no ( 1 ) yes
+	CheckNMvar( cdf+"SaveTTLwaves", 1 )				// copy stim TTL waves to data folder flag ( 0 ) no ( 1 ) yes
 	
 	CheckNMvar( cdf+"MultiClamp700Save", 0 )		// save MultiClamp 700 Commander variables ( 0 ) no ( 1 ) yes
 	
@@ -321,6 +323,8 @@ Function NMClampConfigs()
 	NMConfigVar( fname, "SaveWhen", 1, "save data when ( 0 ) never ( 1 ) after recording ( 2 ) while recording", "never;after recording all episodes;after recording each episode;" )
 	NMConfigVar( fname, "SaveWithDialogue", 0, "save with dialogue prompt", "boolean" )
 	NMConfigVar( fname, "SaveInSubfolder", 1, "save data in subfolders", "boolean" )
+	NMConfigVar( fname, "SaveDACwaves", 1, "save stim DAC waves", "boolean" )
+	NMConfigVar( fname, "SaveTTLwaves", 1, "save stim TTL waves", "boolean" )
 	NMConfigVar( fname, "AutoCloseFolder", 1, "close previous data folder before creating new one", "boolean" )
 	
 	NMConfigVar( fname, "LogDisplay", 1, "clamp log display ( 0 ) none ( 1 ) notebook ( 2 ) table", "none;notebook;table;" )

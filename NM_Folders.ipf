@@ -3475,7 +3475,7 @@ End // NMPrefixFoldersRenameWave2
 //****************************************************************
 
 Function NMPrefixSelect( wavePrefix [ noPrompts ] ) // change to a new wave prefix
-	String wavePrefix // wave prefix name, or ( "" ) for current prefix
+	String wavePrefix // wave prefix name, or ( "" ) for current prefix, or "_OFF_" for none
 	Variable noPrompts // ( 0 ) no ( 1 ) yes
 	
 	Variable ccnt, ccnt2, wcnt, numChannels, oldNumChannels, numItems, numWaves
@@ -3492,6 +3492,12 @@ Function NMPrefixSelect( wavePrefix [ noPrompts ] ) // change to a new wave pref
 	
 	if ( strlen( wavePrefix ) == 0 )
 		return -1
+	endif
+	
+	if ( StringMatch( wavePrefix, "_OFF_" ) )
+		SetNMstr( "CurrentPrefix", "" )
+		UpdateNM( 1 )
+		return 0
 	endif
 	
 	prefixFolder = NMPrefixFolderDF( currentFolder, wavePrefix )

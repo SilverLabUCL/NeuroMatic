@@ -77,7 +77,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMKeidingGauss,n:4;f:NMKeidingChi,n:4;f:NMCircle,n:3;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMKeidingGauss,n:4;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
 
 //****************************************************************
 //****************************************************************
@@ -1862,13 +1862,18 @@ Function NMFitFunctionSet( fxn [ update ] )
 			break
 		case "NMKeidingGauss":
 			sfxn = "KeidingGauss"
-			pList = "X0;STDVx;T;Theta"
+			pList = "X0;STDVx;T;Theta;"
 			eq = "Keiding(x0,stdv,T,theta)"
 			break
 		case "NMKeidingChi":
 			sfxn = "KeidingChi"
-			pList = "F;Beta;T;Theta"
+			pList = "F;Beta;T;Theta;"
 			eq = "Keiding(f,beta,T,theta)"
+			break
+		case "NMKeidingGamma":
+			sfxn = "KeidingGamma"
+			pList = "X0;F;Beta;T;Theta;"
+			eq = "Keiding(x0,f,beta,T,theta)"
 			break
 		case "NMCircle":
 			sfxn = "Circle"
@@ -2013,7 +2018,7 @@ Function NMFitAuto( [ update ] )
 	Variable update
 
 	Variable fitError
-	String gName, fitWave
+	String gName, fitWaveName, gfitWaveName
 	
 	Variable currentWave = CurrentNMWave()
 
@@ -2026,16 +2031,19 @@ Function NMFitAuto( [ update ] )
 	endif
 	
 	gName = ChanGraphName( CurrentNMChannel() )
-	fitWave = NMFitWaveName( currentWave )
+	fitWaveName = NMFitWaveName( currentWave )
+	gfitWaveName = "GFit_" + NMChanWaveName( CurrentNMChannel(), currentWave )
 	
 	NMFitDisplayClear()
 	
 	if ( NMFitVarGet( "FitAuto" ) )
 		fitError = NMFitWave()
-	else
-		if ( ( WinType( gName ) == 1 ) && WaveExists( $fitWave ) )
-			AppendToGraph /W=$gName $fitWave
-			NMFitSaveRetrieve( currentWave ) 
+	elseif ( WinType( gName ) == 1 )
+		if ( WaveExists( $fitWaveName ) )
+			AppendToGraph /W=$gName $fitWaveName
+			NMFitSaveRetrieve( currentWave )
+		elseif ( WaveExists( $gfitWaveName ) )
+			//AppendToGraph /W=$gName $gfitWaveName
 		endif
 	endif
 	
@@ -2714,6 +2722,7 @@ Function NMFitWave( [ history ] )
 			
 		case "NMKeidingGauss":
 		case "NMKeidingChi":
+		case "NMKeidingGamma":
 			SetNMvar( NMFitDF + "NMKeidingXmax", rightx( $currentWaveName ) )
 			break
 	
@@ -3242,6 +3251,9 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 		case "NMKeidingChi":
 			fit = NMKeidingChi2( w, x )
 			break
+		case "NMKeidingGamma":
+			fit = NMKeidingGamma2( w, x )
+			break
 		case "NMCircle":
 			fit = NMCircle( w, x )
 			break
@@ -3609,8 +3621,8 @@ Function NMFitGuess()
 			if ( ( numpnts( FT_guess ) == 4 ) && ( numpnts( FT_hold ) == 4 ) )
 				FT_guess[0] = 45 // X0
 				FT_guess[1] = 4 // STDVx
-				FT_guess[2] = 60 // T 
-				FT_guess[3] = 60 // phi
+				FT_guess[2] = 0 // T 
+				FT_guess[3] = 30 // phi
 				FT_hold[2] = 1
 			endif
 			break
@@ -3618,9 +3630,19 @@ Function NMFitGuess()
 			if ( ( numpnts( FT_guess ) == 4 ) && ( numpnts( FT_hold ) == 4 ) )
 				FT_guess[0] = 80 // f
 				FT_guess[1] = 25 // beta
-				FT_guess[2] = 60 // T 
-				FT_guess[3] = 60 // phi
+				FT_guess[2] = 0 // T 
+				FT_guess[3] = 30 // phi
 				FT_hold[2] = 1
+			endif
+			break
+		case "NMKeidingGamma":
+			if ( ( numpnts( FT_guess ) == 5 ) && ( numpnts( FT_hold ) == 5 ) )
+				FT_guess[0] = 0 // X0
+				FT_guess[1] = 80 // f
+				FT_guess[2] = 25 // beta
+				FT_guess[3] = 0 // T 
+				FT_guess[4] = 30 // phi
+				FT_hold[3] = 1
 			endif
 			break
 		case "NMCircle":
@@ -4730,7 +4752,8 @@ Function NMGamma( w, x ) : FitFunc
 		return 0
 	endif
 	
-	return ( w[2] ^ w[1] ) * ( ( x - w[0] ) ^ ( w[1] - 1 ) ) * exp( -w[2] * ( x - w[0] ) ) / gamma( w[1] )
+	//return ( w[2] ^ w[1] ) * ( ( x - w[0] ) ^ ( w[1] - 1 ) ) * exp( -w[2] * ( x - w[0] ) ) / gamma( w[1] )
+	return ( (1/w[2]) ^ w[1] ) * ( ( x - w[0] ) ^ ( w[1] - 1 ) ) * exp( -(1/w[2]) * ( x - w[0] ) ) / gamma( w[1] )
 	
 End // NMGamma
 
@@ -5655,6 +5678,16 @@ End
 
 // replace with new NMKeidingChi(w,x)
 Function NMKeidingChi2(w,x) : FitFunc
+	Wave w
+	Variable x
+End
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+// replace with new NMKeidingGamma(w,x)
+Function NMKeidingGamma2(w,x) : FitFunc
 	Wave w
 	Variable x
 End
