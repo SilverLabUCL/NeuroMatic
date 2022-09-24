@@ -3237,7 +3237,7 @@ Function /S NMSpikeRasterPlot( [ folder, xRasterList, yRasterList, xbgn, xend, o
 	wName = NMChild( xRaster )
 	folderPrefix = NMFolderListName( folder )
 	gName = "SP_" + folderPrefix + "_" + wName
-	gTitle = folderPrefix + " : " + wName
+	gTitle = NMFolderListName( "" ) + " : " + wName
 	
 	gName = ReplaceString( "SP_RX_", gName, "Rstr_" )
 	gName = ReplaceString( "SP_RasterX_", gName, "Rstr_" )
@@ -4295,6 +4295,10 @@ Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInte
 	
 	ISIHname = NMCheckStringName( ISIHname )
 	
+	gName = "SP_" + CurrentNMFolderPrefix() + ISIHname
+	gName = NMCheckStringName( gName )
+	gTitle = NMFolderListName( "" ) + " : " + ISIHname
+	
 	if ( strlen( subfolder ) > 0 )
 		intvlsName = subfolder + intvlsName
 		ISIHname = subfolder + ISIHname
@@ -4373,11 +4377,6 @@ Function /S NMSpikeISIH( [ folder, xRasterList, xbgn, xend, minInterval, maxInte
 	SetNMstr( NMDF + "OutputWaveList", intvlsName + ";" + ISIHname + ";" )
 	
 	if ( !noGraph )
-	
-		gName = "SP_" + CurrentNMFolderPrefix() + ISIHname
-		gName = NMCheckStringName( gName )
-		
-		gTitle = NMFolderListName( "" ) + " : " + ISIHname
 	
 		NMWinCascadeRect( w )
 	

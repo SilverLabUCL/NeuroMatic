@@ -1285,6 +1285,51 @@ Function List2Wave( strList, wName [ numeric, overwrite ] ) // convert list item
 
 End // List2Wave
 
+//**************************************************************** //
+
+Function NMHistoFreqList2Wave( histoFreqList, wName, xstart, xdelta [ probability, overwrite ] )
+	String histoFreqList
+	String wName
+	Variable xStart, xDelta // x-scale start and delta
+	Variable probability // (0) count (1) PDF
+	Variable overwrite
+	
+	Variable total, error
+	
+	if ( strlen( wName ) == 0 )
+		return NM2Error( 21, "wName", "" )
+	endif
+	
+	if ( WaveExists( $wName ) && !overwrite )
+		return NM2Error( 2, "wName", wName )
+	endif
+	
+	if ( ( numtype( xstart ) > 0 ) )
+		return NM2Error( 10, "xstart", num2str( xstart ) )
+	endif
+	
+	if ( ( numtype( xdelta ) > 0 ) || ( xDelta == 0 ) )
+		return NM2Error( 10, "xdelta", num2str( xDelta ) )
+	endif
+	
+	error = List2Wave( histoFreqList, wName, numeric=1, overwrite=overwrite )
+	
+	if ( error != 0 )
+		return error
+	endif
+	
+	Wave wtemp = $wName
+	Setscale /P x xstart, xdelta, wtemp
+	
+	if ( probability )
+		total = sum( wtemp )
+		wtemp /= total * xDelta
+	endif
+	
+	return 0
+	
+End // NMHistoFreqList2Wave
+
 //****************************************************************
 //****************************************************************
 

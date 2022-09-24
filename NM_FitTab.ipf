@@ -70,6 +70,9 @@ Static Constant Tolerance = 0.001
 Static Constant MultiThreads = 1 // ( 0 ) no ( 1 ) yes
 Static Constant FitMethod = 0 // 0, 1, 2, 3 ( see Igor CurveFit /ODR )
 
+Static Constant KeidingGuessAuto = 1 // ( 0 ) no ( 1 ) yes
+Static Constant KeidingConstraints = 0 // ( 0 ) no ( 1 ) yes
+
 Static StrConstant WeightingPrefix = "Stdv_" // weighting wave name prefix
 
 Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
@@ -77,7 +80,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMKeidingGauss,n:4;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMKeidingGauss,n:5;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
 
 //****************************************************************
 //****************************************************************
@@ -342,6 +345,9 @@ Function NMFitConfigs()
 	NMConfigVar( "Fit", "AutoGraph", AutoGraph, "create graph of fit results", "boolean" )
 	NMConfigVar( "Fit", "PrintResults", PrintResults, "print fit results to Igor Command Window", "boolean" )
 	
+	NMConfigVar( "Fit", "KeidingGuessAuto", KeidingGuessAuto, "auto compute initial guesses for Keiding function", "boolean" )
+	NMConfigVar( "Fit", "KeidingConstraints", KeidingConstraints, "set parameter constraints for Keiding function", "boolean" )
+	
 	NMConfigStr( "Fit", "GHK_Xunits", GHK_Xunits, "x-scale units for GHK fit fxn", "V;mV;" )
 	
 End // NMFitConfigs
@@ -443,6 +449,14 @@ Function NMFitVarGet( varName )
 			
 		case "SynExpSign":
 			defaultVal = SynExpSign // ( -1 ) negative events ( 1 ) positive events
+			break
+			
+		case "KeidingGuessAuto":
+			defaultVal = KeidingGuessAuto
+			break
+			
+		case "KeidingConstraints":
+			defaultVal = KeidingConstraints
 			break
 			
 		case "V_FitQuitReason":
@@ -1862,18 +1876,18 @@ Function NMFitFunctionSet( fxn [ update ] )
 			break
 		case "NMKeidingGauss":
 			sfxn = "KeidingGauss"
-			pList = "X0;STDVx;T;Theta;"
-			eq = "Keiding(x0,stdv,T,theta)"
+			pList = "X0;STDVx;Phi;T;N;"
+			eq = "KeidingGauss(x0,stdv,Phi,T,N)"
 			break
 		case "NMKeidingChi":
 			sfxn = "KeidingChi"
-			pList = "F;Beta;T;Theta;"
-			eq = "Keiding(f,beta,T,theta)"
+			pList = "F;Beta;Phi;T;"
+			eq = "KeidingChi(f,beta,Phi,T)"
 			break
 		case "NMKeidingGamma":
 			sfxn = "KeidingGamma"
-			pList = "X0;F;Beta;T;Theta;"
-			eq = "Keiding(x0,f,beta,T,theta)"
+			pList = "X0;F;Beta;Phi;T;"
+			eq = "KeidingGamma(x0,f,beta,Phi,T)"
 			break
 		case "NMCircle":
 			sfxn = "Circle"
@@ -2577,8 +2591,8 @@ Function NMFitWave( [ history ] )
 	Wave FT_sigma = $NMFitWavePath( "sigma" )
 	Wave FT_hold = $NMFitWavePath( "hold" )
 	
-	if ( StringMatch( fxn, "NMKeidingGauss" ) && ( exists("NMKeidingGuess") == 6 ) )
-		Execute /Q/Z "NMKeidingGuess()"
+	if ( StringMatch( fxn, "NMKeidingGauss" ) && ( exists("NMKeidingGaussInit") == 6 ) )
+		Execute /Q/Z "NMKeidingGaussInit()"
 	endif
 	
 	FT_sigma = Nan
@@ -2836,6 +2850,12 @@ Function NMFitWave( [ history ] )
 	SetNMvar( "V_FitQuitReason", V_FitQuitReason )
 	SetNMstr( "S_Info", S_Info )
 	
+	// V_FitQuitReason:
+	// 0 if the fit terminated normally
+	// 1 if the iteration limit was reached
+	// 2 if the user stopped the fit
+	// 3 if the limit of passes without decreasing chi-square was reached.
+	
 	fitWaveName = StringByKey( "AUTODESTWAVE", S_Info, "=" )
 	
 	if ( WaveExists( $NMDF + fitWaveName ) ) // fix wave note
@@ -2860,6 +2880,10 @@ Function NMFitWave( [ history ] )
 			FT_coef = NaN
 		endif
 		
+	endif
+	
+	if ( StringMatch( fxn, "NMKeidingGauss" ) )
+		Execute /Z "NMKeidingGaussPhiCutoffEstimate(" + NMQuotes( NMFitWavePath( "coef" ) ) + ")"
 	endif
 	
 	return V_FitQuitReason
@@ -3204,7 +3228,7 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 			fit = NMAlpha( w, x )
 			break
 		case "NMGamma":
-			fit = NMGamma( w, x )
+			fit = NMGammaPDF( w, x )
 			break
 		case "NMGauss":
 			fit = NMGauss( w, x )
@@ -3246,13 +3270,13 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 			fit = NM_RCvstep( w, x )
 			break
 		case "NMKeidingGauss":
-			fit = NMKeidingGauss2( w, x )
+			NMKeidingExecute( fitWave, paramWave, "Gauss" )
 			break
 		case "NMKeidingChi":
-			fit = NMKeidingChi2( w, x )
+			NMKeidingExecute( fitWave, paramWave, "Chi" )
 			break
 		case "NMKeidingGamma":
-			fit = NMKeidingGamma2( w, x )
+			NMKeidingExecute( fitWave, paramWave, "Gamma" )
 			break
 		case "NMCircle":
 			fit = NMCircle( w, x )
@@ -3618,31 +3642,33 @@ Function NMFitGuess()
 			endif
 			break
 		case "NMKeidingGauss":
-			if ( ( numpnts( FT_guess ) == 4 ) && ( numpnts( FT_hold ) == 4 ) )
-				FT_guess[0] = 45 // X0
-				FT_guess[1] = 4 // STDVx
-				FT_guess[2] = 0 // T 
-				FT_guess[3] = 30 // phi
-				FT_hold[2] = 1
+			if ( ( numpnts( FT_guess ) == 5 ) && ( numpnts( FT_hold ) == 5 ) )
+				FT_guess[0] = 1 // X0
+				FT_guess[1] = 0.1 // STDVx
+				FT_guess[2] = 20 // phi
+				FT_guess[3] = 0 // T
+				FT_guess[4] = NaN // N // used after fit to compute phi-cutoff
+				FT_hold[3] = 1
+				FT_hold[4] = 1
 			endif
 			break
 		case "NMKeidingChi":
 			if ( ( numpnts( FT_guess ) == 4 ) && ( numpnts( FT_hold ) == 4 ) )
-				FT_guess[0] = 80 // f
-				FT_guess[1] = 25 // beta
-				FT_guess[2] = 0 // T 
-				FT_guess[3] = 30 // phi
-				FT_hold[2] = 1
+				FT_guess[0] = 100 // f
+				FT_guess[1] = 0.01 // beta
+				FT_guess[2] = 20 // phi
+				FT_guess[3] = 0 // T
+				FT_hold[3] = 1
 			endif
 			break
 		case "NMKeidingGamma":
 			if ( ( numpnts( FT_guess ) == 5 ) && ( numpnts( FT_hold ) == 5 ) )
 				FT_guess[0] = 0 // X0
-				FT_guess[1] = 80 // f
-				FT_guess[2] = 25 // beta
-				FT_guess[3] = 0 // T 
-				FT_guess[4] = 30 // phi
-				FT_hold[3] = 1
+				FT_guess[1] = 100 // f
+				FT_guess[2] = 0.01 // beta
+				FT_guess[3] = 20 // phi
+				FT_guess[4] = 0 // T 
+				FT_hold[4] = 1
 			endif
 			break
 		case "NMCircle":
@@ -4732,36 +4758,31 @@ End // NMAlpha
 //****************************************************************
 //****************************************************************
 
-Function NMGamma( w, x ) : FitFunc
+Function NMGammaPDF( w, x ) : FitFunc // see Igor StatsGammaPDF
 	Wave w
 	Variable x
 
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = Gamma(x0,alpha,beta)
+	//CurveFitDialog/ f(x) = StatsGammaPDF(x0,sigma,gamma)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
 	//CurveFitDialog/ Coefficients 3
 	//CurveFitDialog/ w[0] = x0
-	//CurveFitDialog/ w[1] = alpha
-	//CurveFitDialog/ w[2] = beta
+	//CurveFitDialog/ w[1] = sigma
+	//CurveFitDialog/ w[2] = gamma
 	
-	if ( x < w[0] )
-		return 0
-	endif
+	return StatsGammaPDF( x, w[0], w[1], w[2] )
 	
-	//return ( w[2] ^ w[1] ) * ( ( x - w[0] ) ^ ( w[1] - 1 ) ) * exp( -w[2] * ( x - w[0] ) ) / gamma( w[1] )
-	return ( (1/w[2]) ^ w[1] ) * ( ( x - w[0] ) ^ ( w[1] - 1 ) ) * exp( -(1/w[2]) * ( x - w[0] ) ) / gamma( w[1] )
-	
-End // NMGamma
+End // NMGammaPDF
 
 //****************************************************************
 //****************************************************************
 //****************************************************************
 
-Function NMGauss( w, x ) : FitFunc // PDF // uses Igor "gauss" function.
+Function NMGauss( w, x ) : FitFunc // PDF // see Igor Gauss
 	Wave w
 	Variable x
 
@@ -5666,31 +5687,14 @@ End // NMCircle
 //****************************************************************
 //****************************************************************
 
-// replace with new NMKeidingGauss(w,x)
-Function NMKeidingGauss2(w,x) : FitFunc
-	Wave w
-	Variable x
-End
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-// replace with new NMKeidingChi(w,x)
-Function NMKeidingChi2(w,x) : FitFunc
-	Wave w
-	Variable x
-End
-
-//****************************************************************
-//****************************************************************
-//****************************************************************
-
-// replace with new NMKeidingGamma(w,x)
-Function NMKeidingGamma2(w,x) : FitFunc
-	Wave w
-	Variable x
-End
+Function NMKeidingExecute( wName, paramWaveName, select )
+	String wName, paramWaveName, select
+	
+	if ( exists("NMKeidingCompute") == 6 )
+		Execute /Q/Z "NMKeidingCompute(" + NMQuotes( wName ) + "," + NMQuotes( paramWaveName ) + "," + NMQuotes( select ) + ")"
+	endif
+	
+End // NMKeidingExecute
 
 //****************************************************************
 //****************************************************************

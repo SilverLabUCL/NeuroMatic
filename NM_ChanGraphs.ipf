@@ -1982,7 +1982,7 @@ End // NMChanPopup
 //****************************************************************
 //****************************************************************
 
-Function NMChanCheckbox( ctrlName, checked ) : CheckBoxControl // change differentiation flag
+Function NMChanCheckbox( ctrlName, checked ) : CheckBoxControl
 	String ctrlName; Variable checked
 	
 	Variable channel, rvalue
@@ -1991,7 +1991,9 @@ Function NMChanCheckbox( ctrlName, checked ) : CheckBoxControl // change differe
 	
 	sscanf ctrlName, cname + "%f", channel // determine channel number
 	
-	return ChanCall( cname, channel, numstr )
+	ChanCall( cname, channel, numstr )
+	
+	return 0
 
 End // NMChanCheckbox
 
@@ -2735,6 +2737,10 @@ Function ChanCall( fxn, channel, select )
 	Variable snum = str2num( select )
 
 	strswitch( fxn )
+	
+		case "":
+		case " ":
+			return 0
 	
 		case "Grid":
 			return ChanGridCall( channel )
