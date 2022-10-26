@@ -2329,9 +2329,9 @@ Function NMStimBoardConfigActivate(sdf, io, config, configName)
 	Wave chanG = $ludf+io+"chan"
 	
 	if (StringMatch(io, "ADC") == 1)
-		Wave modeS = $bdf+io+"mode"
+		Wave /T modeS = $bdf+io+"mode"
 		Wave gainS = $bdf+io+"gain"
-		Wave modeG = $ludf+io+"mode"
+		Wave /T modeG = $ludf+io+"mode"
 		Wave gainG = $ludf+io+"gain"
 	endif
 	
@@ -2404,7 +2404,7 @@ Function NMStimBoardConfigActivate(sdf, io, config, configName)
 		
 		if (StringMatch(io, "ADC") == 1)
 		
-			modeS[config] = Nan
+			modeS[config] = ""
 			gainS[config] = Nan
 			
 		else // DAC and TTL

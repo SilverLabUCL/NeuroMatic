@@ -49,9 +49,9 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0l"
+StrConstant NMVersionStr = "3.0n"
 Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
-Static StrConstant NMRights = "Copyright (c) 2020 Jason Rothman"
+Static StrConstant NMRights = "Copyright (c) 2022 Jason Rothman"
 Static StrConstant NMEmail = "Jason@ThinkRandom.com"
 Static StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
 
@@ -174,6 +174,7 @@ Function NMAbout()
 	NMHistory( NMCR )
 	NMGNUGPL()
 	NMHistory( NMCR )
+	NMCitation()
 	//NMWarranty()
 	
 	//DoAlert 0, version
@@ -206,6 +207,19 @@ Function NMWarranty()
 	NMHistory( "ALL NECESSARY SERVICING, REPAIR OR CORRECTION." )
 
 End // NMWarranty
+
+//****************************************************************
+//****************************************************************
+
+Function NMCitation()
+
+	NMHistory( "Please support NeuroMatic by citing the following Frontiers article:" )
+	NMHistory( "Rothman JS and Silver RA." )
+	NMHistory( "NeuroMatic: An Integrated Open-Source Software Toolkit for Acquisition, Analysis and Simulation of Electrophysiological Data." )
+	NMHistory( "Front Neuroinform. 2018 Apr 4;12:14." )
+	NMHistory( "https://doi.org/10.3389/fninf.2018.00014" )
+
+End // NMCitation
 
 //****************************************************************
 //****************************************************************

@@ -177,7 +177,7 @@ Function HodgkinHuxley_DYDT( pw, tt, yw, dydt ) // see IntegrateODE
 		
 	endif
 	
-	dydt[ 0 ] = isum / Cm
+	dydt[ 0 ] = isum / Cm // -Cm * dV/dt = iNa + iK + iLeak + iAMPA + iNMDA + iGABA + iTonicGABA - iClampValue
 	
 	for ( icnt = 1 ; icnt < numStates ; icnt += 1 )
 		state = StringFromList( icnt, stateList )
