@@ -1353,7 +1353,7 @@ Function NMKeidingPDFcheck()
 	
 	WaveStats /Q XTEMP
 	
-	if ( V_max != 1 )
+	if ( round( V_max * 10 ) != 10 )
 		
 		avalue = NMDoAlert( "Warning: PDF wave " + NMQuotes( wName ) + " does not integrate to 1. Do you want to continue?", title="NM Check PDF", alertType = 1 )
 		
