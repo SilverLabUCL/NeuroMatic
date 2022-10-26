@@ -1,5 +1,5 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
-#pragma hide = 0
+#pragma hide = 1
 
 //****************************************************************
 //****************************************************************
@@ -71,7 +71,7 @@ Static Constant MultiThreads = 1 // ( 0 ) no ( 1 ) yes
 Static Constant FitMethod = 0 // 0, 1, 2, 3 ( see Igor CurveFit /ODR )
 
 Static Constant KeidingGuessAuto = 1 // ( 0 ) no ( 1 ) yes
-Static Constant KeidingConstraints = 0 // ( 0 ) no ( 1 ) yes
+//Static Constant KeidingConstraints = 0 // ( 0 ) no ( 1 ) yes
 
 Static StrConstant WeightingPrefix = "Stdv_" // weighting wave name prefix
 
@@ -80,7 +80,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMKeidingGauss,n:5;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMKeidingGauss,n:6;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
 
 //****************************************************************
 //****************************************************************
@@ -346,7 +346,7 @@ Function NMFitConfigs()
 	NMConfigVar( "Fit", "PrintResults", PrintResults, "print fit results to Igor Command Window", "boolean" )
 	
 	NMConfigVar( "Fit", "KeidingGuessAuto", KeidingGuessAuto, "auto compute initial guesses for Keiding function", "boolean" )
-	NMConfigVar( "Fit", "KeidingConstraints", KeidingConstraints, "set parameter constraints for Keiding function", "boolean" )
+	//NMConfigVar( "Fit", "KeidingConstraints", KeidingConstraints, "set parameter constraints for Keiding function", "boolean" )
 	
 	NMConfigStr( "Fit", "GHK_Xunits", GHK_Xunits, "x-scale units for GHK fit fxn", "V;mV;" )
 	
@@ -455,9 +455,9 @@ Function NMFitVarGet( varName )
 			defaultVal = KeidingGuessAuto
 			break
 			
-		case "KeidingConstraints":
-			defaultVal = KeidingConstraints
-			break
+		//case "KeidingConstraints":
+			//defaultVal = KeidingConstraints
+			//break
 			
 		case "V_FitQuitReason":
 			defaultVal = 0
@@ -1876,8 +1876,8 @@ Function NMFitFunctionSet( fxn [ update ] )
 			break
 		case "NMKeidingGauss":
 			sfxn = "KeidingGauss"
-			pList = "X0;STDVx;Phi;T;N;"
-			eq = "KeidingGauss(x0,stdv,Phi,T,N)"
+			pList = "X0;STDVx;Phi;T;N;PhiCutoff;"
+			eq = "KeidingGauss(x0,stdv,Phi,T,N,PhiCutoff)"
 			break
 		case "NMKeidingChi":
 			sfxn = "KeidingChi"
@@ -2591,8 +2591,31 @@ Function NMFitWave( [ history ] )
 	Wave FT_sigma = $NMFitWavePath( "sigma" )
 	Wave FT_hold = $NMFitWavePath( "hold" )
 	
-	if ( StringMatch( fxn, "NMKeidingGauss" ) && ( exists("NMKeidingGaussInit") == 6 ) )
-		Execute /Q/Z "NMKeidingGaussInit()"
+	SetNMVar( NMFitDF + "Cancel", 0 )
+	
+	strswitch( fxn )
+		case "NMKeidingGauss":
+			if ( exists("NMKeidingGaussInit") == 6 )
+				Execute /Q/Z "NMKeidingGaussInit()"
+			endif
+			break
+		case "NMKeidingChi":
+			if ( exists("NMKeidingChiInit") == 6 )
+				Execute /Q/Z "NMKeidingChiInit()"
+			endif
+			break
+		case "NMKeidingGamma":
+			if ( exists("NMKeidingGammaInit") == 6 )
+				Execute /Q/Z "NMKeidingGammaInit()"
+			endif
+			break
+		default:
+			break
+	endswitch
+	
+	If ( NumVarOrDefault( NMFitDF + "Cancel", 0 ) == 1 )
+		NMHistory( "NM Fit Cancel" )
+		return NaN
 	endif
 	
 	FT_sigma = Nan
@@ -3642,14 +3665,16 @@ Function NMFitGuess()
 			endif
 			break
 		case "NMKeidingGauss":
-			if ( ( numpnts( FT_guess ) == 5 ) && ( numpnts( FT_hold ) == 5 ) )
+			if ( ( numpnts( FT_guess ) == 6 ) && ( numpnts( FT_hold ) == 6 ) )
 				FT_guess[0] = 1 // X0
 				FT_guess[1] = 0.1 // STDVx
 				FT_guess[2] = 20 // phi
 				FT_guess[3] = 0 // T
-				FT_guess[4] = NaN // N // used after fit to compute phi-cutoff
+				FT_guess[4] = 0 // N // not a fit parameter // used to compute phi-cutoff
+				FT_guess[5] = 0 // phi-cutoff // not a fit parameter // used to compute phi-cutoff
 				FT_hold[3] = 1
 				FT_hold[4] = 1
+				FT_hold[5] = 1
 			endif
 			break
 		case "NMKeidingChi":
@@ -3667,7 +3692,8 @@ Function NMFitGuess()
 				FT_guess[1] = 100 // f
 				FT_guess[2] = 0.01 // beta
 				FT_guess[3] = 20 // phi
-				FT_guess[4] = 0 // T 
+				FT_guess[4] = 0 // T
+				FT_hold[0] = 1
 				FT_hold[4] = 1
 			endif
 			break
