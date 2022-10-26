@@ -1,4 +1,7 @@
-# NeuroMatic
+<p align="left">
+  <img src="http://www.neuromatic.thinkrandom.com/images/NeuroMaticLogoMedium.jpg" alt="NeuroMatic"/>
+</p>
+
 NeuroMatic is a collection of WaveMetrics Igor Pro software tools for acquiring, analyzing and simulating electrophysiological data. By merging a wide range of tools into a single package, NeuroMatic facilitates a more integrated style of research. Being open source and of modular design, NeuroMatic allows users to develop their own analysis functions that can be easily incorporated into NeuroMatic’s framework.
 
 Available Tool Tabs: Main, Stats, Spike, Event, Fit, Pulse, Model, Clamp, Demo
@@ -14,3 +17,7 @@ http://www.neuromatic.thinkrandom.com/
 https://www.wavemetrics.com/
 
 Send email inquiries to Jason@ThinkRandom.com
+
+<p align="left">
+  <img src="http://www.neuromatic.thinkrandom.com/images/NeuroMaticGUISmall.jpg" alt="NeuroMatic GUI"/>
+</p>
