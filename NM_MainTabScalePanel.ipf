@@ -177,11 +177,11 @@ Function /S NMScalePanel( [ mode, align ] )
 	
 	w0 = 20; w1 = 100; w2 = 20; w3 = 100; w4 = 0
 
-	ListBox MD_ScaleInputs, pos={x0,y0}, size={width,height}, fsize=fs, win=$NMScalePanelName
-	ListBox MD_ScaleInputs, listWave=$wNameLB, selWave=$wNameLBS, colorWave=$wNameLBC, win=$NMScalePanelName
-	ListBox MD_ScaleInputs, mode=1, proc=NMScalePanelListBoxInput, win=$NMScalePanelName
-	ListBox MD_ScaleInputs, selRow=-1, editStyle=1, userColumnResize=1, win=$NMScalePanelName
-	ListBox MD_ScaleInputs, widths={w0,w1,w2,w3,w4}, win=$NMScalePanelName
+	ListBox MN_ScaleInputs, pos={x0,y0}, size={width,height}, fsize=fs, win=$NMScalePanelName
+	ListBox MN_ScaleInputs, listWave=$wNameLB, selWave=$wNameLBS, colorWave=$wNameLBC, win=$NMScalePanelName
+	ListBox MN_ScaleInputs, mode=1, proc=NMScalePanelListBoxInput, win=$NMScalePanelName
+	ListBox MN_ScaleInputs, selRow=-1, editStyle=1, userColumnResize=1, win=$NMScalePanelName
+	ListBox MN_ScaleInputs, widths={w0,w1,w2,w3,w4}, win=$NMScalePanelName
 	
 	zPanelUpdate()
 	
@@ -195,9 +195,9 @@ End // NMScalePanel
 Static Function zPanelUpdate( [ reset, browserSelect ] )
 	Variable reset, browserSelect
 
-	Variable md, numRows, numCols, numPoints, source, zWaveLengthFormat, longHistory, align
+	Variable md, numRows, numCols, numPoints, source, zWaveLengthFormat, longHistory
 	Variable w0, w1, w2, w3, w4, w5, w6, opWidth
-	String alignAtSelect, scaleMode, scaleModeList, op, wName, txt
+	String alignAtSelect, op, wName, txt
 	
 	if ( WinType( NMScalePanelName ) != 7 )
 		return -1
@@ -205,9 +205,10 @@ Static Function zPanelUpdate( [ reset, browserSelect ] )
 	
 	DoWindow /F $NMScalePanelName
 	
-	align = NumVarOrDefault( NMMainDF + "ScaleAlign", 0 )
-	scaleMode = StrVarOrDefault( NMMainDF + "ScaleMode", "" )
-	scaleModeList = NMScalePanelModeList()
+	Variable align = NumVarOrDefault( NMMainDF + "ScaleAlign", 0 )
+	Variable zEditCells = NumVarOrDefault( NMMainDF + "ScalezEditCells", 0 )
+	String scaleMode = StrVarOrDefault( NMMainDF + "ScaleMode", "" )
+	String scaleModeList = NMScalePanelModeList()
 	
 	md = 1 + WhichListItem( scaleMode, scaleModeList )
 	md = max( md, 1 )
@@ -248,7 +249,7 @@ Static Function zPanelUpdate( [ reset, browserSelect ] )
 	
 		PopupMenu MN_ScaleOp, mode=1, win=$NMScalePanelName
 		PopupMenu MN_ScaleWave, mode=1, win=$NMScalePanelName
-		ListBox MD_ScaleInputs, selRow=-1, win=$NMScalePanelName
+		ListBox MN_ScaleInputs, selRow=-1, win=$NMScalePanelName
 		
 		SetNMvar( NMMainDF + "ScalezEditCells", 0 )
 	
@@ -327,7 +328,7 @@ Static Function zPanelUpdate( [ reset, browserSelect ] )
 		
 			numPoints = zPanelNumPoints( 1 )
 			
-			txt = "choose wave ( " + num2istr( numPoints ) + " points )"
+			txt = "choose wave(s) ( " + num2istr( numPoints ) + " points )"
 		
 			SetVariable MN_ScaleValue, disable=1, win=$NMScalePanelName
 			
@@ -405,7 +406,11 @@ Static Function zPanelUpdate( [ reset, browserSelect ] )
 			break
 	endswitch
 	
-	ListBox MD_ScaleInputs, widths={w0,w1,w2,w3,w4,w5,w6}, win=$NMScalePanelName
+	ListBox MN_ScaleInputs, widths={w0,w1,w2,w3,w4,w5,w6}, win=$NMScalePanelName
+	
+	if ( !zEditCells )
+		ListBox MN_ScaleInputs, selRow=-1, win=$NMScalePanelName
+	endif
 	
 	zListBoxUpdate()
 	
@@ -545,7 +550,7 @@ Static Function zListBoxUpdate()
 	
 	scaleLB[][ %n ] = num2istr( x )
 	
-	scaleLBS[][][%foreColors] = 0
+	// scaleLBS[][][%foreColors] = 0
 	
 	if ( align )
 	
@@ -629,14 +634,16 @@ End // zListBoxUpdate
 //****************************************************************
 //****************************************************************
 
-Static Function zListBoxCheck()
+Function zListBoxCheck()
 
-	Variable wcnt, ccnt, numRows, numCols, numChans, extraColumns = 4
-	String sName
+	Variable thesame, wcnt, ccnt, numRows, numCols, numChans, extraColumns = 4
+	String sName, wName, factor, promptStr
 
 	if ( !WaveExists( $NMMainDF + "ScaleLB" ) )
 		return NM2Error( 1, "ScaleLB", "" )
 	endif
+	
+	String df = CurrentNMFolder( 1 )
 	
 	Wave /T scaleLB = $NMMainDF + "ScaleLB"
 	Wave scaleLBS = $NMMainDF + "ScaleLBselect"
@@ -654,8 +661,13 @@ Static Function zListBoxCheck()
 		for ( ccnt = 0 ; ccnt < numChans ; ccnt += 1 )
 		
 			if ( !align )
-				if ( StringMatch( scaleLB[ wcnt ][ ccnt + 1 ], scaleLB[ wcnt ][ %factor ] ) )
+				wName = scaleLB[ wcnt ][ ccnt + 1 ]
+				factor = scaleLB[ wcnt ][ %factor ]
+				if ( StringMatch( wName, factor ) || StringMatch( df+wName, factor ) )
 					scaleLBS[ wcnt ][ %factor ][ %foreColors ] = 1 // scale by self ( point-by-point )
+					thesame += 1
+				elseif ( StringMatch( factor, "0" ) || StringMatch( factor, "nan" ) || StringMatch( factor, "inf" ) || StringMatch( factor, "-inf" ) )
+					scaleLBS[ wcnt ][ %factor ][ %foreColors ] = 1
 				endif
 			endif
 			
@@ -668,6 +680,15 @@ Static Function zListBoxCheck()
 		endfor
 		
 	endfor
+	
+	if ( thesame > 0 )
+		if ( thesame == 1 )
+			promptStr = "warning: 1 wave will be scaled by themself."
+		else
+			promptStr = "warning: " + num2istr( thesame ) + " waves will be scaled by themselves."
+		endif
+		NMDoAlert( promptStr, title = "NM Scale wave point-by-point", alertType = 0 )
+	endif
 
 End // zListBoxCheck
 
@@ -1156,6 +1177,8 @@ Static Function zScaleFactorSet( factor )
 	
 	scaleLB[][ %factor ] = factor
 	
+	zListBoxCheck()
+	
 	return 0
 	
 End // zScaleFactorSet
@@ -1163,14 +1186,23 @@ End // zScaleFactorSet
 //****************************************************************
 //****************************************************************
 
-Static Function zScaleByWaveSet( wName )
-	String wName
+Static Function zScaleByWaveSet( wList )
+	String wList
 	
-	Variable ccnt, wcnt, numRows
-	String df, scaleMode, wNameFullPath, statsWName, sName
-	String parent, strValue, formatStr = "%.8f"
+	Variable ccnt, wcnt, wbgn, numRows, row, rbgn
+	String df, scaleMode, wNameFullPath, statsWName, sName, wName
+	String parent, strValue, promptStr, formatStr = "%.8f"
 	
 	Variable align = NumVarOrDefault( NMMainDF + "ScaleAlign", 0 )
+	Variable zEditCells = NumVarOrDefault( NMMainDF + "ScalezEditCells", 0 )
+	
+	Variable numWaves = ItemsInList( wList )
+	
+	if ( numWaves == 0 )
+		return 0
+	endif
+	
+	wName = StringFromList( 0, wList )
 	
 	if ( align )
 		return zAlignByWaveSet( wName )
@@ -1249,13 +1281,52 @@ Static Function zScaleByWaveSet( wName )
 			break
 			
 		case "wave point-by-point":
-			scaleLB[][ %factor ] = wName
+		
+			ControlInfo /W=$NMScalePanelName MN_ScaleInputs
+			row = V_value
+			
+			if ( zEditCells && ( row >= 0 ) && ( row < numRows ) )
+				
+				if ( numWaves == numRows )
+					rbgn = 0
+				else
+					rbgn = row
+				endif
+				
+				for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
+					if ( rbgn < numRows )
+						scaleLB[ rbgn ][ %factor ] = StringFromList( wcnt, wList )
+					else
+						break
+					endif
+					rbgn += 1
+				endfor
+			
+			else
+			
+				if ( numWaves == 1 )
+					scaleLB[][ %factor ] = wName
+				elseif ( numWaves == numRows )
+					for ( wcnt = 0 ; wcnt < numWaves ; wcnt += 1 )
+						scaleLB[ wcnt ][ %factor ] = StringFromList( wcnt, wList )
+					endfor
+				else
+					promptStr = "error: number of selected waves does not match number of table rows. "
+					promptStr += "To edit selected rows, click " + NMQuotes("edit cells") + "checkbox "
+					promptStr += "and select first row to place first selected wave." 
+					NMDoAlert( promptStr, title = "NM Scale wave point-by-point", alertType = 0 )
+				endif
+			
+			endif
+			
 			scaleLB[][ %source ] = ""
+			
 			break
 			
 	endswitch
 	
 	zListBoxCheck()
+	zPanelUpdate()
 	
 	return 0
 	
@@ -1400,8 +1471,8 @@ End // zStartXCompute
 
 Static Function /S zWaveBrowser()
 
-	Variable numPoints
-	String promptStr, wName
+	Variable alert, numPoints, numWaves, numWavesLimit = 1
+	String promptStr, wList, wName
 
 	String scaleMode = StrVarOrDefault( NMMainDF + "ScaleMode", "" )
 	
@@ -1420,8 +1491,9 @@ Static Function /S zWaveBrowser()
 			break
 			
 		case "wave point-by-point":
+			numWavesLimit = ItemsInList( NMWaveSelectList( -1 ) )
 			numPoints = NMWaveSelectXstats( "numpnts", -1 )
-			promptStr = "choose wave to scale point-by-point (" + num2istr( numPoints ) + " points)"
+			promptStr = "choose wave(s) to scale point-by-point (" + num2istr( numPoints ) + " points)"
 			break
 	
 	endswitch
@@ -1430,18 +1502,18 @@ Static Function /S zWaveBrowser()
 		return ""
 	endif
 	
-	wName = NMWaveBrowser( promptStr, numWavesLimit = 1, numPoints = numPoints, noText = 1, noSelect = 1 )
-			
-	if ( !WaveExists( $wName ) )
+	wList = NMWaveBrowser( promptStr, numWavesLimit = numWavesLimit, numPoints = numPoints, noText = 1, noSelect = 1 )
+	
+	numWaves = ItemsInList( wList )
+	
+	if ( numWaves == 0 )
 		return ""
 	endif
 	
-	SetNMstr( NMMainDF + "ScaleWaveSelect", wName )
-	
-	zScaleByWaveSet( wName )
+	zScaleByWaveSet( wList )
 	zPanelUpdate( browserSelect = 1 )
-
-	return wName
+	
+	return wList
 
 End // zWaveBrowser
 
@@ -1451,10 +1523,10 @@ End // zWaveBrowser
 Static Function /S zPanelExecute()
 
 	Variable numRows, numCols, numChans, ccnt, icnt, xbgn, xend
-	Variable factor, zWaveLengthFormat, success, failure, history2
+	Variable factor, factors, zWaveLengthFormat, success, history2
 	Variable w0, w1, w2, w3, w4, w5, w6
 	String wName, xWave, matrixName, successStr, successList = ""
-	String opList, op, factorStr, waveOfFactors, wavePntByPnt, df, wNameFullPath
+	String opList, op, factorStr, waveOfFactors, wavePntByPnt, wNameFullPath
 	
 	Variable align = NumVarOrDefault( NMMainDF + "ScaleAlign", 0 )
 	
@@ -1467,6 +1539,10 @@ Static Function /S zPanelExecute()
 	String scaleMode = StrVarOrDefault( NMMainDF + "ScaleMode", "" )
 	
 	Variable extraColumns = 4
+	
+	String df = CurrentNMFolder( 1 )
+	String wavePrefix = CurrentNMWavePrefix()
+	String waveSelect = NMWaveSelectGet()
 	
 	history2 = history + 1
 
@@ -1495,7 +1571,11 @@ Static Function /S zPanelExecute()
 	
 		if ( ( WhichListItem( op, opList ) >= 0 ) && ( strlen( factorStr ) > 0 ) )
 			success = 1
-			break
+		endif
+		
+		if ( !StringMatch( factorStr, scaleLB[ 0 ][ %factor ] ) )
+			zEditCells = 1 // found multiple scale factors
+			history = 1 // long history
 		endif
 		
 	endfor
@@ -1511,6 +1591,8 @@ Static Function /S zPanelExecute()
 	
 	if ( zEditCells )
 	
+		STRUCT NMParams nm		
+	
 		matrixName = NMMainDF + "ScaleMatrix"
 	
 		NMMatrixArithmeticMake( matrixName, numRows )
@@ -1522,6 +1604,8 @@ Static Function /S zPanelExecute()
 		Wave /T matrix = $matrixName
 		
 		for ( ccnt = 0 ; ccnt < numChans ; ccnt += 1 )
+		
+			NMLoopStructInit( "NMScale", df, wavePrefix, ccnt, waveSelect, nm )
 		
 			for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
 			
@@ -1541,7 +1625,11 @@ Static Function /S zPanelExecute()
 				
 			endfor
 			
-			successList += NMMatrixArithmetic( NMMainDF + "ScaleMatrix", xbgn = xbgn, xend = xend, xWave = xWave, history = history )
+			nm.successList += NMMatrixArithmetic( NMMainDF + "ScaleMatrix", xbgn = xbgn, xend = xend, xWave = xWave, history = history )
+			
+			if ( history )
+				NMLoopHistory( nm )
+			endif
 			
 			for ( icnt = 0 ; icnt < numRows ; icnt += 1 )
 		
@@ -1556,7 +1644,6 @@ Static Function /S zPanelExecute()
 					scaleLBS[ icnt ][][ %foreColors ] = 2 // green
 				else
 					scaleLBS[ icnt ][][ %foreColors ] = 1 // red
-					failure = 1
 				endif
 				
 			endfor
@@ -1564,6 +1651,8 @@ Static Function /S zPanelExecute()
 		endfor
 	
 		KillWaves /Z $matrixName
+		
+		ChanGraphsUpdate()
 	
 	else
 	
@@ -1617,8 +1706,6 @@ Static Function /S zPanelExecute()
 			case "wave point-by-point":
 			
 				wavePntByPnt = StrVarOrDefault( NMMainDF + "ScaleWaveSelect", "" )
-				
-				df = CurrentNMFolder( 1 )
 				wNameFullPath = CheckNMWavePath( df, wavePntByPnt )
 			
 				if ( NMUtilityWaveTest( wNameFullPath ) != 0 )

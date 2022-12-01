@@ -955,13 +955,13 @@ Function /S NMWaveBrowser( promptStr [ numWavesLimit, numPoints, noText, noSelec
 	endif
 	
 	if ( !ParamIsDefault( numWavesLimit ) && ( ItemsInList( wList ) > numWavesLimit ) )
-		DoAlert /T="NM Wave Browser" 0, "number of waves selected was greater than " + num2istr( numWavesLimit ) + "."
+		DoAlert /T="NM Wave Browser" 0, "error: number of waves selected was greater than " + num2istr( numWavesLimit ) + "."
 		error = 1
 		wList = ""
 	endif
 	
 	if ( !error && !WavesExist( wList ) )
-		DoAlert /T="NM Wave Browser" 0, "one or more selected items are not a wave."
+		DoAlert /T="NM Wave Browser" 0, "error: one or more selected items are not a wave."
 		error = 1
 		wList = ""
 	endif
@@ -969,13 +969,13 @@ Function /S NMWaveBrowser( promptStr [ numWavesLimit, numPoints, noText, noSelec
 	npnts = GetXstats( "points", wList )
 	
 	if ( !error && !ParamIsDefault( numPoints ) && ( npnts != numPoints ) )
-		DoAlert /T="NM Wave Browser" 0, "one or more selected waves do not have a dimension of " + num2istr( numPoints ) + " points."
+		DoAlert /T="NM Wave Browser" 0, "error: one or more selected waves do not have a dimension of " + num2istr( numPoints ) + " points."
 		error = 1
 		wList = ""
 	endif
 	
 	if ( !error && noText && ( NMUtilityWaveTest( wList ) != 0 ) )
-		DoAlert /T="NM Wave Browser" 0, "one or more selected items are text waves."
+		DoAlert /T="NM Wave Browser" 0, "error: one or more selected items are text waves."
 		error = 1
 		wList = ""
 	endif
