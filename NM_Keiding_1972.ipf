@@ -133,18 +133,18 @@ Menu "NeuroMatic"
 	"-"
 
 		Submenu "Keiding model for estimating particle size and density"
-			"Keiding et al 1976", /Q, NMKeiding_1972_Citation()
+			"Keiding et al 1976", /Q, NMKeiding_Citation()
 			"Rothman et al 2022", /Q, NMKeiding_Rothman2022_Citation()
 			"-"
 			"Compute Analytical G (Fig 3)", /Q, NMKeidingGaussMakeGCall()
-			"Fit Keiding G (Fig S3)", /Q, NMKeiding_1972_Fit_All( computeOriginalFits=1, graph=1 )
+			"Fit Keiding G (Fig S3)", /Q, NMKeiding_Fit_All( computeOriginalFits=1, graph=1 )
 			"Fit Wicksell G (Fig S4)", /Q, NMKeiding_Wicksell_Fit( graph=1 )
 			"Fit Simulated G (Fig 4)", /Q, NMKeiding_D3D_G_Fit( graph=1 )
-			"Fit MFT Vesicle G ET10 (Fig 6)", /Q, NMKeiding_MFTvesicles_G_ET_Fit( "ET10", graph=1 )
-			"Fit MFT Vesicle G ET11 (Fig S10)", /Q, NMKeiding_MFTvesicles_G_ET_Fit( "ET11", graph=1 )
-			"Fit GC Somata G (Fig 8)", /Q, NMKeiding_GCsomata_G_Fit()
+			"Fit MFT Vesicle G ET10 (Fig 6)", /Q, NMKeiding_MFves_G_ET_Fit( "ET10", graph=1 )
+			"Fit MFT Vesicle G ET11 (Fig S10)", /Q, NMKeiding_MFves_G_ET_Fit( "ET11", graph=1 )
+			"Fit GC Somata G (Fig 8)", /Q, NMKeiding_GCsoma_G_Fit()
 			"Fit GC Nuclei G (Fig 8)", /Q, NMKeiding_GCnuclei_G_Fit()
-			"Fit MFT Vesicle G TEM  (Fig 9)", /Q, NMKeiding_MFTvesicles_G_TEM_Fit()
+			"Fit MFT Vesicle G TEM  (Fig 9)", /Q, NMKeiding_MFves_G_TEM_Fit()
 			"-"
 			"Compute Density to VF", /Q, NM_Convert_Density_To_VF()
 			"Compute VF to Density", /Q, NM_Convert_VF_To_Density()
@@ -156,14 +156,14 @@ End
 
 //**************************************************************** //
 
-Function NMKeiding_1972_Citation()
+Function NMKeiding_Citation()
 
 	NMHistory( NMQuotes( "Maximum likelihood estimation of the size distribution of liver cell nuclei from the observed distribution in a plane section." ) )
 	NMHistory( "Keiding N, Jensen ST, Ranek L." )
 	NMHistory( "Biometrics 1972 Sep;28(3):813-29" )
 	NMHistory( "https://doi.org/10.2307/2528765" )
 
-End // NMKeiding_1972_Citation
+End // NMKeiding_Citation
 
 //**************************************************************** //
 
@@ -1749,7 +1749,7 @@ End // NMKeiding_Wicksell_Fit_Graph
 //
 //****************************************************************//
 
-Function NMKeiding_1972_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al Figure S3
+Function NMKeiding_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al Figure S3
 	Variable overwrite
 	Variable computeOriginalFits
 	
@@ -1785,18 +1785,18 @@ Function NMKeiding_1972_Check( [ overwrite, computeOriginalFits ] ) // Rothman e
 	endif
 	
 	if ( computeOriginalFits )
-		NMKeiding_1972_Table2_Fits_ComputeAll()
+		NMKeiding_Table2_Fits_All()
 	endif
 	
 	DoUpdate /W=$ChanGraphName(0)
 	
 	return 0
 	
-End // NMKeiding_1972_Check
+End // NMKeiding_Check
 
 //****************************************************************
 
-Function NMKeiding_1972_Table2_Fits_ComputeAll() // fit values from Keiding Table 2
+Function NMKeiding_Table2_Fits_All() // fit values from Keiding Table 2
 
 	Variable f, b, phi, p1, p2
 	String wName
@@ -1813,7 +1813,7 @@ Function NMKeiding_1972_Table2_Fits_ComputeAll() // fit values from Keiding Tabl
 	p1 = 0.889
 	p2 = 0.109
 	
-	NMKeiding_1972_Table2_Fits_Compute( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
+	NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
 	
 	wName = "G_1_H2003"
 	f = 2 * 104 // degrees freedom
@@ -1823,7 +1823,7 @@ Function NMKeiding_1972_Table2_Fits_ComputeAll() // fit values from Keiding Tabl
 	p1 = 0.864
 	p2 = 0.122
 	
-	NMKeiding_1972_Table2_Fits_Compute( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
+	NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
 	
 	wName = "G_2_H1037"
 	f = 2 * 35 // degrees freedom
@@ -1833,13 +1833,13 @@ Function NMKeiding_1972_Table2_Fits_ComputeAll() // fit values from Keiding Tabl
 	p1 = 0.887
 	p2 = 0.100
 	
-	NMKeiding_1972_Table2_Fits_Compute( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
+	NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
 
-End // NMKeiding_1972_Table2_Fits_Compute
+End // NMKeiding_Table2_Fits_
 
 //****************************************************************
 
-Function NMKeiding_1972_Table2_Fits_Compute( wName, f, b, phi, p1, p2, T [ diam_max, diam_pnts, diam_units ] )
+Function NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, T [ diam_max, diam_pnts, diam_units ] )
 	String wName
 	Variable f, b, phi, p1, p2, T
 	Variable diam_max, diam_pnts
@@ -1933,15 +1933,15 @@ Function NMKeiding_1972_Table2_Fits_Compute( wName, f, b, phi, p1, p2, T [ diam_
 	
 	KillWaves /Z Temp_ChiSqr, W_Coef2, W_Coef3
 
-End // NMKeiding_1972_Table2_Fits_Compute2
+End // NMKeiding_Table2_Fits_2
 
 //****************************************************************//
 
-Function NMKeiding_1972_Fit_All( [ computeOriginalFits, graph ] ) // LSE Keiding F-Gauss
+Function NMKeiding_Fit_All( [ computeOriginalFits, graph ] ) // LSE Keiding F-Gauss
 	Variable computeOriginalFits
 	Variable graph
 
-	NMKeiding_1972_Check( computeOriginalFits=computeOriginalFits )
+	NMKeiding_Check( computeOriginalFits=computeOriginalFits )
 	
 	Variable avalue = NMDoAlert( "Compute fit to Keiding's 1972 G(d)?", title="Keiding-model Fit Demo", alertType = 1 )
 	
@@ -1949,29 +1949,29 @@ Function NMKeiding_1972_Fit_All( [ computeOriginalFits, graph ] ) // LSE Keiding
 		return 0
 	endif
 	
-	if ( NMKeiding_1972_Fit( "G_0_H0601", num_diam=Keiding_N ) > 0 )
+	if ( NMKeiding_Fit( "G_0_H0601", num_diam=Keiding_N ) > 0 )
 		return -1
 	endif
 	
-	if ( NMKeiding_1972_Fit( "G_1_H2003", num_diam=Keiding_N ) > 0 )
+	if ( NMKeiding_Fit( "G_1_H2003", num_diam=Keiding_N ) > 0 )
 		return -1
 	endif
 	
-	if ( NMKeiding_1972_Fit( "G_2_H1037", num_diam=Keiding_N ) > 0 )
+	if ( NMKeiding_Fit( "G_2_H1037", num_diam=Keiding_N ) > 0 )
 		return -1
 	endif
 	
 	if ( graph )
-		return NMKeiding_1972_Graph_All()
+		return NMKeiding_Graph_All()
 	endif
 
 	return 0
 
-End // NMKeiding_1972_Fit_All
+End // NMKeiding_Fit_All
 
 //****************************************************************//
 
-Function NMKeiding_1972_Fit( wName [ fit_pnts, num_diam ] )
+Function NMKeiding_Fit( wName [ fit_pnts, num_diam ] )
 	String wName
 	Variable fit_pnts
 	Variable num_diam // for phi-cutoff test
@@ -2032,21 +2032,21 @@ Function NMKeiding_1972_Fit( wName [ fit_pnts, num_diam ] )
 	
 	return V_FitQuitReason
 	
-End // NMKeiding_1972_Fit
+End // NMKeiding_Fit
 
 //****************************************************************//
 
-Function NMKeiding_1972_Graph_All()
+Function NMKeiding_Graph_All()
 
-	NMKeiding_1972_Graph( "G_0_H0601", 0.9 )
-	NMKeiding_1972_Graph( "G_1_H2003", 1.1 )
-	NMKeiding_1972_Graph( "G_2_H1037", 0.7 )
+	NMKeiding_Graph( "G_0_H0601", 0.9 )
+	NMKeiding_Graph( "G_1_H2003", 1.1 )
+	NMKeiding_Graph( "G_2_H1037", 0.7 )
 
-End // NMKeiding_1972_Graph_All
+End // NMKeiding_Graph_All
 
 //****************************************************************//
 
-Function /S NMKeiding_1972_Graph( wName, ymax )
+Function /S NMKeiding_Graph( wName, ymax )
 	String wName
 	Variable ymax
 	
@@ -2189,7 +2189,7 @@ Function /S NMKeiding_1972_Graph( wName, ymax )
 	
 	return gName
 
-End // NMKeiding_1972_Graph
+End // NMKeiding_Graph
 
 //****************************************************************//
 //
@@ -2267,7 +2267,7 @@ End // NMKeiding_GCsomata_G_Num_Diam
 
 //****************************************************************//
 
-Function NMKeiding_GCsomata_G_Fit()
+Function NMKeiding_GCsoma_G_Fit()
 
 	Variable wcnt, T_optical, num_diam
 	String strvalue, wName
@@ -2307,7 +2307,7 @@ Function NMKeiding_GCsomata_G_Fit()
 	
 	return 0
 
-End // NMKeiding_GCsomata_G_Fit
+End // NMKeiding_GCsoma_G_Fit
 
 //****************************************************************//
 
@@ -2400,7 +2400,7 @@ End // NMKeiding_GCnuclei_G_Fit
 
 //****************************************************************//
 
-Function NMKeiding_MFTvesicles_G_TEM_Check( [ overwrite ] )
+Function NMKeiding_MFves_G_TEM_Check( [ overwrite ] )
 	Variable overwrite
 	
 	Variable xstart = 0.5 * MFT_Vesicles_G_TEM_BinWidth
@@ -2431,11 +2431,11 @@ Function NMKeiding_MFTvesicles_G_TEM_Check( [ overwrite ] )
 	
 	return 0
 	
-End // NMKeiding_MFTvesicles_G_TEM_Check
+End // NMKeiding_MFves_G_TEM_Check
 
 //****************************************************************//
 
-Static Function NMKeiding_MFTvesicles_G_Num_Diam( wName )
+Static Function NMKeiding_MFves_G_Num_Diam( wName )
 	String wName
 	
 	strswitch( wName )
@@ -2470,16 +2470,16 @@ Static Function NMKeiding_MFTvesicles_G_Num_Diam( wName )
 	
 	return NaN
 
-End // NMKeiding_MFTvesicles_G_Num_Diam
+End // NMKeiding_MFves_G_Num_Diam
 
 //****************************************************************//
 
-Function NMKeiding_MFTvesicles_G_TEM_Fit()
+Function NMKeiding_MFves_G_TEM_Fit()
 
 	Variable wcnt, num_diam
 	String wName
 
-	NMKeiding_MFTvesicles_G_TEM_Check()
+	NMKeiding_MFves_G_TEM_Check()
 	
 	Variable avalue = NMDoAlert( "Compute fits to 8 MFT vesicle TEM G(d)?", title="Keiding-model Fit Demo", alertType = 1 )
 	
@@ -2501,7 +2501,7 @@ Function NMKeiding_MFTvesicles_G_TEM_Fit()
 		FT_guess[ 1 ] = 4
 		FT_guess[ 2 ] = 20
 		FT_guess[ 3 ] = MFT_Vesicles_TEM_T
-		FT_guess[ 4 ] = NMKeiding_MFTvesicles_G_Num_Diam( wName )
+		FT_guess[ 4 ] = NMKeiding_MFves_G_Num_Diam( wName )
 	
 		if ( NMFitWave() == 0 )
 			NMFitSaveCurrent()
@@ -2511,11 +2511,11 @@ Function NMKeiding_MFTvesicles_G_TEM_Fit()
 	
 	return 0
 
-End // NMKeiding_MFTvesicles_G_TEM_Fit
+End // NMKeiding_MFves_G_TEM_Fit
 
 //****************************************************************//
 
-Function NMKeiding_MFTvesicles_G_ET_Check( etID [ overwrite ] )
+Function NMKeiding_MFves_G_ET_Check( etID [ overwrite ] )
 	String etID
 	Variable overwrite
 	
@@ -2534,7 +2534,7 @@ Function NMKeiding_MFTvesicles_G_ET_Check( etID [ overwrite ] )
 			gList = MFT_Vesicles_G_ET11
 			break
 		default:
-			Print "error: NMKeiding_MFTvesicles_G_ET_Check: unknown ET ID:", etID
+			Print "error: NMKeiding_MFves_G_ET_Check: unknown ET ID:", etID
 			return -1
 	endswitch
 	
@@ -2568,11 +2568,11 @@ Function NMKeiding_MFTvesicles_G_ET_Check( etID [ overwrite ] )
 	
 	return 0
 
-End // NMKeiding_MFTvesicles_G_ET_Check
+End // NMKeiding_MFves_G_ET_Check
 
 //****************************************************************//
 
-Static Function NMKeiding_MFTvesicles_G_ET_Num_Diam( etID )
+Static Function NMKeiding_MFves_G_ET_Num_Diam( etID )
 	String etID
 	
 	strswitch( etID )
@@ -2584,18 +2584,18 @@ Static Function NMKeiding_MFTvesicles_G_ET_Num_Diam( etID )
 	
 	return NaN
 	
-End // NMKeiding_MFTvesicles_G_ET_Num_Diam
+End // NMKeiding_MFves_G_ET_Num_Diam
 
 //****************************************************************//
 
-Function NMKeiding_MFTvesicles_G_ET_Fit( etID [ graph ] )
+Function NMKeiding_MFves_G_ET_Fit( etID [ graph ] )
 	String etID
 	Variable graph
 	
 	Variable fit_mn, fit_sd, num_diam, error
 	String wName, fName, fName2
 
-	NMKeiding_MFTvesicles_G_ET_Check( etID )
+	NMKeiding_MFves_G_ET_Check( etID )
 	
 	Variable avalue = NMDoAlert( "Compute fit to MFT vesicle ET G(d)?", title="Keiding-model Fit Demo", alertType = 1 )
 	
@@ -2615,12 +2615,12 @@ Function NMKeiding_MFTvesicles_G_ET_Fit( etID [ graph ] )
 	FT_guess[ 1 ] = 4
 	FT_guess[ 2 ] = 20
 	FT_guess[ 3 ] = MFT_Vesicles_ET_T
-	FT_guess[ 4 ] = NMKeiding_MFTvesicles_G_Num_Diam( wName )
+	FT_guess[ 4 ] = NMKeiding_MFves_G_Num_Diam( wName )
 	
 	error = NMFitWave()
 	
 	if ( error > 0 )
-		NMHistory( "fit error: NMKeiding_MFTvesicles_G_ET_Fit" )
+		NMHistory( "fit error: NMKeiding_MFves_G_ET_Fit" )
 		return error
 	endif
 	
@@ -2646,15 +2646,15 @@ Function NMKeiding_MFTvesicles_G_ET_Fit( etID [ graph ] )
 		return 0
 	endif
 	
-	NMKeiding_MFTvesicles_G_ET_Fit_Graph( etID )
+	NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	
 	return 0
 
-End // NMKeiding_MFTvesicles_G_ET_Fit
+End // NMKeiding_MFves_G_ET_Fit
 
 //****************************************************************//
 
-Function /S NMKeiding_MFTvesicles_G_ET_Fit_Graph( etID )
+Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	String etID
 	
 	String df = "root:" + etID + ":"
@@ -2739,7 +2739,7 @@ Function /S NMKeiding_MFTvesicles_G_ET_Fit_Graph( etID )
 	
 	return gName
 	
-End // NMKeiding_MFTvesicles_G_ET_Fit_Graph
+End // NMKeiding_MFves_G_ET_Fit_Graph
 
 //****************************************************************//
 //
