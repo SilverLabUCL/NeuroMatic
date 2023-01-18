@@ -1189,7 +1189,9 @@ Function NMArtTimeWaveSet( waveNameOrSpikeSubfolder )
 	for ( icnt = 0; icnt < numpnts( xwave ); icnt += 1 )
 		t = xwave[ icnt ]
 		pnt = x2pnt( dtemp, t )
-		ywave[ icnt ] = dtemp[ pnt ]
+		if ( ( pnt >= 0 ) && ( pnt < numpnts( dtemp ) ) )
+			ywave[ icnt ] = dtemp[ pnt ]
+		endif
 	endfor
 	
 	z_NumStimsCount()
