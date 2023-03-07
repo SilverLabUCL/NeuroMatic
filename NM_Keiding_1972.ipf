@@ -30,7 +30,20 @@
 //
 //	NM functions for estimating 3D particle size and density from 2D projections using Keiding model for lost caps
 //
-//	Keiding N, Jensen ST, Ranek L. 
+//****************************************************************
+//****************************************************************
+//
+//	Rothman JS, Borges-Merjane C, Holderith N, Jonas P, Silver RA
+//	Validation of a stereological method for estimating particle size and density from 2D projections with high accuracy.
+//	PLOS ONE 2023 (in press)
+//	https://doi.org/10.1371/journal.pone.0277148
+//	bioRxiv 25 Oct 2022
+//	https://doi.org/10.1101/2022.10.21.513285
+//
+//****************************************************************
+//****************************************************************
+//
+//	Keiding N, Jensen ST, Ranek L
 //	Maximum likelihood estimation of the size distribution of liver cell nuclei from the observed distribution in a plane section.
 //	Biometrics 1972 Sep;28(3):813-29
 //	PMID: 5073254.
@@ -38,8 +51,25 @@
 //
 //****************************************************************
 //****************************************************************
+//
+//	Wicksell SD
+//	The corpuscle problem: a mathematical study of a biometric problem.
+//	Biometrika. 1925 Jun;17(1/2): 84–99.
+//	doi: 10.2307/2332027
+//	Example 4
+//
+//****************************************************************
+//****************************************************************
+//
+//	Nguyen TM, Thomas LA, Rhoades JL, Ricchi I, Yuan XC, Sheridan A, et al.
+//	Structured cerebellar connectivity supports resilient pattern separation.
+//	Nature. 2023 Jan 19; 613(7944):543-549.
+//	doi: 10.1038/s41586-022-05471-w
+//
+//****************************************************************
+//****************************************************************
 
-// Below, G & F number lists are histogram bin counts which are converted to PDFs
+// Below are G and F number lists containing histogram bin counts that are converted to PDFs
 
 // Spleen follicles, Wicksell 1925
 Static Constant Wicksell_T = 0.018 // mm // without magnification
@@ -60,11 +90,10 @@ Static StrConstant Keiding_G_Units = "μm"
 Static StrConstant Keiding_G_H0601 = "7;21;43;64;94;70;69;47;26;8;11;11;9;11;2;1;3;2;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;" // radii
 Static StrConstant Keiding_G_H2003 = "0;0;9;22;78;121;96;75;24;6;7;5;6;14;15;10;2;2;1;0;1;1;1;2;1;1;0;0;0;0;0;0;0;"
 Static StrConstant Keiding_G_H1037 = "0;1;5;10;18;24;43;61;65;62;60;37;30;17;15;11;8;6;7;2;0;5;5;2;0;2;0;1;2;1;0;0;0;"
-
 Static StrConstant KeidingFolder = "Keiding1972"
 
-// GC somata G(d) frequencies, confocal data, Rothman et al 2022
-Static Constant GC_Somata_G_BinWidth = 0.3
+// GC somata G(d) frequencies, confocal data, Rothman et al 2023
+Static Constant GC_Somata_G_BinWidth = 0.3 // um
 Static StrConstant GC_Somata_G_Units = "μm"
 Static StrConstant GC_Somata_G_R1_SL1_1 = "0;0;0;0;0;0;0;0;2;0;6;2;10;23;22;23;24;64;67;122;95;93;51;25;5;2;2;0;0;0;0;0;"
 Static StrConstant GC_Somata_G_R1_SL1_2 = "0;0;0;0;0;0;0;0;0;1;3;4;6;10;16;30;35;40;56;91;110;93;41;22;6;3;1;1;0;0;0;0;"
@@ -78,18 +107,26 @@ Static StrConstant GC_Somata_G_R6_SL2_2 = "0;0;0;0;0;0;0;0;2;4;4;3;4;6;19;37;75;
 Static StrConstant GC_Somata_T_List = "R1.SL1.1=1.6829478;R1.SL1.2=1.7561194;R1.SL2.1=1.8359430;R5.SL1.1=1.3927844;R5.SL2.1=1.5534902;R5.SL3.1=1.8359430;R6.SL1.1=2.6927164;R6.SL2.1=1.5534902;R6.SL2.2=1.5534902;"
 Static StrConstant GC_Somata_Folder = "GC_Somata"
 
-// GC nuclei G(d) frequencies, TEM data, Rothman et al 2022
-Static Constant GC_Nuclei_G_BinWidth = 0.25
+// GC nuclei G(d) frequencies, TEM data, Rothman et al 2023
+Static Constant GC_Nuclei_G_BinWidth = 0.25 // um
 Static StrConstant GC_Nuclei_G_Units = "μm"
 Static StrConstant GC_Nuclei_G_M15_All = "0;0;0;0;0;3;3;8;12;21;23;28;17;33;44;44;55;61;61;70;26;8;1;1;0;0;0;"
 Static StrConstant GC_Nuclei_G_M18_All = "0;0;0;0;0;0;2;5;7;9;22;18;14;17;29;37;31;45;60;59;56;47;25;4;0;0;0;"
 Static StrConstant GC_Nuclei_G_M19_All = "0;0;0;0;0;1;8;7;15;17;18;16;21;20;33;33;32;50;62;36;32;12;2;1;0;0;0;"
 Static StrConstant GC_Nuclei_G_M21_All = "0;0;0;0;1;7;6;6;18;19;29;28;29;32;34;70;63;57;41;14;4;1;1;0;0;0;0;"
-Static Constant GC_Nuclei_T = 0.060
+Static Constant GC_Nuclei_T = 0.060 // um
 Static StrConstant GC_Nuclei_Folder = "GC_Nuclei"
 
-// MFT vesicle G(d) frequencies, TEM data, Rothman et al 2022
-Static Constant MFT_Vesicles_G_TEM_BinWidth = 2
+// GC nuclei G(d) frequencies, TEM data of Nguyen et al 2023, Fig S9 in S1_File.pdf
+Static StrConstant GC_Nuclei_G_Nguyen = "0;0;0;0;1;4;9;7;12;13;14;11;20;20;15;26;25;21;19;21;36;47;50;50;59;60;52;54;27;7;4;1;1;1;0;1;0;0;0;0;"
+Static StrConstant GC_Nuclei_F_Nguyen = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;2;5;11;14;22;21;19;6;4;0;1;0;0;1;0;0;0;0;"
+Static Constant GC_Nuclei_Nguyen_T = 0.040 // um
+Static StrConstant GC_Nuclei_Nguyen_Folder = "GC_Nuclei_Nguyen"
+Static Constant GC_Nuclei_F_Nguyen_MN = 6.72909252 // um // measured
+Static Constant GC_Nuclei_F_Nguyen_SD = 0.50875555 // um // measured
+
+// MFT vesicle G(d) frequencies, TEM data, Rothman et al 2023
+Static Constant MFT_Vesicles_G_TEM_BinWidth = 2 // nm
 Static StrConstant MFT_Vesicles_G_TEM_Units = "nm"
 Static StrConstant MFT_Vesicles_G_M15_45 = "0;0;0;0;0;0;0;0;0;0;0;1;0;0;1;0;1;1;3;22;25;34;47;48;41;32;28;9;5;2;1;2;1;1;0;1;1;1;0;1;0;0;0;0;"
 Static StrConstant MFT_Vesicles_G_M15_48 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;2;0;3;9;26;38;60;38;33;26;20;5;3;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;"
@@ -99,23 +136,29 @@ Static StrConstant MFT_Vesicles_G_M19_26 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;3;1;3;
 Static StrConstant MFT_Vesicles_G_M19_34 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;4;3;9;16;66;93;85;59;41;27;8;10;0;3;1;2;1;0;0;0;0;0;0;0;0;0;0;0;0;"
 Static StrConstant MFT_Vesicles_G_M21_04 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;2;4;11;20;32;43;32;26;16;10;1;2;2;1;2;0;2;0;0;0;0;0;0;0;0;0;0;"
 Static StrConstant MFT_Vesicles_G_M21_19 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;2;4;2;8;16;26;52;40;33;26;7;4;8;3;2;3;0;0;1;0;1;0;0;0;1;0;0;0;"
-Static Constant MFT_Vesicles_TEM_T = 60
+Static Constant MFT_Vesicles_TEM_T = 60 // nm
 Static StrConstant MFT_Vesicles_TEM_Folder = "MFT_Vesicles_TEM"
 
-// MFT vesicle G(d) frequencies, ET data, Rothman et al 2022
-Static Constant MFT_Vesicles_G_ET_BinWidth = 1
+// MFT vesicle G(d) frequencies, ET data, Rothman et al 2023
+Static Constant MFT_Vesicles_G_ET_BinWidth = 1 // nm
 Static StrConstant MFT_Vesicles_G_ET_Units = "nm"
 Static StrConstant MFT_Vesicles_G_ET10 = "0;0;0;0;0;0;0;0;0;0;0;0;0;1;1;2;0;1;1;7;6;12;25;23;31;29;46;66;67;88;90;121;151;165;202;197;233;284;357;397;421;435;512;497;462;441;403;309;228;200;167;138;100;60;53;23;23;3;2;2;1;0;0;0;"
-Static StrConstant MFT_Vesicles_F_ET10 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;4;6;2;2;8;7;13;19;10;15;9;11;6;3;3;5;2;0;3;0;0;1;0;0;0;0;0;"
+Static StrConstant MFT_Vesicles_F_ET10 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;1;5;2;7;5;7;13;12;13;14;13;10;8;5;4;6;4;0;1;1;0;0;0;0;0;0;0;"
 Static StrConstant MFT_Vesicles_G_ET11 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;8;12;20;32;59;92;155;173;224;282;302;402;440;460;537;645;678;768;879;964;983;978;1026;902;786;666;541;341;203;102;87;66;41;16;8;7;6;5;1;6;5;4;1;0;0;0;0;0;0;"
-Static StrConstant MFT_Vesicles_F_ET11 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;3;2;9;13;20;25;21;37;33;26;15;10;7;5;3;1;1;1;0;0;0;1;0;0;0;0;0;0;1;0;0;0;0;"
-Static Constant MFT_Vesicles_ET_T = 0
+Static StrConstant MFT_Vesicles_F_ET11 = "  0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;2;2;5;18;20;14;35;28;25;26;21;15;4;8;3;3;0;1;0;0;1;0;0;0;0;1;0;0;0;0;0;0;0;"
+Static Constant MFT_Vesicles_ET_T = 0 // nm
 Static StrConstant MFT_Vesicles_ET_Folder = "MFT_Vesicles"
+Static Constant MFT_Vesicles_F_ET10_MN = 46.0006974 // nm // measured
+Static Constant MFT_Vesicles_F_ET10_SD = 4.0356605 // nm // measured
+Static Constant MFT_Vesicles_ET10_Phi_MN = 40.9923688 // degrees // measured
+Static Constant MFT_Vesicles_F_ET11_MN = 42.9372104 // nm // measured
+Static Constant MFT_Vesicles_F_ET11_SD = 3.4026290 // nm // measured
+Static Constant MFT_Vesicles_ET11_Phi_MN = 41.515274 // degrees // measured
 
-// D3D simulations, Rothman et al 2022, Figs 3 & 4
-Static Constant D3D_F_MN = 46
-Static Constant D3D_F_SD = 4
-Static Constant D3D_G_BinWidth = 2
+// D3D simulations, Rothman et al 2023, Figs 3 & 4
+Static Constant D3D_F_MN = 46 // nm
+Static Constant D3D_F_SD = 4 // nm
+Static Constant D3D_G_BinWidth = 2 // nm
 Static StrConstant D3D_G_Units = "nm"
 Static StrConstant D3D_G_T0_P20_41 = "0;0;0;0;0;0;0;3;5;9;14;17;11;10;23;12;27;28;33;36;47;52;57;24;27;21;5;1;0;0;0;0;0;0;0;0;"
 Static StrConstant D3D_G_T1_P70_41 = "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;2;8;18;50;72;95;92;74;44;19;4;3;0;0;0;0;0;0;0;"
@@ -125,8 +168,6 @@ Static Constant D3D_G_Convert2UD = 1
 //**************************************************************** //
 
 Menu "NeuroMatic"
-
-	"-"
 	
 	Submenu "Analysis"
 	
@@ -134,20 +175,21 @@ Menu "NeuroMatic"
 
 		Submenu "Keiding model for estimating particle size and density"
 			"Keiding et al 1976", /Q, NMKeiding_Citation()
-			"Rothman et al 2022", /Q, NMKeiding_Rothman2022_Citation()
+			"Rothman et al 2023", /Q, NMKeiding_Rothman2023_Citation()
 			"-"
 			"Compute Analytical G (Fig 3)", /Q, NMKeidingGaussMakeGCall()
-			"Fit Keiding G (Fig S3)", /Q, NMKeiding_Fit_All( computeOriginalFits=1, graph=1 )
-			"Fit Wicksell G (Fig S4)", /Q, NMKeiding_Wicksell_Fit( graph=1 )
+			"Fit Keiding G (Fig S2)", /Q, NMKeiding_Fit_All( computeOriginalFits=1, graph=1 )
+			"Fit Wicksell G (Fig S3)", /Q, NMKeiding_Wicksell_Fit( graph=1 )
 			"Fit Simulated G (Fig 4)", /Q, NMKeiding_D3D_G_Fit( graph=1 )
-			"Fit MFT Vesicle G ET10 (Fig 6)", /Q, NMKeiding_MFves_G_ET_Fit( "ET10", graph=1 )
-			"Fit MFT Vesicle G ET11 (Fig S10)", /Q, NMKeiding_MFves_G_ET_Fit( "ET11", graph=1 )
+			"Fit MFT Vesicle G ET11 (Fig 6)", /Q, NMKeiding_MFves_G_ET_Fit( "ET11", graph=1 )
+			"Fit MFT Vesicle G ET10 (Fig S8)", /Q, NMKeiding_MFves_G_ET_Fit( "ET10", graph=1 )
+			"Fit GC Nuclei G Nguyen (Fig S9)", /Q, NMKeiding_GCnuclei_Nguyen_G_Fit( graph=1 )
 			"Fit GC Somata G (Fig 8)", /Q, NMKeiding_GCsoma_G_Fit()
 			"Fit GC Nuclei G (Fig 8)", /Q, NMKeiding_GCnuclei_G_Fit()
 			"Fit MFT Vesicle G TEM  (Fig 9)", /Q, NMKeiding_MFves_G_TEM_Fit()
 			"-"
-			"Compute Density to VF", /Q, NM_Convert_Density_To_VF()
-			"Compute VF to Density", /Q, NM_Convert_VF_To_Density()
+			"Convert Density to VF", /Q, NM_Convert_Density_To_VF()
+			"Convert VF to Density", /Q, NM_Convert_VF_To_Density()
 		End
 	
 	End
@@ -159,7 +201,7 @@ End
 Function NMKeiding_Citation()
 
 	NMHistory( NMQuotes( "Maximum likelihood estimation of the size distribution of liver cell nuclei from the observed distribution in a plane section." ) )
-	NMHistory( "Keiding N, Jensen ST, Ranek L." )
+	NMHistory( "Keiding N, Jensen ST, Ranek L" )
 	NMHistory( "Biometrics 1972 Sep;28(3):813-29" )
 	NMHistory( "https://doi.org/10.2307/2528765" )
 
@@ -167,14 +209,16 @@ End // NMKeiding_Citation
 
 //**************************************************************** //
 
-Function NMKeiding_Rothman2022_Citation()
+Function NMKeiding_Rothman2023_Citation()
 
 	NMHistory( NMQuotes( "Validation of a stereological method for estimating particle size and density from 2D projections with high accuracy." ) )
-	NMHistory( "Rothman JS, Borges-Merjane C, Holderith N, Jonas P, Silver RA." )
+	NMHistory( "Rothman JS, Borges-Merjane C, Holderith N, Jonas P, Silver RA" )
+	NMHistory( "PLOS ONE 2023 (in press)" )
+	NMHistory( "https://doi.org/10.1371/journal.pone.0277148" )
 	NMHistory( "bioRxiv 25 Oct 2022" )
 	NMHistory( "https://doi.org/10.1101/2022.10.21.513285" )
 
-End // NMKeiding_Rothman2022_Citation
+End // NMKeiding_Rothman2023_Citation
 
 //****************************************************************//
 //
@@ -395,7 +439,7 @@ Function NMKeidingGauss3(w,x) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = KeidingGauss3(x0,stdv,T,phi,p1,p2)
+	//CurveFitDialog/ f(x) = KeidingGauss3(x0,stdv,phi,T,p1,p2)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -573,7 +617,7 @@ Function NMKeidingChi( w, x ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = KeidingChi(f,beta,T,phi)
+	//CurveFitDialog/ f(x) = KeidingChi(f,beta,phi,T)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -644,7 +688,7 @@ Function NMKeidingChi3( w, x ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = KeidingChi3(f,beta,T,phi,p1,p2)
+	//CurveFitDialog/ f(x) = KeidingChi3(f,beta,phi,T,p1,p2)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -824,7 +868,7 @@ Function NMKeidingGamma( w, x ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = KeidingGamma(x0,f,beta,T,phi)
+	//CurveFitDialog/ f(x) = KeidingGamma(x0,f,beta,phi,T)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -853,7 +897,7 @@ Function NMKeidingGamma( w, x ) : FitFunc
 	//Variable count = 0 // adaptive
 	
 	Variable mn = w[0] + w[1] * w[2]
-	Variable f = StatsGammaPDF( x, w[0], w[2], w[1] ) // note order: w[2] w[1] 
+	Variable f = StatsGammaPDF( x, w[0], w[2], w[1] ) // NOTE ORDER: w[2], w[1] 
 	
 	if ( phi == 0 ) // Bach
 		zeta_ = T + mn
@@ -1064,7 +1108,7 @@ End // NMKeidingGaussPhiCutoffEstimate
 
 //****************************************************************//
 
-Function NMKeidingGaussPhiCutoff( num_diam, diam3D_mean, diam3D_stdv, diam3D_type [ phi ] ) // Rothman et al 2022
+Function NMKeidingGaussPhiCutoff( num_diam, diam3D_mean, diam3D_stdv, diam3D_type [ phi ] ) // Rothman et al 2023
 	Variable num_diam // # of diameter measurements
 	Variable diam3D_mean, diam3D_stdv // Gaussian F(d) (true or estimates)
 	String diam3D_type // "true" or "estimate"
@@ -1168,7 +1212,7 @@ Function NM_Weibel_Kv( sectionT, diam3D_mean, diam3D_stdv, phi_degrees )
 	// Equation 37
 	
 	double g = sectionT / diam3D_mean
-	double chi = 1 - cos( phi_degrees * pi / 180 ) // Rothman et al 2022 / Equation A3.2d
+	double chi = 1 - cos( phi_degrees * pi / 180 ) // Rothman et al 2023 / S1_file.PDF / Eq A2.2c
 	double dm2 = diam3D_mean * diam3D_mean
 	double dm3 = diam3D_mean * diam3D_mean * diam3D_mean
 	double ds2 = diam3D_stdv * diam3D_stdv
@@ -1407,11 +1451,11 @@ Function /S NM_PDFstats( wName [ precision, make_MN_SD_Waves, quiet ]) // mean, 
 	endfor
 	
 	for (icnt = 0 ; icnt < numpnts(wtemp) ; icnt += 1)
-		mn += pnt2x(wtemp, icnt) * wtemp[icnt] * dx // x * g(x) * dx
+		mn += pnt2x(wtemp, icnt) * wtemp[icnt] * dx // x * PDF(x) * dx
 	endfor
 	
 	for (icnt = 0 ; icnt < numpnts(wtemp) ; icnt += 1)
-		sd += (pnt2x(wtemp, icnt) - mn)^2 * wtemp[icnt] * dx // (x - mn)^2 * g(x) * dx
+		sd += (pnt2x(wtemp, icnt) - mn)^2 * wtemp[icnt] * dx // (x - mn)^2 * PDF(x) * dx
 	endfor
 	
 	sd = sqrt(sd)
@@ -1442,11 +1486,11 @@ End // NM_PDFstats
 
 //**************************************************************** //
 //
-//	Demo functions based on Rothman et al 2022
+//	Demo functions based on Rothman et al 2023
 //
 //**************************************************************** //
 
-Function /S NMKeidingGaussMakeGCall( [ diam3D_mean, diam3D_stdv, TList, phiList ] ) // Rothman et al 2022 Figure 3
+Function /S NMKeidingGaussMakeGCall( [ diam3D_mean, diam3D_stdv, TList, phiList ] ) // Rothman et al 2023 Fig 3
 	Variable diam3D_mean, diam3D_stdv // mean and stdv of Gaussian F(d)
 	String TList // section thickness list, e.g. "0;1;"
 	String phiList // phi list, e.g. "00;10;20;30;40;50;60;70;80;"
@@ -1531,7 +1575,7 @@ End // NMKeidingGaussMakeGCall
 //
 //**************************************************************** //
 
-Function NMKeiding_Wicksell_Check( [ overwrite ] ) // Rothman et al Figure S4
+Function NMKeiding_Wicksell_Check( [ overwrite ] ) // Rothman et al Fig S3 in S1_File.pdf
 	Variable overwrite
 	
 	Variable new
@@ -1749,7 +1793,7 @@ End // NMKeiding_Wicksell_Fit_Graph
 //
 //****************************************************************//
 
-Function NMKeiding_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al Figure S3
+Function NMKeiding_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al Fig S2 in S1_File.pdf
 	Variable overwrite
 	Variable computeOriginalFits
 	
@@ -2160,7 +2204,7 @@ Function /S NMKeiding_Graph( wName, ymax )
 		endif
 		
 		if ( p601 )
-			txt += "\\sa+06\\s(" + fName + ") 2022 LSE (K-Gauss3)" + txt2
+			txt += "\\sa+06\\s(" + fName + ") 2023 LSE (K-Gauss3)" + txt2
 		endif
 		
 	endif
@@ -2194,7 +2238,7 @@ End // NMKeiding_Graph
 //****************************************************************//
 //
 //	Demo functions for fitting G(d) of cerebellar GC somata and nuclei and MFT vesicles
-//	Rothman et al 2022
+//	Rothman et al 2023
 //
 //****************************************************************//
 
@@ -2351,6 +2395,8 @@ Static Function NMKeiding_GCnuclei_G_Num_Diam( wName )
 			return FreqListSum( GC_Nuclei_G_M19_All )
 		case "G_M21_All":
 			return FreqListSum( GC_Nuclei_G_M21_All )
+		case "G_2D_Nguyen":
+			return FreqListSum( GC_Nuclei_G_Nguyen )
 	endswitch
 	
 	return NaN
@@ -2519,7 +2565,7 @@ Function NMKeiding_MFves_G_ET_Check( etID [ overwrite ] )
 	String etID
 	Variable overwrite
 	
-	Variable new
+	Variable new, f_MN, f_SD
 	String wName, fList, gList
 	
 	Variable xstart = 0.5 * MFT_Vesicles_G_ET_BinWidth
@@ -2528,10 +2574,14 @@ Function NMKeiding_MFves_G_ET_Check( etID [ overwrite ] )
 		case "ET10":
 			fList = MFT_Vesicles_F_ET10
 			gList = MFT_Vesicles_G_ET10
+			f_MN = MFT_Vesicles_F_ET10_MN
+			f_SD = MFT_Vesicles_F_ET10_SD
 			break
 		case "ET11":
 			fList = MFT_Vesicles_F_ET11
 			gList = MFT_Vesicles_G_ET11
+			f_MN = MFT_Vesicles_F_ET11_MN
+			f_SD = MFT_Vesicles_F_ET11_SD
 			break
 		default:
 			Print "error: NMKeiding_MFves_G_ET_Check: unknown ET ID:", etID
@@ -2544,7 +2594,8 @@ Function NMKeiding_MFves_G_ET_Check( etID [ overwrite ] )
 	
 	if ( overwrite || !WaveExists( $wName ) )
 		NMHistoFreqList2Wave( fList, wName, xstart, MFT_Vesicles_G_ET_BinWidth, probability=1, overwrite=overwrite )
-		NM_PDFstats( wName, make_MN_SD_Waves=1 ) // mean matches Wicksell
+		Make /O/N=1 $"MN_" + wName = f_MN
+		Make /O/N=1 $"SD_" + wName = f_SD
 		NMSet( wavePrefix="F_" )
 		NMChanXLabelSetAll( "MFT vesicle 3D diameter (" + MFT_Vesicles_G_ET_Units + ")" )
 		NMChanLabelSet( 0, 2, "y", PDF_YLabel( MFT_Vesicles_G_ET_Units ) )
@@ -2569,22 +2620,6 @@ Function NMKeiding_MFves_G_ET_Check( etID [ overwrite ] )
 	return 0
 
 End // NMKeiding_MFves_G_ET_Check
-
-//****************************************************************//
-
-Static Function NMKeiding_MFves_G_ET_Num_Diam( etID )
-	String etID
-	
-	strswitch( etID )
-		case "ET10":
-			return FreqListSum( MFT_Vesicles_G_ET10 )
-		case "ET11":
-			return FreqListSum( MFT_Vesicles_G_ET11 )
-	endswitch
-	
-	return NaN
-	
-End // NMKeiding_MFves_G_ET_Num_Diam
 
 //****************************************************************//
 
@@ -2657,11 +2692,14 @@ End // NMKeiding_MFves_G_ET_Fit
 Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	String etID
 	
-	String df = "root:" + etID + ":"
+	Variable phi_measured
+	
+	String df = "root:" + MFT_Vesicles_ET_Folder + "_" + etID + ":"
+	String fdf = df + "Fit_KeidingGauss_G_All_A:"
 	
 	Variable overwriteMode = 1
 	Variable currentChan = CurrentNMChannel()
-	Variable left_max = 0.15
+	Variable left_max = 0.11
 	
 	String fxn = NMFitStrGet( "FxnShort" )
 	String gPrefix = "FT_" + CurrentNMFolderPrefix() + etID + "_" + fxn
@@ -2670,9 +2708,11 @@ Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	
 	strswitch( etID )
 		case "ET10":
+			phi_measured = MFT_Vesicles_ET10_Phi_MN
 			break
 		case "ET11":
 			left_max = 0.16
+			phi_measured = MFT_Vesicles_ET11_Phi_MN
 			break
 		default:
 			return ""
@@ -2694,6 +2734,16 @@ Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	Wave F_Fit_G_ = $"F_Fit_G_" + etID
 	Wave MN_F_Fit_G_ = $"MN_F_Fit_G_" + etID
 	Wave SD_F_Fit_G_ = $"SD_F_Fit_G_" + etID
+	Wave fit_phi = $fdf + "FT_Keidi_Phi_GAll_A0"
+	
+	Variable deltaD_MN = 100 * ( MN_F_Fit_G_[ 0 ] - MN_F_[0] ) / MN_F_[0] // %
+	Variable deltaD_SD = 100 * ( SD_F_Fit_G_[ 0 ] - SD_F_[0] ) / SD_F_[0] // %
+	Variable deltaPhi = fit_phi[0] - phi_measured // degrees
+	
+	String deltaD_MN_str, deltaD_SD_str
+	
+	sprintf deltaD_MN_str, "%.1f", deltaD_MN
+	sprintf deltaD_SD_str, "%.1f", deltaD_SD
 	
 	Make /O/N=1 Y0 = 0
 	Make /O/N=1 Y1 = 0
@@ -2707,6 +2757,7 @@ Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	ModifyGraph margin(left)=58,margin(bottom)=44,margin(top)=25,margin(right)=25
 	ModifyGraph mode(Y0)=3,mode(Y1)=3
 	ModifyGraph marker(Y0)=19,marker(Y1)=19
+	ModifyGraph mode($"G_"+etID)=3,marker($"G_"+etID)=19,msize($"G_"+etID)=3
 	ModifyGraph lSize=1.25
 	ModifyGraph lStyle($"F_Fit_G_"+etID)=3
 	ModifyGraph rgb($"F_"+etID)=(0,0,0),rgb($"G_"+etID)=(19675,39321,1),rgb($"Fit_G_"+etID)=(52428,1,1),rgb($"F_Fit_G_"+etID)=(52428,1,1)
@@ -2721,6 +2772,8 @@ Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	ModifyGraph manTick(bottom)={0,10,0,0},manMinor(bottom)={1,50}
 	ModifyGraph axisOnTop=1
 	
+	// ModifyGraph mode(G_ET10)=3,marker(G_ET10)=19,msize(G_ET10)=3
+	
 	Label left PDF_YLabel( MFT_Vesicles_G_ET_Units )
 	Label bottom "MFT vesicle diameter (" + MFT_Vesicles_G_ET_Units + ")"
 	SetAxis left*,left_max
@@ -2732,6 +2785,9 @@ Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 	txt += "\\sa+12\\s(G_" + etID + ") G(d)\r"
 	txt += "\\sa+12\\s(Fit_G_" + etID + ") Fit to G(d)\r"
 	txt += "\\sa+12\\s(F_Fit_G_" + etID + ") F(d) from fit (\\s(Y1))\r"
+	txt += "\\sa+48∆μ\\BD\\M\\Z12 = " + deltaD_MN_str + "%\r"
+	txt += "\\sa+12∆σ\\BD\\M\\Z12 = " + deltaD_SD_str + "%\r"
+	txt += "\\sa+12∆Φ = " + num2istr( round( deltaPhi ) ) + "°"
 	
 	Legend/C/N=text0/J/F=0/M/A=MC/X=-31.31/Y=23.42 txt
 	
@@ -2742,9 +2798,216 @@ Function /S NMKeiding_MFves_G_ET_Fit_Graph( etID )
 End // NMKeiding_MFves_G_ET_Fit_Graph
 
 //****************************************************************//
+
+Function NMKeiding_GCnuclei_Nguyen_G_Check( [ overwrite ] )
+	Variable overwrite
+	
+	Variable new
+	String wName
+	
+	Variable xstart = 0.5 * GC_Nuclei_G_BinWidth
+	
+	String fList = GC_Nuclei_F_Nguyen
+	String gList = GC_Nuclei_G_Nguyen
+	
+	NMFolderCheck( GC_Nuclei_Nguyen_Folder )
+	
+	wName = "F_3D_Nguyen"
+	
+	if ( overwrite || !WaveExists( $wName ) )
+		NMHistoFreqList2Wave( fList, wName, xstart, GC_Nuclei_G_BinWidth, probability=1, overwrite=overwrite )
+		Make /O/N=1 $"MN_" + wName = GC_Nuclei_F_Nguyen_MN
+		Make /O/N=1 $"SD_" + wName = GC_Nuclei_F_Nguyen_SD
+		NMSet( wavePrefix="F_" )
+		NMChanXLabelSetAll( "GC nuclei 3D diameter (" + GC_Nuclei_G_Units + ")" )
+		NMChanLabelSet( 0, 2, "y", PDF_YLabel( GC_Nuclei_G_Units ) )
+	endif
+	
+	wName = "G_2D_Nguyen"
+	
+	if ( overwrite || !WaveExists( $wName ) )
+		NMHistoFreqList2Wave( gList, wName, xstart, GC_Nuclei_G_BinWidth, probability=1, overwrite=overwrite )
+		new = 1
+	endif
+	
+	NMSet( wavePrefix="G_" )
+	
+	if ( new )
+		NMChanXLabelSetAll( "GC nuclei 2D diameter (" + GC_Nuclei_G_Units + ")" )
+		NMChanLabelSet( 0, 2, "y", PDF_YLabel( GC_Nuclei_G_Units ) )
+	endif
+	
+	DoUpdate /W=$ChanGraphName(0)
+	
+	return 0
+
+End // NMKeiding_GCnuclei_Nguyen_G_Check
+
+//****************************************************************//
+
+Function NMKeiding_GCnuclei_Nguyen_G_Fit( [ graph ] )
+	Variable graph
+	
+	Variable fit_mn, fit_sd, num_diam, error
+	String wName, fName, fName2
+
+	NMKeiding_GCnuclei_Nguyen_G_Check()
+	
+	Variable avalue = NMDoAlert( "Compute fit to GC nuclei G(d) of Nguyen et al?", title="Keiding-model Fit Demo", alertType = 1 )
+	
+	if ( avalue != 1 )
+		return 0
+	endif
+	
+	NMFitKeidingInit()
+	
+	Wave FT_guess = $NMFitWavePath( "guess" )
+	Wave FT_coef = $NMFitWavePath( "coef" )
+	
+	NMSet( waveNum=0 )
+	wName = CurrentNMWaveName()
+	
+	FT_guess[ 0 ] = 6 // changed by NMKeidingGaussGuess
+	FT_guess[ 1 ] = 0.5
+	FT_guess[ 2 ] = 15
+	FT_guess[ 3 ] = GC_Nuclei_Nguyen_T
+	FT_guess[ 4 ] = NMKeiding_GCnuclei_G_Num_Diam( wName )
+	
+	error = NMFitWave()
+	
+	if ( error > 0 )
+		NMHistory( "fit error: NMKeiding_MFves_G_ET_Fit" )
+		return error
+	endif
+	
+	NMFitSaveCurrent()
+	
+	Wave FT_coef = $NMFitWavePath( "coef" )
+	fit_mn = FT_coef[0]
+	fit_sd = FT_coef[1]
+	
+	fName = "Fit_G_2D_Nguyen"
+	fName2 = "F_" + fName
+	
+	Make /D/O/N=1 $"MN_" + fName2 = fit_mn
+	Make /D/O/N=1 $"SD_" + fName2 = fit_sd
+	
+	if ( WaveExists( $fName ) )
+		Duplicate /O $fName $fName2
+		Wave wtemp = $fName2
+		wtemp = Gauss( x, fit_mn, fit_sd )
+	endif
+	
+	if ( !graph )
+		return 0
+	endif
+	
+	NMKeiding_GCnuclei_Nguyen_G_Fit_Graph()
+	
+	return 0
+
+End // NMKeiding_GCnuclei_Nguyen_G_Fit
+
+//****************************************************************//
+
+Function /S NMKeiding_GCnuclei_Nguyen_G_Fit_Graph()
+	
+	String df = "root:GC_Nuclei_Nguyen:"
+	String fdf = df + "Fit_KeidingGauss_G_All_A:"
+	
+	Variable overwriteMode = 1
+	Variable currentChan = CurrentNMChannel()
+	Variable left_max = 0.9
+	
+	String fxn = NMFitStrGet( "FxnShort" )
+	String gPrefix = "FT_" + CurrentNMFolderPrefix() + "GCNucleiG_" + fxn
+	String gName = NextGraphName( gPrefix, currentChan, overwriteMode )
+	String gTitle = NMFolderListName( "" ) + " : GC Nuclei G(d) Nguyen : " + fxn + " Fit"
+	
+	NMFolderCheck( GC_Nuclei_Nguyen_Folder )
+	
+	if ( !WaveExists( $"G_2D_Nguyen" ) )
+		return ""
+	endif
+	
+	String f3D_Name = "F_3D_Nguyen"
+	String g2D_Name = "G_2D_Nguyen"
+	
+	Wave F_ = $f3D_Name
+	Wave MN_F_ = $"MN_" + f3D_Name
+	Wave SD_F_ = $"SD_" + f3D_Name
+	
+	Wave G_ = $g2D_Name
+	
+	Wave Fit_G_ = $"Fit_" + g2D_Name
+	Wave F_Fit_G_ = $"F_Fit_" + g2D_Name
+	Wave MN_F_Fit_G_ = $"MN_F_Fit_" + g2D_Name
+	Wave SD_F_Fit_G_ = $"SD_F_Fit_" + g2D_Name
+	Wave fit_phi = $fdf + "FT_Keidi_Phi_GAll_A0"
+	
+	Variable deltaD_MN = 100 * ( MN_F_Fit_G_[ 0 ] - MN_F_[0] ) / MN_F_[0] // %
+	Variable deltaD_SD = 100 * ( SD_F_Fit_G_[ 0 ] - SD_F_[0] ) / SD_F_[0] // %
+	
+	String deltaD_MN_str, deltaD_SD_str
+	
+	sprintf deltaD_MN_str, "%.1f", deltaD_MN
+	sprintf deltaD_SD_str, "%.1f", deltaD_SD
+	
+	Make /O/N=1 Y0 = 0
+	Make /O/N=1 Y1 = 0
+	
+	DoWindow /K $gName
+	Display /K=1/N=$gName/W=(294,216,891,654) F_,G_,Fit_G_,F_Fit_G_ as gTitle
+	
+	AppendToGraph Y0 vs MN_F_
+	AppendToGraph Y1 vs MN_F_Fit_G_
+	
+	ModifyGraph margin(left)=58,margin(bottom)=44,margin(top)=25,margin(right)=25
+	ModifyGraph mode(Y0)=3,mode(Y1)=3
+	ModifyGraph marker(Y0)=19,marker(Y1)=19
+	ModifyGraph mode($g2D_Name)=3,marker($g2D_Name)=19,msize($g2D_Name)=3
+	ModifyGraph lSize=1.25
+	ModifyGraph lStyle($"F_Fit_"+g2D_Name)=3
+	ModifyGraph rgb($f3D_Name)=(0,0,0),rgb($g2D_Name)=(19675,39321,1),rgb($"Fit_"+g2D_Name)=(52428,1,1),rgb($"F_Fit_"+g2D_Name)=(52428,1,1)
+	ModifyGraph rgb(Y0)=(0,0,0),rgb(Y1)=(52428,1,1)
+	ModifyGraph msize(Y0)=2.5,msize(Y1)=2.5
+	ModifyGraph mrkThick(Y0)=1.25,mrkThick(Y1)=1.25
+	ModifyGraph offset(Y0)={0,0.08},offset(Y1)={0,0.04}
+	ModifyGraph fSize=10
+	ModifyGraph standoff=0
+	ModifyGraph axThick=1.25
+	ModifyGraph manTick(left)={0,0.2,0,1},manMinor(left)={1,50}
+	ModifyGraph manTick(bottom)={0,2,0,0},manMinor(bottom)={3,50}
+	ModifyGraph axisOnTop=1
+	
+	Label left PDF_YLabel( GC_Nuclei_G_Units )
+	Label bottom "GC nucleus diameter (" + GC_Nuclei_G_Units + ")"
+	SetAxis left*,left_max
+	SetAxis bottom 0,9.5
+	ErrorBars Y0 X,wave=(SD_F_,SD_F_)
+	ErrorBars Y1 X,wave=(SD_F_Fit_G_,SD_F_Fit_G_)
+	
+	String txt = "\\Z12\rTEM z-stack of GC nuclei\r"
+	txt += "\\sa+12\\s(" + f3D_Name +  ") F(d) (\\s(Y0))\r"
+	txt += "\\sa+12\\s(" + g2D_Name + ") G(d) blind\r"
+	txt += "\\sa+12\\s(Fit_" + g2D_Name + ") Fit to G(d)\r"
+	txt += "\\sa+12\\s(F_Fit_" + g2D_Name + ") F(d) from fit (\\s(Y1))\r"
+	txt += "\\sa+48∆μ\\BD\\M\\Z12 = " + deltaD_MN_str + "%\r"
+	txt += "\\sa+12∆σ\\BD\\M\\Z12 = " + deltaD_SD_str + "%\r"
+	txt += "\\sa+12Fit Φ = " + num2istr( round( fit_phi[0] ) ) + "°"
+	
+	Legend/C/N=text0/J/F=0/M/A=MC/X=-31.31/Y=23.42 txt
+	
+	NMWinCascade( gName )
+	
+	return gName
+	
+End // NMKeiding_GCnuclei_Nguyen_G_Fit_Graph
+
+//****************************************************************//
 //
 //	Demo functions for fitting simulated G(d) from D3D
-//	Rothman et al 2022
+//	Rothman et al 2023
 //
 //****************************************************************//
 
