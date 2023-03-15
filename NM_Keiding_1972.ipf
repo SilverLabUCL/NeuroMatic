@@ -28,15 +28,17 @@
 //****************************************************************
 //****************************************************************
 //
-//	NM functions for estimating 3D particle size and density from 2D projections using Keiding model for lost caps
+//	NM functions for estimating 3D particle size and density from 2D projections using the Keiding model for lost caps,
+//	i.e. the cap-angle limit (phi)
 //
 //****************************************************************
 //****************************************************************
 //
 //	Rothman JS, Borges-Merjane C, Holderith N, Jonas P, Silver RA
 //	Validation of a stereological method for estimating particle size and density from 2D projections with high accuracy.
-//	PLOS ONE 2023 (in press)
+//	PLOS ONE 17 March 2023
 //	https://doi.org/10.1371/journal.pone.0277148
+//
 //	bioRxiv 25 Oct 2022
 //	https://doi.org/10.1101/2022.10.21.513285
 //
@@ -69,9 +71,9 @@
 //****************************************************************
 //****************************************************************
 
-// Below are G and F number lists containing histogram bin counts that are converted to PDFs
+// Below are G and F number lists containing histogram bin counts (frequencies) that are converted to PDFs
 
-// Spleen follicles, Wicksell 1925
+// Spleen follicles, Wicksell 1925, Example 4
 Static Constant Wicksell_T = 0.018 // mm // without magnification
 Static Constant Wicksell_Magnification = 18
 Static Constant Wicksell_G_BinWidth = 1
@@ -80,7 +82,7 @@ Static StrConstant Wicksell_G = "0;0;52;146;197;210;184;143;95;57;31;15;7;4;2;1;
 Static StrConstant Wicksell_F = "5;14;38;72;151;194;172;143;96;57;31;15;6;3;2;1;0;0"
 Static StrConstant WicksellFolder = "Wicksell"
 
-// Liver cell nuclei, Keiding 1972
+// Liver cell nuclei, Keiding 1972, Table 1
 Static Constant Keiding_T = 6.5 //um
 Static Constant Keiding_N = 500 // # diameters
 Static Constant Keiding_Magnification = 2300
@@ -88,9 +90,9 @@ Static Constant Keiding_G_BinStart = 6000
 Static Constant Keiding_G_BinWidth = 250
 Static StrConstant Keiding_G_Units = "μm"
 Static StrConstant Keiding_G_H0601 = "7;21;43;64;94;70;69;47;26;8;11;11;9;11;2;1;3;2;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;" // radii
-Static StrConstant Keiding_G_H2003 = "0;0;9;22;78;121;96;75;24;6;7;5;6;14;15;10;2;2;1;0;1;1;1;2;1;1;0;0;0;0;0;0;0;"
-Static StrConstant Keiding_G_H1037 = "0;1;5;10;18;24;43;61;65;62;60;37;30;17;15;11;8;6;7;2;0;5;5;2;0;2;0;1;2;1;0;0;0;"
-Static StrConstant KeidingFolder = "Keiding1972"
+Static StrConstant Keiding_G_H2003 = "0;0;9;22;78;121;96;75;24;6;7;5;6;14;15;10;2;2;1;0;1;1;1;2;1;1;0;0;0;0;0;0;0;" // radii
+Static StrConstant Keiding_G_H1037 = "0;1;5;10;18;24;43;61;65;62;60;37;30;17;15;11;8;6;7;2;0;5;5;2;0;2;0;1;2;1;0;0;0;" // radii
+Static StrConstant KeidingFolder = "Keiding"
 
 // GC somata G(d) frequencies, confocal data, Rothman et al 2023
 Static Constant GC_Somata_G_BinWidth = 0.3 // um
@@ -213,10 +215,10 @@ Function NMKeiding_Rothman2023_Citation()
 
 	NMHistory( NMQuotes( "Validation of a stereological method for estimating particle size and density from 2D projections with high accuracy." ) )
 	NMHistory( "Rothman JS, Borges-Merjane C, Holderith N, Jonas P, Silver RA" )
-	NMHistory( "PLOS ONE 2023 (in press)" )
+	NMHistory( "PLOS ONE 17 Mar 2023" )
 	NMHistory( "https://doi.org/10.1371/journal.pone.0277148" )
-	NMHistory( "bioRxiv 25 Oct 2022" )
-	NMHistory( "https://doi.org/10.1101/2022.10.21.513285" )
+	//NMHistory( "bioRxiv 25 Oct 2022" )
+	//NMHistory( "https://doi.org/10.1101/2022.10.21.513285" )
 
 End // NMKeiding_Rothman2023_Citation
 

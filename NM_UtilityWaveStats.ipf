@@ -561,12 +561,13 @@ End // NMLineStructInit
 //****************************************************************
 //****************************************************************
 
-Function /S NMLinearRegression( wName [ xWave, xbgn, xend, history, deprecation, s ] )
+Function /S NMLinearRegression( wName [ xWave, xbgn, xend, history, deprecation ] )
 	String wName // wave name
 	String xWave // x-axis wave name
 	Variable xbgn, xend // x-axis window begin and end, use ( -inf, inf ) for all
 	Variable history, deprecation
-	STRUCT NMLineStruct &s
+	
+	STRUCT NMLineStruct s
 	
 	if ( deprecation )
 		NMDeprecationAlert()

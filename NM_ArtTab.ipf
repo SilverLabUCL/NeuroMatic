@@ -53,7 +53,9 @@ Static StrConstant BslnFxn = "avg" // baseline function to compute within bslnWi
 Static Constant BslnWin = 1.5 // baseline window size; baseline is computed immediately before stim artefact time
 Static Constant BslnDT = 0 // optional baseline time shift negative from stim time, 0 - no time shift
 Static Constant BslnConvergeNstdv = 1 // decay convergence test, number of bsln stdv
-Static Constant BslnExpSlopeThreshold = 0 // baseline exp fit if abs(slope) > threshold, otherwise baseline avg
+Static Constant BslnExpSlopeThreshold = 0
+		// compute baseline exp fit if baseline slope > +threshold, otherwise compute baseline avg
+		// compute baseline exp fit if baseline slope < -threshold, otherwise compute baseline avg
 
 Static StrConstant DecayFxn = "2exp" // "exp" or "2exp"
 
@@ -248,7 +250,7 @@ Function NMArtConfigs()
 	
 	NMConfigVar( "Art", "BslnSubtract", 0, "subtract baseline: 0-no, 1-yes", "" )
 	NMConfigVar( "Art", "BslnConvergeNstdv", BslnConvergeNstdv, "decay convergence test, number of bsln stdv", "" )
-	NMConfigVar( "Art", "BslnExpSlopeThreshold", BslnExpSlopeThreshold, "absolute slope threshold for baseline exp fit", "" )
+	NMConfigVar( "Art", "BslnExpSlopeThreshold", BslnExpSlopeThreshold, "slope threshold for baseline exp fit", "" )
 
 	NMConfigVar( "Art", "t1_hold", NaN, "fit hold value of t1", "" )
 	NMConfigVar( "Art", "t1_min", 0, "t1 min value", "" )
@@ -1765,6 +1767,7 @@ Function NMArtFitBsln( [ update ] )
 	Variable bbgn, bend, dt, ybgn, yend, pbgn, pend, slope
 	Variable v1 = Nan, v2 = Nan
 	Variable V_FitError = 0, V_FitQuitReason = 0, V_chisq
+	String regstr
 	
 	// V_FitQuitReason:
 	// 0 if the fit terminated normally
@@ -1814,9 +1817,13 @@ Function NMArtFitBsln( [ update ] )
 	
 	if ( StringMatch( bslnFxn, "exp" ) && ( abs( bslnExpSlopeThreshold ) > 0 ) )
 	
-		slope = ( yend - ybgn ) / ( bend - bbgn )
+		//slope = ( yend - ybgn ) / ( bend - bbgn )
+		regstr = NMLinearRegression( dwName, xbgn=bbgn, xend=bend )
+		slope = str2num( StringByKey( "m", regstr, "=" ) )
 		
-		if ( abs( slope ) > abs( bslnExpSlopeThreshold ) )
+		if ( ( bslnExpSlopeThreshold > 0 ) && ( slope > bslnExpSlopeThreshold ) )
+			bslnFxn = "exp"
+		elseif ( ( bslnExpSlopeThreshold < 0 ) && ( slope < bslnExpSlopeThreshold ) )
 			bslnFxn = "exp"
 		else
 			bslnFxn = "avg"
@@ -1849,13 +1856,29 @@ Function NMArtFitBsln( [ update ] )
 				AT_FitB = NMArtFxnExp( AT_A, AT_FitX )
 				v1 = AT_A[ 2 ]
 				v2 = AT_A[ 3 ]
+			elseif ( abs( bslnExpSlopeThreshold ) > 0 )
+				bslnFxn = "avg" // fit failed, so compute average
 			else
 				AT_FitB = NaN
 			endif
 			
 			Redimension /N=4 AT_B // now n=4 so NMArtFxnExp will use baseline in Decay fit
 			AT_B = AT_A
+			
+			if ( StringMatch( bslnFxn, "exp" ) )
+				break
+			endif
+			
+		case "avg":
 		
+			Redimension /N=1 AT_B
+			
+			WaveStats /Q/R=( bbgn, bend ) dtemp
+	
+			AT_FitB = V_avg
+			AT_B = V_avg
+			v1 = V_avg
+			
 			break
 			
 		case "line":
@@ -1871,18 +1894,6 @@ Function NMArtFitBsln( [ update ] )
 			
 			v1 = AT_B[ 0 ] // b
 			v2 = AT_B[ 1 ] // m
-			
-			break
-			
-		case "avg":
-		
-			Redimension /N=1 AT_B
-			
-			WaveStats /Q/R=( bbgn, bend ) dtemp
-	
-			AT_FitB = V_avg
-			AT_B = V_avg
-			v1 = V_avg
 			
 			break
 			
@@ -2111,15 +2122,15 @@ Function NMArtFitDecay( [ update ] )
 	pend = pbgn
 	pbgn = pend - 10
 	
-	WaveStats /Q/R=[ pbgn, pend ] AT_Fit
+	WaveStats /Q/R=[ pbgn, pend ]/Z AT_Fit
 	
 	fit_ss = V_avg
 	
-	WaveStats /Q/R=[ pbgn, pend ] AT_FitB
+	WaveStats /Q/R=[ pbgn, pend ]/Z AT_FitB
 	
 	bsln_ss = V_avg
 	
-	WaveStats /Q/R=[ pbgn, pend ] dtemp
+	WaveStats /Q/R=[ pbgn, pend ]/Z dtemp
 	
 	data_stdv = V_sdev
 	
