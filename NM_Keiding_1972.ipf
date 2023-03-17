@@ -80,7 +80,7 @@ Static Constant Wicksell_G_BinWidth = 1
 Static StrConstant Wicksell_G_Units = "mm"
 Static StrConstant Wicksell_G = "0;0;52;146;197;210;184;143;95;57;31;15;7;4;2;1;0;0;"
 Static StrConstant Wicksell_F = "5;14;38;72;151;194;172;143;96;57;31;15;6;3;2;1;0;0"
-Static StrConstant WicksellFolder = "Wicksell"
+Static StrConstant WicksellFolder = "Wicksell1925"
 
 // Liver cell nuclei, Keiding 1972, Table 1
 Static Constant Keiding_T = 6.5 //um
@@ -92,7 +92,7 @@ Static StrConstant Keiding_G_Units = "μm"
 Static StrConstant Keiding_G_H0601 = "7;21;43;64;94;70;69;47;26;8;11;11;9;11;2;1;3;2;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;" // radii
 Static StrConstant Keiding_G_H2003 = "0;0;9;22;78;121;96;75;24;6;7;5;6;14;15;10;2;2;1;0;1;1;1;2;1;1;0;0;0;0;0;0;0;" // radii
 Static StrConstant Keiding_G_H1037 = "0;1;5;10;18;24;43;61;65;62;60;37;30;17;15;11;8;6;7;2;0;5;5;2;0;2;0;1;2;1;0;0;0;" // radii
-Static StrConstant KeidingFolder = "Keiding"
+Static StrConstant KeidingFolder = "Keiding1972"
 
 // GC somata G(d) frequencies, confocal data, Rothman et al 2023
 Static Constant GC_Somata_G_BinWidth = 0.3 // um
@@ -176,11 +176,11 @@ Menu "NeuroMatic"
 	"-"
 
 		Submenu "Keiding model for estimating particle size and density"
-			"Keiding et al 1976", /Q, NMKeiding_Citation()
+			"Keiding et al 1976", /Q, NMKeiding_1972_Citation()
 			"Rothman et al 2023", /Q, NMKeiding_Rothman2023_Citation()
 			"-"
-			"Compute Analytical G (Fig 3)", /Q, NMKeidingGaussMakeGCall()
-			"Fit Keiding G (Fig S2)", /Q, NMKeiding_Fit_All( computeOriginalFits=1, graph=1 )
+			"Compute Analytical G (Fig 3)", /Q, NMKeidingGaussMakeG_Prompt()
+			"Fit Keiding G (Fig S2)", /Q, NMKeiding_1972_Fit_All( graph=1 )
 			"Fit Wicksell G (Fig S3)", /Q, NMKeiding_Wicksell_Fit( graph=1 )
 			"Fit Simulated G (Fig 4)", /Q, NMKeiding_D3D_G_Fit( graph=1 )
 			"Fit MFT Vesicle G ET11 (Fig 6)", /Q, NMKeiding_MFves_G_ET_Fit( "ET11", graph=1 )
@@ -197,17 +197,6 @@ Menu "NeuroMatic"
 	End
 	
 End
-
-//**************************************************************** //
-
-Function NMKeiding_Citation()
-
-	NMHistory( NMQuotes( "Maximum likelihood estimation of the size distribution of liver cell nuclei from the observed distribution in a plane section." ) )
-	NMHistory( "Keiding N, Jensen ST, Ranek L" )
-	NMHistory( "Biometrics 1972 Sep;28(3):813-29" )
-	NMHistory( "https://doi.org/10.2307/2528765" )
-
-End // NMKeiding_Citation
 
 //**************************************************************** //
 
@@ -1492,18 +1481,48 @@ End // NM_PDFstats
 //
 //**************************************************************** //
 
-Function /S NMKeidingGaussMakeGCall( [ diam3D_mean, diam3D_stdv, TList, phiList ] ) // Rothman et al 2023 Fig 3
+Function /S NMKeidingGaussMakeG_Prompt()
+
 	Variable diam3D_mean, diam3D_stdv // mean and stdv of Gaussian F(d)
 	String TList // section thickness list, e.g. "0;1;"
 	String phiList // phi list, e.g. "00;10;20;30;40;50;60;70;80;"
+	Variable diam_pnts // number of points for diameter x-axis
+	
+	String promptStr = "NM Analytical Solution of the Keiding Function"
+	
+	diam3D_stdv = 0.09 // ud // MFT vesicles
+	
+	TList = "0;1;"
+	phiList = "00;10;20;30;40;50;60;70;80;90;"
+	
+	diam_pnts = 500
+	
+	Prompt diam3D_stdv, "standard deviation of 3D diameters (unit diameters):"
+	Prompt TList, "list of relative section thickness (T) to compute (unit diameters):"
+	Prompt phiList, "list of ϕ to compute (degrees):"
+	prompt diam_pnts, "number of points for the diameter x-axis (unit diameters):"
+	DoPrompt promptStr, diam3D_stdv, tList, phiList, diam_pnts
+	
+	if ( ( V_flag == 1 ) || ( ItemsInList( TList ) == 0 ) || ( ItemsInList( phiList ) == 0 ) || ( diam_pnts <= 0 ) )
+		return "" // cancel
+	endif
+	
+	return NMKeidingGaussMakeG_Call( diam3D_mean=1, diam3D_stdv=diam3D_stdv, TList=TList, phiList=phiList, diam_pnts=diam_pnts )
+
+End // NMKeidingGaussMakeG_Prompt
+
+//**************************************************************** //
+
+Function /S NMKeidingGaussMakeG_Call( [ diam3D_mean, diam3D_stdv, TList, phiList, diam_pnts ] ) // Rothman et al 2023 Fig 3
+	Variable diam3D_mean, diam3D_stdv // mean and stdv of Gaussian F(d)
+	String TList // section thickness list, e.g. "0;1;"
+	String phiList // phi list, e.g. "00;10;20;30;40;50;60;70;80;"
+	Variable diam_pnts // number of points for diameter x-axis
 
 	Variable pcnt, tcnt, phi, Tvalue
+	Variable diam_max, diam_step
 	String wNameG, wList = ""
 	String gName, gList1, gList2 = ""
-	
-	Variable diam_max = 1.5
-	Variable diam_pnts = 500
-	Variable diam_step = diam_max / diam_pnts
 	
 	Variable overwrite = 1
 	
@@ -1516,8 +1535,12 @@ Function /S NMKeidingGaussMakeGCall( [ diam3D_mean, diam3D_stdv, TList, phiList 
 	endif
 	
 	if ( ParamIsDefault( diam3D_stdv ) )
-		diam3D_stdv = 4 / 46 // vesicles
+		diam3D_stdv = 0.09 // MFT vesicles
 	endif
+	
+	diam_max = diam3D_mean + 5 * diam3D_stdv
+	diam_max = round( diam_max * 10 ) / 10
+	diam_step = diam_max / diam_pnts
 	
 	if ( ParamIsDefault( TList ) )
 		TList = "0;1;"
@@ -1526,6 +1549,10 @@ Function /S NMKeidingGaussMakeGCall( [ diam3D_mean, diam3D_stdv, TList, phiList 
 	if ( ParamIsDefault( phiList ) )
 		phiList = "00;10;20;30;40;50;60;70;80;90;"
 	endif
+	
+	if ( ParamIsDefault( diam_pnts ) )
+		diam_pnts = 500
+	endif 
 	
 	NMFolderCheck( folderName )
 	
@@ -1566,7 +1593,7 @@ Function /S NMKeidingGaussMakeGCall( [ diam3D_mean, diam3D_stdv, TList, phiList 
 	
 	return wList
 	
-End // NMKeidingGaussMakeGCall
+End // NMKeidingGaussMakeG_Call
 
 //**************************************************************** //
 //
@@ -1627,7 +1654,7 @@ Function NMKeiding_Wicksell_Fit( [ graph ] )
 	
 	NMKeiding_Wicksell_Check()
 	
-	Variable avalue = NMDoAlert( "Compute fit to Wicksell's spleen-follicle G(d)?", title="Keiding-model Fit Demo", alertType = 1 )
+	Variable avalue = NMDoAlert( "Compute fit to Wicksell's G(d) of spleen follicles?", title="Keiding-model Fit Demo", alertType = 1 )
 	
 	if ( avalue != 1 )
 		return 0
@@ -1790,12 +1817,21 @@ End // NMKeiding_Wicksell_Fit_Graph
 //	Keiding N, Jensen ST. 
 //	Maximum likelihood estimation of the size distribution of liver cell nuclei from the observed distribution in a plane section
 //	Biometrics. 1972 Sep;28(3):813-29
-//	PMID: 5073254.
-//	Table 1
 //
+//**************************************************************** //
+
+Function NMKeiding_1972_Citation()
+
+	NMHistory( NMQuotes( "Maximum likelihood estimation of the size distribution of liver cell nuclei from the observed distribution in a plane section." ) )
+	NMHistory( "Keiding N, Jensen ST, Ranek L" )
+	NMHistory( "Biometrics 1972 Sep;28(3):813-29" )
+	NMHistory( "https://doi.org/10.2307/2528765" )
+
+End // NMKeiding_1972__Citation
+
 //****************************************************************//
 
-Function NMKeiding_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al Fig S2 in S1_File.pdf
+Function NMKeiding_1972_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al Fig S2 in S1_File.pdf
 	Variable overwrite
 	Variable computeOriginalFits
 	
@@ -1831,18 +1867,18 @@ Function NMKeiding_Check( [ overwrite, computeOriginalFits ] ) // Rothman et al 
 	endif
 	
 	if ( computeOriginalFits )
-		NMKeiding_Table2_Fits_All()
+		NMKeiding_1972_Table2_Fits_All()
 	endif
 	
 	DoUpdate /W=$ChanGraphName(0)
 	
 	return 0
 	
-End // NMKeiding_Check
+End // NMKeiding_1972_Check
 
 //****************************************************************
 
-Function NMKeiding_Table2_Fits_All() // fit values from Keiding Table 2
+Function NMKeiding_1972_Table2_Fits_All() // fit values from Keiding et al Table 2
 
 	Variable f, b, phi, p1, p2
 	String wName
@@ -1859,7 +1895,7 @@ Function NMKeiding_Table2_Fits_All() // fit values from Keiding Table 2
 	p1 = 0.889
 	p2 = 0.109
 	
-	NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
+	NMKeiding_1972_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
 	
 	wName = "G_1_H2003"
 	f = 2 * 104 // degrees freedom
@@ -1869,7 +1905,7 @@ Function NMKeiding_Table2_Fits_All() // fit values from Keiding Table 2
 	p1 = 0.864
 	p2 = 0.122
 	
-	NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
+	NMKeiding_1972_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
 	
 	wName = "G_2_H1037"
 	f = 2 * 35 // degrees freedom
@@ -1879,13 +1915,13 @@ Function NMKeiding_Table2_Fits_All() // fit values from Keiding Table 2
 	p1 = 0.887
 	p2 = 0.100
 	
-	NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
+	NMKeiding_1972_Table2_Fits_( wName, f, b, phi, p1, p2, Keiding_T, diam_units=Keiding_G_Units )
 
-End // NMKeiding_Table2_Fits_
+End // NMKeiding_1972_Table2_Fits_All
 
 //****************************************************************
 
-Function NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, T [ diam_max, diam_pnts, diam_units ] )
+Function NMKeiding_1972_Table2_Fits_( wName, f, b, phi, p1, p2, T [ diam_max, diam_pnts, diam_units ] )
 	String wName
 	Variable f, b, phi, p1, p2, T
 	Variable diam_max, diam_pnts
@@ -1979,45 +2015,58 @@ Function NMKeiding_Table2_Fits_( wName, f, b, phi, p1, p2, T [ diam_max, diam_pn
 	
 	KillWaves /Z Temp_ChiSqr, W_Coef2, W_Coef3
 
-End // NMKeiding_Table2_Fits_2
+End // NMKeiding_1972_Table2_Fits_
 
 //****************************************************************//
 
-Function NMKeiding_Fit_All( [ computeOriginalFits, graph ] ) // LSE Keiding F-Gauss
-	Variable computeOriginalFits
+Function NMKeiding_1972_Fit_All( [ graph ] ) // LSE Keiding F-Gauss
 	Variable graph
+	
+	Variable avalue, computeOriginalFits = 0
+	
+	String title = "Keiding-model Fit Demo"
+	String alert = "Compute original MLE fits to G(d) of Keiding et al 1972?"
+	
+	avalue = NMDoAlert( alert, title=title, alertType = 1 )
+	
+	if ( avalue == 1 )
+		computeOriginalFits = 1
+	endif
 
-	NMKeiding_Check( computeOriginalFits=computeOriginalFits )
+	NMKeiding_1972_Check( computeOriginalFits=computeOriginalFits )
 	
-	Variable avalue = NMDoAlert( "Compute fit to Keiding's 1972 G(d)?", title="Keiding-model Fit Demo", alertType = 1 )
+	alert = "Compute NM fit to G(d) of patient H0601?"
+	avalue = NMDoAlert( alert, title=title, alertType = 1 )
 	
-	if ( avalue != 1 )
-		return 0
-	endif
-	
-	if ( NMKeiding_Fit( "G_0_H0601", num_diam=Keiding_N ) > 0 )
+	if ( ( avalue == 1 ) && ( NMKeiding_1972_Fit( "G_0_H0601", num_diam=Keiding_N ) > 0 ) )
 		return -1
 	endif
 	
-	if ( NMKeiding_Fit( "G_1_H2003", num_diam=Keiding_N ) > 0 )
+	alert = "Compute NM fit to G(d) of patient H2003?"
+	avalue = NMDoAlert( alert, title=title, alertType = 1 )
+	
+	if ( ( avalue == 1 ) && ( NMKeiding_1972_Fit( "G_1_H2003", num_diam=Keiding_N ) > 0 ) )
 		return -1
 	endif
 	
-	if ( NMKeiding_Fit( "G_2_H1037", num_diam=Keiding_N ) > 0 )
+	alert = "Compute NM fit to G(d) of patient H1037?"
+	avalue = NMDoAlert( alert, title=title, alertType = 1 )
+	
+	if ( ( avalue == 1 ) && ( NMKeiding_1972_Fit( "G_2_H1037", num_diam=Keiding_N ) > 0 ) )
 		return -1
 	endif
 	
 	if ( graph )
-		return NMKeiding_Graph_All()
+		return NMKeiding_1972_Graph_All()
 	endif
 
 	return 0
 
-End // NMKeiding_Fit_All
+End // NMKeiding_1972_Fit_All
 
 //****************************************************************//
 
-Function NMKeiding_Fit( wName [ fit_pnts, num_diam ] )
+Function NMKeiding_1972_Fit( wName [ fit_pnts, num_diam ] ) // LSE Keiding F-Gauss
 	String wName
 	Variable fit_pnts
 	Variable num_diam // for phi-cutoff test
@@ -2078,21 +2127,21 @@ Function NMKeiding_Fit( wName [ fit_pnts, num_diam ] )
 	
 	return V_FitQuitReason
 	
-End // NMKeiding_Fit
+End // NMKeiding_1972_Fit
 
 //****************************************************************//
 
-Function NMKeiding_Graph_All()
+Function NMKeiding_1972_Graph_All()
 
-	NMKeiding_Graph( "G_0_H0601", 0.9 )
-	NMKeiding_Graph( "G_1_H2003", 1.1 )
-	NMKeiding_Graph( "G_2_H1037", 0.7 )
+	NMKeiding_1972_Graph( "G_0_H0601", 0.9 )
+	NMKeiding_1972_Graph( "G_1_H2003", 1.1 )
+	NMKeiding_1972_Graph( "G_2_H1037", 0.7 )
 
-End // NMKeiding_Graph_All
+End // NMKeiding_1972_Graph_All
 
 //****************************************************************//
 
-Function /S NMKeiding_Graph( wName, ymax )
+Function /S NMKeiding_1972_Graph( wName, ymax )
 	String wName
 	Variable ymax
 	
@@ -2235,7 +2284,7 @@ Function /S NMKeiding_Graph( wName, ymax )
 	
 	return gName
 
-End // NMKeiding_Graph
+End // NMKeiding_1972_Graph
 
 //****************************************************************//
 //
