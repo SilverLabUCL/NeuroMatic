@@ -80,7 +80,7 @@ Static StrConstant GHK_Xunits = "mV" // "V" or "mV"
 StrConstant NMFitDF = "root:Packages:NeuroMatic:Fit:"
 
 Static StrConstant IgorFitFxnList = "f:Line,n:2;f:Poly,n:3;f:Poly_XOffset,n:3;f:Gauss,n:4;f:Lor,n:4;f:Exp,n:3;f:Exp_XOffset,n:3;f:DblExp,n:5;f:DblExp_XOffset,n:5;f:Sin,n:4;f:HillEquation,n:4;f:Sigmoid,n:4;f:Power,n:3;f:LogNormal,n:4;"
-Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMKeidingGauss,n:6;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
+Static StrConstant NMFitFxnList = "f:NMExp3,n:8;f:NMAlpha,n:4;f:NMGamma,n:3;f:NMGauss,n:2;f:NMGauss1,n:4;f:NMSynExp3,n:7;f:NMSynExp4,n:9;f:NM_IV,n:2;f:NM_IV_Boltzmann,n:5;f:NM_IV_GHK,n:4;f:NM_IV_GHK_Boltzmann,n:7;f:NM_MPFA1,n:4;f:NM_MPFA2,n:5;f:NM_RCvstep,n:6;f:NMCircle,n:3;f:NMEllipse,n:4;f:NMKeidingGauss,n:6;f:NMKeidingChi,n:4;f:NMKeidingGamma,n:5;"
 
 //****************************************************************
 //****************************************************************
@@ -1806,8 +1806,8 @@ Function NMFitFunctionSet( fxn [ update ] )
 			break
 		case "NMGamma":
 			sfxn = "Gamma"
-			pList = "X0;Alpha;Beta;"
-			eq = "Gamma(x0,alpha,beta)"
+			pList = "X0;Sigma;Gamma;"
+			eq = "Gamma(x0,sigma,gamma)"
 			break
 		case "NMGauss":
 			sfxn = "Gauss"
@@ -1893,6 +1893,11 @@ Function NMFitFunctionSet( fxn [ update ] )
 			sfxn = "Circle"
 			pList = "X0;DX;R;"
 			eq = "sqrt(R^2-(x·DX-X0)^2)"
+			break
+		case "NMEllipse":
+			sfxn = "Ellipse"
+			pList = "X0;DX;R;E;"
+			eq = "sqrt(R^2-((x·DX-X0)/E)^2)"
 			break
 		default:
 			sfxn = fxn
@@ -3251,7 +3256,7 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 			fit = NMAlpha( w, x )
 			break
 		case "NMGamma":
-			fit = NMGammaPDF( w, x )
+			fit = NMGamma( w, x )
 			break
 		case "NMGauss":
 			fit = NMGauss( w, x )
@@ -3303,6 +3308,9 @@ Function NMFitWaveCompute( guessORfit [ history ] )
 			break
 		case "NMCircle":
 			fit = NMCircle( w, x )
+			break
+		case "NMEllipse":
+			fit = NMEllipse( w, x )
 			break
 		default:
 			return NM2Error( 90, "cannot compute function for " + NMQuotes( fxn ), "" )
@@ -3551,8 +3559,8 @@ Function NMFitGuess()
 		case "NMGamma":
 			if ( numpnts( FT_guess ) == 3 )
 				FT_guess[0] = xbgn // X0
-				FT_guess[1] = 3 // Alapha
-				FT_guess[2] = 1 // Beta
+				FT_guess[1] = 3 // Sigma
+				FT_guess[2] = 1 // Gamma
 			endif
 			break
 		case "NMGauss":
@@ -3702,6 +3710,15 @@ Function NMFitGuess()
 				FT_guess[0] = 0 // X0
 				FT_guess[1] = 1 // DX
 				FT_guess[2] = 1 // R
+				FT_hold[1] = 1
+			endif
+			break
+		case "NMEllipse":
+			if ( numpnts( FT_guess ) == 4 )
+				FT_guess[0] = 0 // X0
+				FT_guess[1] = 1 // DX
+				FT_guess[2] = 1 // R
+				FT_guess[3] = 1 // E
 				FT_hold[1] = 1
 			endif
 			break
@@ -4784,7 +4801,7 @@ End // NMAlpha
 //****************************************************************
 //****************************************************************
 
-Function NMGammaPDF( w, x ) : FitFunc // see Igor StatsGammaPDF
+Function NMGamma( w, x ) : FitFunc // see Igor StatsGammaPDF
 	Wave w
 	Variable x
 
@@ -4800,9 +4817,13 @@ Function NMGammaPDF( w, x ) : FitFunc // see Igor StatsGammaPDF
 	//CurveFitDialog/ w[1] = sigma
 	//CurveFitDialog/ w[2] = gamma
 	
+	if ( x < w[0] )
+		return 0
+	endif
+	
 	return StatsGammaPDF( x, w[0], w[1], w[2] )
 	
-End // NMGammaPDF
+End // NMGamma
 
 //****************************************************************
 //****************************************************************
@@ -5689,7 +5710,7 @@ Function NMCircle( w,x ) : FitFunc
 	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
 	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
 	//CurveFitDialog/ Equation:
-	//CurveFitDialog/ f(x) = (R^2 - (x * dx)^2)^0.5
+	//CurveFitDialog/ f(x) = SQRT(R^2 - (x * dx)^2)
 	//CurveFitDialog/ End of Equation
 	//CurveFitDialog/ Independent Variables 1
 	//CurveFitDialog/ x
@@ -5701,13 +5722,54 @@ Function NMCircle( w,x ) : FitFunc
 	// R^2 = x^2 + y^2
 	// y = sqrt(R^2 - x^2)
 	
+	
 	if ( numtype( x ) > 0  )
 		return 0
 	endif
 	
-	return sqrt(w[2]^2 - (x * w[1] - w[0])^2)
+	Variable xvalue = x * w[1] - w[0] // x: 0, 1, 2, 3...
+	
+	return sqrt(w[2]^2 - xvalue^2)
 
 End // NMCircle
+
+//****************************************************************
+//****************************************************************
+//****************************************************************
+
+Function NMEllipse( w,x ) : FitFunc
+	Wave w
+	Variable x
+
+	//CurveFitDialog/ These comments were created by the Curve Fitting dialog. Altering them will
+	//CurveFitDialog/ make the function less convenient to work with in the Curve Fitting dialog.
+	//CurveFitDialog/ Equation:
+	//CurveFitDialog/ f(x) = SQRT(R^2 - (x*dx/E)^2)
+	//CurveFitDialog/ End of Equation
+	//CurveFitDialog/ Independent Variables 1
+	//CurveFitDialog/ x
+	//CurveFitDialog/ Coefficients 4
+	//CurveFitDialog/ w[0] = x0
+	//CurveFitDialog/ w[1] = dx
+	//CurveFitDialog/ w[2] = R
+	//CurveFitDialog/ w[3] = E
+	
+	// 1 = (x/Rx)^2 + (y/Ry)^2
+	// 1 = (x/ERy)^2 + (y/(Ry))^2
+	// 1 = (x/ER)^2 + (y/R)^2
+	// R^2 = (x/E)^2 + y^2
+	//	y^2 = R^2 - (x/E)^2
+	// y = sqrt(R^2 - (x/E)^2)
+	
+	if ( numtype( x ) > 0  )
+		return 0
+	endif
+	
+	Variable xvalue = x * w[1] - w[0] // x: 0, 1, 2, 3...
+	
+	return sqrt(w[2]^2 - (xvalue/w[3])^2)
+
+End // NMEllipse
 
 //****************************************************************
 //****************************************************************

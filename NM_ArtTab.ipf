@@ -53,6 +53,9 @@ Static StrConstant BslnFxn = "avg" // baseline function to compute within bslnWi
 Static Constant BslnWin = 1.5 // baseline window size; baseline is computed immediately before stim artefact time
 Static Constant BslnDT = 0 // optional baseline time shift negative from stim time, 0 - no time shift
 Static Constant BslnConvergeNstdv = 1 // decay convergence test, number of bsln stdv
+Static Constant BslnExpSlopeThreshold = 0
+		// compute baseline exp fit if baseline slope > +threshold, otherwise compute baseline avg
+		// compute baseline exp fit if baseline slope < -threshold, otherwise compute baseline avg
 
 Static StrConstant DecayFxn = "2exp" // "exp" or "2exp"
 
@@ -160,6 +163,7 @@ Function NMArtCheck() // check globals
 	CheckNMStr( df+"BslnFxn", BslnFxn )
 	CheckNMVar( df+"BslnDT", BslnDT )
 	CheckNMVar( df+"BslnWin", BslnWin )
+	CheckNMVar( df+"BslnSubtract", 0 )
 	CheckNMVar( df+"BslnConvergeNstdv", BslnConvergeNstdv )
 	
 	CheckNMStr( df+"ArtShape", ArtShape )
@@ -244,8 +248,10 @@ Function NMArtConfigs()
 	NMConfigVar( "Art", "ArtWidth", ArtWidth, "approx artefact width", "" )
 	NMConfigStr( "Art", "ArtShape", ArtShape, "artefact end polarity, Pos-Neg or Neg-Pos", "PN;NP;" )
 	
+	NMConfigVar( "Art", "BslnSubtract", 0, "subtract baseline: 0-no, 1-yes", "" )
 	NMConfigVar( "Art", "BslnConvergeNstdv", BslnConvergeNstdv, "decay convergence test, number of bsln stdv", "" )
-	
+	NMConfigVar( "Art", "BslnExpSlopeThreshold", BslnExpSlopeThreshold, "slope threshold for baseline exp fit", "" )
+
 	NMConfigVar( "Art", "t1_hold", NaN, "fit hold value of t1", "" )
 	NMConfigVar( "Art", "t1_min", 0, "t1 min value", "" )
 	NMConfigVar( "Art", "t1_max", NaN, "t1 max value", "" )
@@ -290,8 +296,16 @@ Function NMArtVarGet( varName )
 			defaultVal = BslnDT
 			break
 			
+		case "BslnSubtract":
+			defaultVal = 0
+			break
+			
 		case "BslnConvergeNstdv":
 			defaultVal = BslnConvergeNstdv
+			break
+			
+		case "BslnExpSlopeThreshold":
+			defaultVal = BslnExpSlopeThreshold
 			break
 			
 		case "DecayWin":
@@ -814,7 +828,8 @@ End // z_PrecisionStr
 Function /S NMArtTimeWaveList()
 
 	String currentWavePrefix = CurrentNMWavePrefix()
-	String xWaveOrFolder = CurrentNMSpikeRasterOrFolder()
+	// String xWaveOrFolder = CurrentNMSpikeRasterOrFolder()
+	String spikeSubfolderList = NMSubfolderList2( "", "Spike_", 0, 0 )
 
 	String wList = WaveList( "*",";","" )
 	String wListSP = WaveList( "SP_*",";","" )
@@ -828,13 +843,15 @@ Function /S NMArtTimeWaveList()
 	
 	wList = wListSP + wList
 	
-	if ( DataFolderExists( xWaveOrFolder ) )
+	//if ( DataFolderExists( xWaveOrFolder ) )
+	if ( ItemsInList( spikeSubfolderList ) > 0 )
 	
 		if ( ItemsInList( wList ) > 0 )
 			wList += "---;"
 		endif
 		
-		wList += xWaveOrFolder
+		//wList += xWaveOrFolder
+		wList += spikeSubfolderList
 		
 	endif
 	
@@ -1189,7 +1206,9 @@ Function NMArtTimeWaveSet( waveNameOrSpikeSubfolder )
 	for ( icnt = 0; icnt < numpnts( xwave ); icnt += 1 )
 		t = xwave[ icnt ]
 		pnt = x2pnt( dtemp, t )
-		ywave[ icnt ] = dtemp[ pnt ]
+		if ( ( pnt >= 0 ) && ( pnt < numpnts( dtemp ) ) )
+			ywave[ icnt ] = dtemp[ pnt ]
+		endif
 	endfor
 	
 	z_NumStimsCount()
@@ -1745,13 +1764,23 @@ End // NMArtFit
 Function NMArtFitBsln( [ update ] )
 	Variable update
 
-	Variable bbgn, bend, dt, ybgn, yend, pbgn, pend
+	Variable bbgn, bend, dt, ybgn, yend, pbgn, pend, slope
 	Variable v1 = Nan, v2 = Nan
-	Variable V_FitError = 0, V_chisq
+	Variable V_FitError = 0, V_FitQuitReason = 0, V_chisq
+	String regstr
+	
+	// V_FitQuitReason:
+	// 0 if the fit terminated normally
+	// 1 if the iteration limit was reached
+	// 2 if the user stopped the fit
+	// 3 if the limit of passes without decreasing chi-square was reached.
+	
+	String S_Info = "" // Keyword-value pairs giving certain kinds of information about the fit.
 	 
 	String df = NMArtDF
 	
 	String bslnFxn = NMArtStrGet( "BslnFxn" )
+	Variable bslnExpSlopeThreshold = NMArtVarGet( "BslnExpSlopeThreshold" )
 	
 	Variable stimTime = NMArtVarGet( "StimTime" )
 	Variable subtractWin = NMArtVarGet( "SubtractWin" )
@@ -1785,6 +1814,22 @@ Function NMArtFitBsln( [ update ] )
 	WaveStats /Q/R=( bend - 10 * dt, bend ) dtemp
 	
 	yend = V_avg
+	
+	if ( StringMatch( bslnFxn, "exp" ) && ( abs( bslnExpSlopeThreshold ) > 0 ) )
+	
+		//slope = ( yend - ybgn ) / ( bend - bbgn )
+		regstr = NMLinearRegression( dwName, xbgn=bbgn, xend=bend )
+		slope = str2num( StringByKey( "m", regstr, "=" ) )
+		
+		if ( ( bslnExpSlopeThreshold > 0 ) && ( slope > bslnExpSlopeThreshold ) )
+			bslnFxn = "exp"
+		elseif ( ( bslnExpSlopeThreshold < 0 ) && ( slope < bslnExpSlopeThreshold ) )
+			bslnFxn = "exp"
+		else
+			bslnFxn = "avg"
+		endif
+	
+	endif
 
 	strswitch( bslnFxn )
 	
@@ -1799,16 +1844,41 @@ Function NMArtFitBsln( [ update ] )
 			AT_A[ 3 ] = ( bend - bbgn ) / 5 // t1
 			
 			//FuncFit /Q/W=2/N/H="1101" NMArtFxnExp AT_A ewave( bbgn,bend ) // single exp // W=2 suppresses Fit Progress window
-			FuncFit /Q/W=2/N/H="1100" NMArtFxnExp AT_A dtemp( bbgn,bend ) // single exp
+			FuncFit /Q/W=2/N/H="1100" NMArtFxnExp AT_A dtemp( bbgn,bend ) // single exp // W=2 suppresses Fit Progress window
 			
-			AT_FitB = NMArtFxnExp( AT_A, AT_FitX )
+			if ( strlen( S_Info ) == 0 )
+				if ( V_FitQuitReason == 0 )
+					V_FitQuitReason = 9
+				endif
+			endif
+			
+			if ( V_FitQuitReason == 0 )
+				AT_FitB = NMArtFxnExp( AT_A, AT_FitX )
+				v1 = AT_A[ 2 ]
+				v2 = AT_A[ 3 ]
+			elseif ( abs( bslnExpSlopeThreshold ) > 0 )
+				bslnFxn = "avg" // fit failed, so compute average
+			else
+				AT_FitB = NaN
+			endif
 			
 			Redimension /N=4 AT_B // now n=4 so NMArtFxnExp will use baseline in Decay fit
 			AT_B = AT_A
 			
-			v1 = AT_A[ 2 ]
-			v2 = AT_A[ 3 ]
+			if ( StringMatch( bslnFxn, "exp" ) )
+				break
+			endif
+			
+		case "avg":
 		
+			Redimension /N=1 AT_B
+			
+			WaveStats /Q/R=( bbgn, bend ) dtemp
+	
+			AT_FitB = V_avg
+			AT_B = V_avg
+			v1 = V_avg
+			
 			break
 			
 		case "line":
@@ -1824,18 +1894,6 @@ Function NMArtFitBsln( [ update ] )
 			
 			v1 = AT_B[ 0 ] // b
 			v2 = AT_B[ 1 ] // m
-			
-			break
-			
-		case "avg":
-		
-			Redimension /N=1 AT_B
-			
-			WaveStats /Q/R=( bbgn, bend ) dtemp
-	
-			AT_FitB = V_avg
-			AT_B = V_avg
-			v1 = V_avg
 			
 			break
 			
@@ -2040,7 +2098,11 @@ Function NMArtFitDecay( [ update ] )
 		SetNMvar( df+"fit_t2", t2 )
 	else
 		return NaN
-	endif 
+	endif
+	
+	//if ( numpnts( AT_Fit ) == 0 )
+	//	return NaN
+	//endif
 	
 	if ( ( pbgn > 1 ) && ( pbgn <= numpnts( AT_Fit ) ) )
 		AT_Fit[ 0, pbgn - 1 ] = Nan
@@ -2060,15 +2122,15 @@ Function NMArtFitDecay( [ update ] )
 	pend = pbgn
 	pbgn = pend - 10
 	
-	WaveStats /Q/R=[ pbgn, pend ] AT_Fit
+	WaveStats /Q/R=[ pbgn, pend ]/Z AT_Fit
 	
 	fit_ss = V_avg
 	
-	WaveStats /Q/R=[ pbgn, pend ] AT_FitB
+	WaveStats /Q/R=[ pbgn, pend ]/Z AT_FitB
 	
 	bsln_ss = V_avg
 	
-	WaveStats /Q/R=[ pbgn, pend ] dtemp
+	WaveStats /Q/R=[ pbgn, pend ]/Z dtemp
 	
 	data_stdv = V_sdev
 	
@@ -2156,6 +2218,7 @@ Function NMArtFitSubtract( [ update ] )
 	Variable stimNum = NMArtVarGet( "StimNum" )
 	Variable stimTime = NMArtVarGet( "StimTime" )
 	Variable bslnDT = NMArtVarGet( "BslnDT" )
+	Variable bslnSubtract = NMArtVarGet( "BslnSubtract" )
 	Variable subtractWin = NMArtVarGet( "SubtractWin" )
 	
 	String dwName = ChanDisplayWave( -1 )
@@ -2209,7 +2272,7 @@ Function NMArtFitSubtract( [ update ] )
 	endif
 
 	for ( pcnt = pbgn; pcnt <= pend; pcnt += 1 )
-		wStim[ pcnt ] = wNoStim[ pcnt ]
+		wStim[ pcnt ] = wNoStim[ pcnt ] // save original value before updating
 		wNoStim[ pcnt ] = AT_FitB[ pcnt ] // artefact before tbgn becomes baseline
 	endfor
 	
@@ -2219,9 +2282,16 @@ Function NMArtFitSubtract( [ update ] )
 	pend = x2pnt( wNoStim, stimTime + subtractWin )
 
 	for ( pcnt = pbgn; pcnt < pend; pcnt += 1 )
+	
 		stimValue = AT_Fit[ pcnt ] - AT_FitB[ pcnt ]
-		wStim[ pcnt ] = stimValue
-		wNoStim[ pcnt ] = dtemp[ pcnt ] - stimValue
+		wStim[ pcnt ] = stimValue // save original value before updating
+		
+		if ( bslnSubtract )
+			wNoStim[ pcnt ] = dtemp[ pcnt ] - stimValue - AT_FitB[ pcnt ]
+		else
+			wNoStim[ pcnt ] = dtemp[ pcnt ] - stimValue
+		endif
+		
 	endfor
 	
 	if ( stimNum < DimSize( finished, 0 ) )

@@ -1356,7 +1356,7 @@ Function NMConfigsListBoxWavesUpdate( tabName )
 		
 		icnt = WhichListItem( objName, vList, ";", 0, 0 )
 		
-		if ( icnt < 0 )
+		if ( ( icnt < 0 ) || ( icnt >= DimSize( wtemp, 0) ) )
 			continue
 		endif
 		

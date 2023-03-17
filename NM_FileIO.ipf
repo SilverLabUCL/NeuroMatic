@@ -2893,7 +2893,7 @@ Function /S NMImportWavesCall() // import data waves
 	
 	Variable createNewFolder = 0
 	
-	Variable userPrefixDF = NMVarGet( "LoadWithPrefixDF" )
+	Variable usePrefixDF = NMVarGet( "LoadWithPrefixDF" )
 	
 	String fileList = NMFileOpenDialogue( "OpenDataPath", "?" )
 	
@@ -2950,7 +2950,7 @@ Function /S NMImportWavesCall() // import data waves
 		fileList = "ALL"
 	endif
 	
-	fileList2 = NMImportWaves( folder, folderPath, fileList, usePrefixDF = userPrefixDF, history = 1 )
+	fileList2 = NMImportWaves( folder, folderPath, fileList, usePrefixDF = usePrefixDF, history = 1 )
 	
 	return fileList2
 	
@@ -2976,6 +2976,7 @@ Function /S NMImportWaves( folder, folderPath, fileList [ fileType, usePrefixDF,
 	String tempFolder = "root:NM_Import_Temp:"
 	String prefixDF = NMFoldersWavePrePrefix
 	String prefixDF2 = ""
+	String prefixDFList = ""
 	
 	String folderPrefix = NMPrefixSubfolderPrefix
 	
@@ -3158,6 +3159,8 @@ Function /S NMImportWaves( folder, folderPath, fileList [ fileType, usePrefixDF,
 			endif
 			
 			wList2 = NMFolderWaveList( tempFolder, wavePrefix + "*", ";", "", 0 )
+			
+			prefixDFList += prefixDF2 + ";"
 				
 			for ( wcnt = 0; wcnt < ItemsInList( wList2 ); wcnt += 1 )
 			
@@ -3174,6 +3177,10 @@ Function /S NMImportWaves( folder, folderPath, fileList [ fileType, usePrefixDF,
 	NMHistory( "Imported " + num2istr( ItemsInList( returnFolderList ) ) + " file(s) from " + folderPath )
 	
 	KillDataFolder /Z $tempFolder
+	
+	if ( ItemsInList( prefixDFList ) > 0 )
+		NMPrefixAdd( prefixDFList )
+	endif
 	
 	if ( selectNewData )
 	
