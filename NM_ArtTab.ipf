@@ -69,7 +69,7 @@ Static Constant k_BslnExpSlopeThreshold = 0
 Static Constant k_DragWaveAll = 1 // (0) drag waves adjust current artefact (1) drag waves adjust all artefacts
 
 Static Constant k_SaveFitParameters = 1 // 0 or 1
-Static Constant k_SaveSubtractedArt = 0 // 0 or 1 // AT_A_ waves
+Static Constant k_SaveSubtractedArt = 1 // 0 or 1 // AT_A_ waves
 		
 // Static StrConstant k_WaveNameFormat = "v2" // old
 Static StrConstant k_WaveNameFormat = "v3p"
@@ -2131,7 +2131,7 @@ Function /S NMArtReset( [ artNum, wList, history ] )
 	Variable history
 	
 	Variable wcnt, forceMake = 0
-	String select, wName, fwName, noArtName
+	String select, wName, fwName, noArtName, artName
 	String vlist = "", oList = ""
 	
 	String df = NMArtDF
@@ -2239,11 +2239,18 @@ Function /S NMArtReset( [ artNum, wList, history ] )
 			endif
 			
 			noArtName = NMArtSubWaveName( "no_art", wName=wName )
+			artName = NMArtSubWaveName( "art", wName=wName )
 			
 			ChanWaveMake( currentChan, wName, noArtName, xWave=xWave ) // xWave not programmed yet
 			
 			Wave ftemp = $fwName
 			ftemp = NaN
+			
+			if ( WaveExists( $artName ) )
+				Wave atemp = $artName
+				atemp = NaN
+			endif
+			
 			oList += wName + ";"
 			
 		endfor
@@ -4578,17 +4585,26 @@ Function NMArtFitSubtract( [ artNum, update, history ] )
 
 	for ( pcnt = pbgn; pcnt < pend; pcnt += 1 )
 	
-		yvalue = AT_Fit[ pcnt ] - AT_FitB[ pcnt ]
+		if ( bslnSubtract )
+			yvalue = AT_Fit[ pcnt ]
+		else
+			yvalue = AT_Fit[ pcnt ] - AT_FitB[ pcnt ]
+		endif
 		
 		if ( saveArt )
-			wArt[ pcnt ] = yvalue // save original value before updating
+			wArt[ pcnt ] = yvalue
 		endif
 		
-		if ( bslnSubtract )
-			wtemp[ pcnt ] = dtemp[ pcnt ] - yvalue - AT_FitB[ pcnt ]
-		else
-			wtemp[ pcnt ] = dtemp[ pcnt ] - yvalue
-		endif
+		//if ( bslnSubtract )
+		//	wtemp[ pcnt ] = dtemp[ pcnt ] - yvalue - AT_FitB[ pcnt ]
+		//	wtemp[ pcnt ] = dtemp[ pcnt ] - ( AT_Fit[ pcnt ] - AT_FitB[ pcnt ] ) - AT_FitB[ pcnt ]
+		//	wtemp[ pcnt ] = dtemp[ pcnt ] - AT_Fit[ pcnt ] + AT_FitB[ pcnt ] - AT_FitB[ pcnt ]
+		//	wtemp[ pcnt ] = dtemp[ pcnt ] - AT_Fit[ pcnt ]
+		//else
+		//	wtemp[ pcnt ] = dtemp[ pcnt ] - yvalue
+		//endif
+		
+		wtemp[ pcnt ] = dtemp[ pcnt ] - yvalue
 		
 	endfor
 	
@@ -4639,12 +4655,13 @@ Function NMArtFitRestore( [ artNum, history ] )
 	Variable artNum
 	Variable history
 
-	Variable pcnt, pbgn, pend, bend, tbgn, tend, saveArt = 0
+	Variable pcnt, pbgn, pend, pmax, bend, abgn, tend, dt, saveArt = 0
 	String vlist = "", df = NMArtDF
 	
-	Variable p_extra = 5
+	//Variable p_extra = 5
 	
 	Variable saveSubtractedArt = NMArtVarGet( "SaveSubtractedArt" )
+	Variable bslnDT = NMArtVarGet( "BslnDT" )
 	
 	String dwName = ChanDisplayWave( -1 )
 	String noArtName = NMArtSubWaveName( "no_art" )
@@ -4675,6 +4692,8 @@ Function NMArtFitRestore( [ artNum, history ] )
 	Wave wtemp = $noArtName
 	Wave ftemp = $fwName
 	
+	dt = deltax( dtemp )
+	
 	if ( saveSubtractedArt && WaveExists( $artName ) )
 		Wave wArt = $artName
 		saveArt = 1
@@ -4685,47 +4704,79 @@ Function NMArtFitRestore( [ artNum, history ] )
 	endif
 	
 	bend = ftemp[ artNum ][ %b_end ]
+	abgn = ftemp[ artNum ][ %a_bgn ]
 	
-	if ( ( numtype( bend ) > 0 ) || ( bend < NMLeftX( dwName, xWave=xWave ) ) || ( bend > NMRightX( dwName, xWave=xWave ) ) )
+	if ( numtype( bend * abgn ) > 0 )
 		return -1
 	endif
 	
-	tbgn = bend
-	pbgn = z_NMX2Pnt( dwName, xWave, tbgn )
+	pbgn = z_NMX2Pnt( dwName, xWave, bend )
+	pend = z_NMX2Pnt( dwName, xWave, abgn ) - 1
+	pmax = numpnts( $dwName )
 	
-	if ( ( pbgn < 0 ) || ( pbgn >= numpnts( $dwName ) ) )
+	if ( ( pbgn < 0 ) || ( pbgn >= pmax ) )
 		return -1
 	endif
 	
-	pbgn -= p_extra
-	pbgn = max( pbgn, 0 )
-	
-	if ( artNum == DimSize( ftemp, 0 ) - 1 ) // last artefact
-		pend = numpnts( $dwName ) - 1
-	else
-		tend = z_NextArtTimeLimit( artNum )
-		pend = z_NMX2Pnt( dwName, xWave, tend )
-		pend += p_extra
-		pend = min( pend, numpnts( $dwName ) - 1 )
-	endif
-	
-	if ( ( pend < 0 ) || ( pend >= numpnts( $dwName ) ) )
+	if ( ( pend < 0 ) || ( pend >= pmax ) )
 		return -1
 	endif
 	
-	if ( pbgn >= pend )
-		return -1
-	endif
-
-	for ( pcnt = pbgn; pcnt <= pend; pcnt += 1 )
+	for ( pcnt = pbgn; pcnt <= pend; pcnt += 1 ) // restore artefact
+	
+		wtemp[ pcnt ] = dtemp[ pcnt ]
 	
 		if ( saveArt )
 			wArt[ pcnt ] = NaN
 		endif
 		
-		wtemp[ pcnt ] = dtemp[ pcnt ]
-		
 	endfor
+	
+	pbgn = pend + 1
+	
+	if ( artNum == DimSize( ftemp, 0 ) - 1 ) // last artefact
+	
+		pend = pmax - 1
+		
+	else
+	
+		tend = z_NextArtTimeLimit( artNum )
+		pend = z_NMX2Pnt( dwName, xWave, tend )
+		
+		if ( !saveArt )
+			pend -= bslnDT / dt
+		endif
+		
+	endif
+	
+	pend = min( pend, pmax - 1 )
+	
+	if ( pbgn >= pend )
+		return -1
+	endif
+	
+	if ( ( pend < 0 ) || ( pend >= pmax ) )
+		return -1
+	endif
+	
+	 // restore post-artefact subtraction
+	
+	if ( saveArt )
+	
+		for ( pcnt = pbgn; pcnt <= pend; pcnt += 1 )
+			if ( numtype( wArt[ pcnt ] ) == 0 )
+				wtemp[ pcnt ] += wArt[ pcnt ]
+				wArt[ pcnt ] = NaN
+			endif
+		endfor
+	
+	else
+	
+		for ( pcnt = pbgn; pcnt <= pend; pcnt += 1 )
+			wtemp[ pcnt ] = dtemp[ pcnt ]
+		endfor
+	
+	endif
 	
 	Duplicate /O wtemp $df+"AT_Display"
 	
