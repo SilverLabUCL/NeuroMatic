@@ -49,9 +49,9 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0q"
+StrConstant NMVersionStr = "3.0r"
 Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
-Static StrConstant NMRights = "Copyright (c) 2022 Jason Rothman"
+Static StrConstant NMRights = "Copyright (c) 2024 The Silver Lab, UCL"
 Static StrConstant NMEmail = "Jason@ThinkRandom.com"
 Static StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
 
@@ -670,6 +670,7 @@ Function NMProceduresHide( hide )
 		NMHistory( "SetIgorOption IndependentModuleDev = 0" )
 		Execute /Q/Z "SetIgorOption IndependentModuleDev = 0"
 	else
+		NMMenuProceduresList( "misc", update = 1 ) // update lists of procedure names
 		NMHistory( "SetIgorOption IndependentModuleDev = 1" )
 		Execute /Q/Z "SetIgorOption IndependentModuleDev = 1" // unhide
 	endif
