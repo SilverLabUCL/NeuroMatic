@@ -5,7 +5,7 @@
 //****************************************************************
 //
 //	NeuroMatic: data aquisition, analyses and simulation software that runs with the Igor Pro environment
-//	Copyright (C) 2017 Jason Rothman
+//	Copyright (C) 2024 The Silver Lab, UCL
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -1647,16 +1647,16 @@ Function NMConfigsListBoxInput( ctrlName, row, col, event ) : ListboxControl
 			newValue = NMConfigsListBoxInputVarList( objName, currentValue, type )
 			newStr = num2str( newValue )
 			wtemp[ row ][ %value ] = newStr
-			NMConfigVarSet( tabName, objName, newValue, history = 1 )
+			NMConfigVarSet( tabName, objName, newValue, history=1 )
 		elseif ( editByPrompt )
-			rlist = NMConfigEditPrompt( tabName, objName, editDefinition = 1 )
+			rlist = NMConfigEditPrompt( tabName, objName, editDefinition=1, history=1 )
 			if ( ItemsInList( rlist ) == 3 )
 				newStr = StringFromList( 0, rlist )
 				wtemp[ row ][ %value ] = newStr
 			endif
 		else
 			newValue = str2num( valueStr )
-			NMConfigVarSet( tabName, objName, newValue, history = 1 )
+			NMConfigVarSet( tabName, objName, newValue, history=1 )
 		endif
 		
 	elseif ( StringMatch( objType, "string" ) )
@@ -1668,16 +1668,16 @@ Function NMConfigsListBoxInput( ctrlName, row, col, event ) : ListboxControl
 		if ( typeItems > 1 )
 			newStr = NMConfigsListBoxInputStrList( objName, currentStr, type )
 			wtemp[ row ][ %value ] = newStr
-			NMConfigStrSet( tabName, objName, newStr, history = 1 )
+			NMConfigStrSet( tabName, objName, newStr, history=1 )
 		elseif ( editByPrompt )
-			rlist = NMConfigEditPrompt( tabName, objName, editDefinition = 1 )
+			rlist = NMConfigEditPrompt( tabName, objName, editDefinition=1, history=1 )
 			if ( ItemsInList( rlist ) == 3 )
 				newStr = StringFromList( 0, rlist )
 				wtemp[ row ][ %value ] = newStr
 			endif
 		else
 			newStr = valueStr
-			NMConfigStrSet( tabName, objName, newStr, history = 1 )
+			NMConfigStrSet( tabName, objName, newStr, history=1 )
 		endif
 	
 	endif

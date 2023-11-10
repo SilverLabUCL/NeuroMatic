@@ -7,7 +7,7 @@
 //****************************************************************
 //
 //	NeuroMatic: data aquisition, analyses and simulation software that runs with the Igor Pro environment
-//	Copyright (C) 2017 Jason Rothman
+//	Copyright (C) 2024 The Silver Lab, UCL
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -2328,7 +2328,7 @@ End // NMKeiding_GCsomata_G_Check
 
 //****************************************************************//
 
-Static Function NMKeiding_GCsomata_G_Num_Diam( wName )
+Static Function G_Num_Diam_GC_Somata( wName )
 	String wName
 	
 	strswitch( wName )
@@ -2358,7 +2358,7 @@ Static Function NMKeiding_GCsomata_G_Num_Diam( wName )
 	
 	return NaN
 
-End // NMKeiding_GCsomata_G_Num_Diam
+End // G_Num_Diam_GC_Somata
 
 //****************************************************************//
 
@@ -2392,7 +2392,7 @@ Function NMKeiding_GCsoma_G_Fit()
 		FT_guess[ 1 ] = 0.5
 		FT_guess[ 2 ] = 20
 		FT_guess[ 3 ] = T_optical
-		FT_guess[ 4 ] = NMKeiding_GCsomata_G_Num_Diam( wName )
+		FT_guess[ 4 ] = G_Num_Diam_GC_Somata( wName )
 	
 		if ( NMFitWave() == 0 )
 			NMFitSaveCurrent()
@@ -2434,7 +2434,7 @@ End // NMKeiding_GCnuclei_G_Check
 
 //****************************************************************//
 
-Static Function NMKeiding_GCnuclei_G_Num_Diam( wName )
+Static Function G_Num_Diam_GC_Nuclei( wName )
 	String wName
 	
 	strswitch( wName )
@@ -2452,7 +2452,7 @@ Static Function NMKeiding_GCnuclei_G_Num_Diam( wName )
 	
 	return NaN
 
-End // NMKeiding_GCnuclei_G_Num_Diam
+End // G_Num_Diam_GC_Nuclei
 
 //****************************************************************//
 
@@ -2483,7 +2483,7 @@ Function NMKeiding_GCnuclei_G_Fit()
 		FT_guess[ 1 ] = 0.5
 		FT_guess[ 2 ] = 15
 		FT_guess[ 3 ] = GC_Nuclei_T
-		FT_guess[ 4 ] = NMKeiding_GCnuclei_G_Num_Diam( wName )
+		FT_guess[ 4 ] = G_Num_Diam_GC_Nuclei( wName )
 	
 		if ( NMFitWave() == 0 ) 
 			NMFitSaveCurrent()
@@ -2532,7 +2532,7 @@ End // NMKeiding_MFves_G_TEM_Check
 
 //****************************************************************//
 
-Static Function NMKeiding_MFves_G_Num_Diam( wName )
+Static Function G_Num_Diam_MF_Ves( wName )
 	String wName
 	
 	strswitch( wName )
@@ -2567,7 +2567,7 @@ Static Function NMKeiding_MFves_G_Num_Diam( wName )
 	
 	return NaN
 
-End // NMKeiding_MFves_G_Num_Diam
+End // G_Num_Diam_MF_Ves
 
 //****************************************************************//
 
@@ -2598,7 +2598,7 @@ Function NMKeiding_MFves_G_TEM_Fit()
 		FT_guess[ 1 ] = 4
 		FT_guess[ 2 ] = 20
 		FT_guess[ 3 ] = MFT_Vesicles_TEM_T
-		FT_guess[ 4 ] = NMKeiding_MFves_G_Num_Diam( wName )
+		FT_guess[ 4 ] = G_Num_Diam_MF_Ves( wName )
 	
 		if ( NMFitWave() == 0 )
 			NMFitSaveCurrent()
@@ -2701,7 +2701,7 @@ Function NMKeiding_MFves_G_ET_Fit( etID [ graph ] )
 	FT_guess[ 1 ] = 4
 	FT_guess[ 2 ] = 20
 	FT_guess[ 3 ] = MFT_Vesicles_ET_T
-	FT_guess[ 4 ] = NMKeiding_MFves_G_Num_Diam( wName )
+	FT_guess[ 4 ] = G_Num_Diam_MF_Ves( wName )
 	
 	error = NMFitWave()
 	
@@ -2850,7 +2850,7 @@ End // NMKeiding_MFves_G_ET_Fit_Graph
 
 //****************************************************************//
 
-Function NMKeiding_GCnuclei_Nguyen_G_Check( [ overwrite ] )
+Static Function Nguyen_GCnuclei_G_Check( [ overwrite ] )
 	Variable overwrite
 	
 	Variable new
@@ -2892,7 +2892,7 @@ Function NMKeiding_GCnuclei_Nguyen_G_Check( [ overwrite ] )
 	
 	return 0
 
-End // NMKeiding_GCnuclei_Nguyen_G_Check
+End // Nguyen_GCnuclei_G_Check
 
 //****************************************************************//
 
@@ -2902,7 +2902,7 @@ Function NMKeiding_GCnuclei_Nguyen_G_Fit( [ graph ] )
 	Variable fit_mn, fit_sd, num_diam, error
 	String wName, fName, fName2
 
-	NMKeiding_GCnuclei_Nguyen_G_Check()
+	Nguyen_GCnuclei_G_Check()
 	
 	Variable avalue = NMDoAlert( "Compute fit to GC nuclei G(d) of Nguyen et al?", title="Keiding-model Fit Demo", alertType = 1 )
 	
@@ -2922,7 +2922,7 @@ Function NMKeiding_GCnuclei_Nguyen_G_Fit( [ graph ] )
 	FT_guess[ 1 ] = 0.5
 	FT_guess[ 2 ] = 15
 	FT_guess[ 3 ] = GC_Nuclei_Nguyen_T
-	FT_guess[ 4 ] = NMKeiding_GCnuclei_G_Num_Diam( wName )
+	FT_guess[ 4 ] = G_Num_Diam_GC_Nuclei( wName )
 	
 	error = NMFitWave()
 	
@@ -2953,7 +2953,7 @@ Function NMKeiding_GCnuclei_Nguyen_G_Fit( [ graph ] )
 		return 0
 	endif
 	
-	NMKeiding_GCnuclei_Nguyen_G_Fit_Graph()
+	Nguyen_GCnuclei_G_Fit_Graph()
 	
 	return 0
 
@@ -2961,7 +2961,7 @@ End // NMKeiding_GCnuclei_Nguyen_G_Fit
 
 //****************************************************************//
 
-Function /S NMKeiding_GCnuclei_Nguyen_G_Fit_Graph()
+Static Function /S Nguyen_GCnuclei_G_Fit_Graph()
 	
 	String df = "root:GC_Nuclei_Nguyen:"
 	String fdf = df + "Fit_KeidingGauss_G_All_A:"
@@ -3053,7 +3053,7 @@ Function /S NMKeiding_GCnuclei_Nguyen_G_Fit_Graph()
 	
 	return gName
 	
-End // NMKeiding_GCnuclei_Nguyen_G_Fit_Graph
+End // Nguyen_GCnuclei_G_Fit_Graph
 
 //****************************************************************//
 //
@@ -3119,7 +3119,7 @@ End // NMKeiding_D3D_G_Check
 
 //****************************************************************//
 
-Static Function NMKeiding_D3D_G_Num_Diam( wName )
+Static Function G_Num_Diam_D3D( wName )
 	String wName
 	
 	strswitch( wName )
@@ -3131,7 +3131,7 @@ Static Function NMKeiding_D3D_G_Num_Diam( wName )
 
 	return NaN
 	
-End // NMKeiding_D3D_G_Num_Diam
+End // G_Num_Diam_D3D
 
 //****************************************************************//
 
@@ -3187,7 +3187,7 @@ Function NMKeiding_D3D_G_Fit( [ graph ] )
 			return -1
 		endif
 		
-		FT_guess[ 4 ] = NMKeiding_D3D_G_Num_Diam( wName )
+		FT_guess[ 4 ] = G_Num_Diam_D3D( wName )
 	
 		if ( NMFitWave() > 0 )
 			continue

@@ -5,7 +5,7 @@
 //****************************************************************
 //
 //	NeuroMatic: data aquisition, analyses and simulation software that runs with the Igor Pro environment
-//	Copyright (C) 2017 Jason Rothman
+//	Copyright (C) 2024 The Silver Lab, UCL
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -1275,11 +1275,12 @@ End // NMConfigTypeNS
 //****************************************************************
 //****************************************************************
 
-Function /S NMConfigEditPrompt( tabName, varName [ title, editType, editDefinition ] )
+Function /S NMConfigEditPrompt( tabName, varName [ title, editType, editDefinition, history ] )
 	String tabName
 	String varName
 	String title
 	Variable editType, editDefinition
+	Variable history
 	
 	Variable numValue
 	String strValue, type, definition
@@ -1329,8 +1330,9 @@ Function /S NMConfigEditPrompt( tabName, varName [ title, editType, editDefiniti
 			return "" // cancel
 		endif
 		
-		SetNMvar( cdf + varName, numValue )
-		SetNMvar( pdf + varName, numValue )
+		//SetNMvar( cdf + varName, numValue )
+		//SetNMvar( pdf + varName, numValue )
+		NMConfigVarSet( tabName, varName, numValue, history=history )
 		
 		strValue = num2str( numValue )
 		
@@ -1352,8 +1354,9 @@ Function /S NMConfigEditPrompt( tabName, varName [ title, editType, editDefiniti
 			return "" // cancel
 		endif
 		
-		SetNMstr( cdf + varName, strValue )
-		SetNMstr( pdf + varName, strValue )
+		//SetNMstr( cdf + varName, strValue )
+		//SetNMstr( pdf + varName, strValue )
+		NMConfigStrSet( tabName, varName, strValue, history=history )
 		
 	else
 	

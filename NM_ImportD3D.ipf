@@ -17,8 +17,9 @@ Macro NMImportD3DFilesCall()
 	String folderPath = ""
 	String fileList = ""
 	Variable wavePrecision = 2
+	Variable addWavePrefix = 0
 
-	NMImportD3DFiles( folderPath, fileList, wavePrecision )
+	NMImportD3DFiles( folderPath, fileList, wavePrecision, addWavePrefix = addWavePrefix )
 	
 End // NMImportD3DFilesCall
 
@@ -38,10 +39,11 @@ End // NMImportD3DFolderCall
 //****************************************************************
 //****************************************************************
 
-Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
+Function /S NMImportD3DFolder( folderPath, NoAlerts, precision [ addWavePrefix ] )
 	String folderPath // folder path on hard drive to open, enter ( "" ) to get dialogue
 	Variable NoAlerts // ( 0 ) alert user when necessary ( 1 ) no alerts
 	Variable precision // load into Igor waves ( 1 ) single floating point ( 2 ) double floating point
+	Variable addWavePrefix // add wave prefix name ( 0 ) no ( 1 ) yes
 	
 	//print folderPath, NoAlerts, precision
 
@@ -49,7 +51,11 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 	String df, wName, wList = "", prefix, prefix2, prefixList = "", prefixList2, prefixList3
 	
 	Variable icnt, jcnt, folderSelect = 0, setCurrentPrefix, foundPrefix
-	Variable numFiles, numFolders, createdFolder, addPrefix = 1
+	Variable numFiles, numFolders, createdFolder
+	
+	if ( ParamIsDefault( addWavePrefix ) )
+		addWavePrefix = 1
+	endif
 
 	if ( strlen( folderPath ) == 0 )
 	
@@ -165,7 +171,7 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 				NMFolderNew(  folderName )
 				createdFolder = 1
 			endif
-			addPrefix = 0
+			addWavePrefix = 0
 		else
 			NMFolderNew( folderName )
 		endif
@@ -178,14 +184,18 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 		
 			file = StringFromList( jcnt, fileList )
 			
-			if ( addPrefix && !foundPrefix && strsearch( file, "Detect", 0 ) >= 0 )
+			if ( addWavePrefix && !foundPrefix && strsearch( file, "Detect", 0 ) >= 0 )
 				setCurrentPrefix = 1
 				foundPrefix = 1
 			else
 				setCurrentPrefix = 0
 			endif
 			
-			prefix = NMImportD3DFile( folderPath + file, precision, addPrefix = addPrefix, setCurrentPrefix = setCurrentPrefix )
+			if ( addWavePrefix )
+				prefix = NMImportD3DFile( folderPath + file, precision, addWavePrefix = addWavePrefix, setCurrentPrefix = setCurrentPrefix )
+			else
+				prefix = NMImportD3DFile( folderPath + file, precision, addWavePrefix = 0 )
+			endif
 			
 			if ( strlen( prefix ) > 0 )
 				prefixList = AddListItem( prefix, prefixList, ";", inf )
@@ -193,7 +203,7 @@ Function /S NMImportD3DFolder( folderPath, NoAlerts, precision )
 		
 		endfor
 		
-		if ( addPrefix && !foundPrefix )
+		if ( addWavePrefix && !foundPrefix )
 			prefix = StringFromList( 0, prefixList )
 			NMSet( wavePrefixNoPrompt = prefix )
 		endif
@@ -253,10 +263,11 @@ End // NMImportD3DFolder
 //****************************************************************
 //****************************************************************
 
-Function /S NMImportD3DFiles( folderPath, fileList, precision )
+Function /S NMImportD3DFiles( folderPath, fileList, precision [ addWavePrefix ] )
 	String folderPath // folder path on hard drive, enter ( "" ) if file names contain full path
 	String fileList // list of file names to open, enter ( "All" ) to open all within folderPath, or enter ( "" ) to get file open dialogue
 	Variable precision // load into Igor waves ( 1 ) single floating point ( 2 ) double floating point
+	Variable addWavePrefix // ( 0 ) no ( 1 ) yes, add/select new wave prefix
 	
 	Variable numFiles, icnt
 	String filePath, parent
@@ -304,7 +315,12 @@ Function /S NMImportD3DFiles( folderPath, fileList, precision )
 		
 		filePath = parent + StringFromList( icnt, fileList )
 		
-		NMImportD3DFile( filePath, precision, addPrefix = 1, setCurrentPrefix = ( icnt == 0 ) )
+		if ( addWavePrefix )
+			NMImportD3DFile( filePath, precision, addWavePrefix = addWavePrefix, setCurrentPrefix = ( icnt == 0 ) )
+		else
+			NMImportD3DFile( filePath, precision, addWavePrefix = 0 )
+		endif
+		
 		
 	endfor
 	
@@ -389,10 +405,10 @@ End // NMD3DFileType
 //****************************************************************
 //****************************************************************
 
-Function /S NMImportD3DFile( filePath, precision [ addPrefix, setCurrentPrefix ] )
+Function /S NMImportD3DFile( filePath, precision [ addWavePrefix, setCurrentPrefix ] )
 	String filePath // file path on hard drive to open
 	Variable precision // load into Igor waves ( 1 ) single floating point ( 2 ) double floating point
-	Variable addPrefix // add wave prefix name ( 0 ) no ( 1 ) yes
+	Variable addWavePrefix // add wave prefix name ( 0 ) no ( 1 ) yes
 	Variable setCurrentPrefix // set as current wave prefix name ( 0 ) no ( 1 ) yes
 	
 	String fileName, parent, outPrefix = ""
@@ -408,8 +424,8 @@ Function /S NMImportD3DFile( filePath, precision [ addPrefix, setCurrentPrefix ]
 	
 	Variable pointsPerSample = 1
 	
-	if ( ParamIsDefault( addPrefix ) )
-		addPrefix = 1
+	if ( ParamIsDefault( addWavePrefix ) )
+		addWavePrefix = 1
 	endif
 	
 	if ( ParamIsDefault( setCurrentPrefix ) )
@@ -757,7 +773,7 @@ Function /S NMImportD3DFile( filePath, precision [ addPrefix, setCurrentPrefix ]
 	
 	//Print "Finished loading " + filePath
 	
-	if ( addPrefix )
+	if ( addWavePrefix )
 		if ( strlen( outPrefix ) > 0 )
 			if ( setCurrentPrefix )
 				NMSet( wavePrefixNoPrompt = outPrefix )
