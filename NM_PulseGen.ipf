@@ -39,7 +39,7 @@ Static Constant ampDefault = 1
 Static Constant onsetDefault = 0
 Static Constant widthDefault = 1
 Static Constant tauDefault = 1
-Static Constant sinWidthDefault = 50 // sin cos sinzap
+//Static Constant sinWidthDefault = 50 // sin cos sinzap
 Static Constant periodDefault = 2 // sin cos
 Static Constant periodBgnDefault = 100
 Static Constant periodEndDefault = 10
@@ -295,8 +295,8 @@ Function /S NMPulse( wName, paramList [ df, udf, clear, DSCG, notes, s ] )
 	
 	Variable off, width, TTL, tpeak, normFactor, normalize, infWidth, numExps, userWave
 	Variable center, stdv
-	Variable pslope, Lvar
-	Variable pbgn, pend, ipnt
+	Variable fbgn, fend, pbgn, pend, ipnt
+	Variable Rvar
 	String pulse, paramList2, wNameTemp = "PU_PulseAddTemp"
 	
 	STRUCT NMPulseAOW aow
@@ -583,21 +583,39 @@ Function /S NMPulse( wName, paramList [ df, udf, clear, DSCG, notes, s ] )
 		
 			sz.periodBgn = NMPulseNumByKey( "periodBgn", paramList, 0, DSCG = DSCG, positive = 1 )
 			sz.periodEnd = NMPulseNumByKey( "periodEnd", paramList, 0, DSCG = DSCG, positive = 1 )
-			
-			//Lvar = log( fmax / fmin )
-			//wtemp = sin( 2 * pi * ( x - onset ) * ( fmin / Lvar ) * ( exp( Lvar * ( x - onset ) / 1000 ) - 1 ) ) // Tohidi and Nadim 2009
+			sz.type = NMPulseNumByKey( "type", paramList, 0, positive = 1 )
 			
 			if ( numtype( aow.onset * sz.periodBgn * sz.periodEnd ) == 0 )
 			
-				pslope = ( abs( sz.periodEnd ) - abs( sz.periodBgn ) ) / ( rightx( wtemp ) - aow.onset ) // linear
+				// Tohidi and Nadim 2009 // exp sweep
+				// https://www.jneurosci.org/content/29/20/6427
+				//Lvar = log( fmax / fmin )
+				//wtemp = sin( 2 * pi * ( x - onset ) * ( fmin / Lvar ) * ( exp( Lvar * ( x - onset ) ) - 1 ) ) // DOES NOT WORK
+			
+				// Old attempt at linear sweep
+				// WRONG
+				//pslope = ( abs( sz.periodEnd ) - abs( sz.periodBgn ) ) / ( rightx( wtemp ) - aow.onset ) // linear // WRONG, should be aow.width
+				//pslope = ( abs( sz.periodEnd ) - abs( sz.periodBgn ) ) / aow.width // linear
 				
 				//Duplicate /O wtemp SinZapPeriod
-				//SinZapPeriod = pslope * ( x - onset ) + periodBgn
+				//SinZapPeriod = pslope * ( x - aow.onset ) + abs( sz.periodBgn )
 				
-				wtemp = sin( 2 * pi * ( x - aow.onset ) / ( pslope * ( x - aow.onset ) + abs( sz.periodBgn ) ) ) // linear
-				//wtemp = sin( 2 * pi * ( x - onset ) / periodBgn )
-				//wtemp = sin( 2 * pi * ( x - onset ) / periodEnd )
-			
+				//wtemp = sin( 2 * pi * ( x - aow.onset ) / ( pslope * ( x - aow.onset ) + abs( sz.periodBgn ) ) ) // linear // WRONG, need a factor 2
+				
+				// 25 Nov 2023
+				fbgn = 1.0 / sz.periodBgn
+				fend = 1.0 / sz.periodEnd
+				
+				if ( sz.type == 0 ) // linear sweep
+					// https://www.recordingblogs.com/wiki/sine-sweep
+					wtemp = sin( 2 * pi * ( fbgn * ( x - aow.onset ) + ( fend - fbgn ) * ( x - aow.onset ) * ( x - aow.onset ) / ( 2 * aow.width ) ) )
+				elseif ( sz.type == 1 ) // exp sweep
+					//https://dsp.stackexchange.com/questions/41696/calculating-the-inverse-filter-for-the-exponential-sine-sweep-method
+					Rvar = ln( fend / fbgn )
+					wtemp = exp( ( x - aow.onset ) * Rvar / aow.width ) - 1
+					wtemp = sin( 2 * pi * fbgn * aow.width * wtemp / Rvar )
+				endif
+
 			endif
 			
 			paramList2 += NMPulseSinZapParamList( sz )
@@ -6108,7 +6126,8 @@ Function /S NMPulsePromptSinZap( [ pdf, DSC, ampUnits, timeUnits, p ] )
 	
 	Variable periodBgn, periodEnd
 	Variable periodBgnD, periodEndD, foundDSC
-	String title = "Pulse Config : SinZap"
+	Variable type
+	String title = "Pulse Config : Sine Zap (Sine Sweep)"
 	
 	if ( ParamIsDefault( pdf ) )
 		pdf = NMPulseDF
@@ -6136,6 +6155,7 @@ Function /S NMPulsePromptSinZap( [ pdf, DSC, ampUnits, timeUnits, p ] )
 	periodBgnD = pp.periodBgnD
 	periodEnd = pp.periodEnd
 	periodEndD = pp.periodEndD
+	type = pp.type
 	
 	Prompt periodBgn, zPromptStr( "begin period", timeUnits = timeUnits )
 	Prompt periodEnd, zPromptStr( "end period", timeUnits = timeUnits )
@@ -6143,11 +6163,14 @@ Function /S NMPulsePromptSinZap( [ pdf, DSC, ampUnits, timeUnits, p ] )
 	Prompt periodBgnD, zPromptStr( "begin period", DSC = DSC, timeUnits = timeUnits )
 	Prompt periodEndD, zPromptStr( "end period", DSC = DSC, timeUnits = timeUnits )
 	
+	type += 1
+	Prompt type, "zap (sweep) function", popup "0 - linear;1 - exponential;"
+	
 	foundDSC = zFoundDSC( DSC )
 	
 	if ( foundDSC )
 	
-		DoPrompt title, periodBgn, periodBgnD, periodEnd, periodEndD
+		DoPrompt title, periodBgn, periodBgnD, periodEnd, periodEndD, type
 			
 		if ( V_flag == 1 )
 			return "" // cancel
@@ -6155,7 +6178,7 @@ Function /S NMPulsePromptSinZap( [ pdf, DSC, ampUnits, timeUnits, p ] )
 	
 	else
 	
-		DoPrompt title, periodBgn, periodEnd
+		DoPrompt title, periodBgn, periodEnd, type
 			
 		if ( V_flag == 1 )
 			return "" // cancel
@@ -6166,10 +6189,13 @@ Function /S NMPulsePromptSinZap( [ pdf, DSC, ampUnits, timeUnits, p ] )
 		
 	endif
 	
+	type -= 1
+	
 	pp.periodBgn = periodBgn
 	pp.periodBgnD = periodBgnD
 	pp.periodEnd = periodEnd
 	pp.periodEndD = periodEndD
+	pp.type = type
 	
 	if ( !ParamIsDefault( p ) )
 		p = pp
@@ -8568,6 +8594,7 @@ Structure NMPulseSinZap
 
 	Variable periodBgn, periodEnd
 	Variable periodBgnD, periodEndD
+	Variable type // ( 0 ) linear ( 1 ) exp
 
 EndStructure
 
@@ -8586,11 +8613,13 @@ Function NMPulseSinZapInit( p [ pdf, paramList, DSCG ] )
 		p.periodBgnD = 0
 		p.periodEnd = periodEndDefault
 		p.periodEndD = 0
+		p.type = 0
 	else
 		p.periodBgn = abs( NumVarOrDefault( pdf + vp + "PeriodBgn", periodBgnDefault ) )
 		p.periodBgnD = NumVarOrDefault( pdf + vp + "PeriodBgnD", 0 )
 		p.periodEnd = abs( NumVarOrDefault( pdf + vp + "PeriodEnd", periodEndDefault ) )
 		p.periodEndD = NumVarOrDefault( pdf + vp + "PeriodEndD", 0 )
+		p.type = NumVarOrDefault( pdf + vp + "Type", 0 )
 	endif
 	
 	if ( ParamIsDefault( paramList ) || ( strlen( paramList ) == 0 ) )
@@ -8605,6 +8634,7 @@ Function NMPulseSinZapInit( p [ pdf, paramList, DSCG ] )
 	p.periodBgnD = NMPulseNumByKeyDSCG( "periodBgn", paramList )
 	p.periodEnd = NMPulseNumByKey( "periodEnd", paramList, p.periodEnd, DSCG = DSCG, positive = 1 )
 	p.periodEndD = NMPulseNumByKeyDSCG( "periodEnd", paramList )
+	p.type = NMPulseNumByKey( "type", paramList, p.type, positive = 1 )
 	
 End // NMPulseDefaultsToStrucSinZap
 
@@ -8638,8 +8668,9 @@ Function NMPulseSinZapSaveToWaves( a, p, s )
 	
 	zSaveToWave( s, "PeriodBgn", abs( p.periodBgn ), p.periodBgnD )
 	zSaveToWave( s, "PeriodEnd", abs( p.periodEnd ), p.periodEndD )
+	zSaveToWave( s, "Type", abs( p.type ), p.type )
 	
-End // NMPulseSinSaveToWaves
+End // NMPulseSinZapSaveToWaves
 
 //****************************************************************
 //****************************************************************
@@ -8660,6 +8691,7 @@ Function /S NMPulseSinZapParamList( p [ DSC ] )
 	
 	pstr += NMPulseParamList( "periodBgn", abs( p.periodBgn ), delta = ( p.periodBgnD * d.delta ), stdv = ( p.periodBgnD * d.stdv ), cv = ( p.periodBgnD * d.cv ), fixPolarity = 1 )
 	pstr += NMPulseParamList( "periodEnd", abs( p.periodEnd ), delta = ( p.periodEndD * d.delta ), stdv = ( p.periodEndD * d.stdv ), cv = ( p.periodEndD * d.cv ), fixPolarity = 1 )
+	pstr += NMPulseParamList( "type", abs( p.type ) )
 	
 	return pstr
 	

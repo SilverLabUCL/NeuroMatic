@@ -629,7 +629,7 @@ Function NMConfigOpen( file [ history, quiet ] )
 		
 	else
 	
-		NMDoAlert( "Open File Error: file is not a NeuroMatic configuration file." )
+		NMDoAlert( "Open File Error: file is not a NeuroMatic configuration file: " + file )
 		
 	endif
 	
