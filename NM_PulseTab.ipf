@@ -1978,7 +1978,7 @@ Function /S NMPulseGCTrainCall()
 		
 	endif
 	
-	return NMPulseGCTrain( numWaves = numWaves, dx = dx, waveLength = waveLength, type = type, AMPAmodel = AMPAmodel, NMDAmodel = NMDAmodel, STPmodel = STPmodel, freq = freq, random = random, numInputs = numInputs, numWaves = numWaves, useExistingRanTrains = useExisting, history = 1 )
+	return NMPulseGCTrain( numWaves = numWaves, dx = dx, waveLength = waveLength, type = type, AMPAmodel = AMPAmodel, NMDAmodel = NMDAmodel, STPmodel = STPmodel, freq = freq, random = random, numInputs = numInputs, useExistingRanTrains = useExisting, history = 1 )
 
 End // NMPulseGCTrainCall
 

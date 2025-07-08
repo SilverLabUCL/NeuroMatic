@@ -2649,7 +2649,7 @@ Function /S NMRenameWavesCall( search [ promptStr ] )
 	String search // ( "All" ) search all waves ( "Selected" ) search selected waves
 	String promptStr
 
-	Variable wcnt, items, numWaves, selectedWaves, updateSets = 1
+	Variable wcnt, items, numWaves, selectedWaves
 	String txt, wList, wList2 = "", wName, newname
 	String returnList, prefixList, conflictList = "", vlist = ""
 	
@@ -2657,6 +2657,7 @@ Function /S NMRenameWavesCall( search [ promptStr ] )
 	
 	String find = StrVarOrDefault( NMDF + "RenameWavesFind", "" )
 	String replacement = StrVarOrDefault( NMDF + "RenameWavesReplacement", "" )
+	Variable updateSets = 1 + NumVarOrDefault( NMDF + "RenameWavesUpdateSets", 1 ) // update prefix folder lists - channels, Set, Groups...
 	
 	if ( strlen( search ) == 0 )
 	
@@ -2673,16 +2674,20 @@ Function /S NMRenameWavesCall( search [ promptStr ] )
 	
 	endif
 	
-	Prompt find, "wave name search string:"
-	Prompt replacement, "replacement string:"
-	DoPrompt promptStr, find, replacement
+	Prompt find, "replace this string:"
+	Prompt replacement, "with this string:"
+	Prompt updateSets, "also change wave names in existing channels, Sets, Groups, etc?", popup "no;yes (warning, this can be slow);"
+	DoPrompt promptStr, find, replacement, updateSets
 	
 	if ( ( V_flag == 1 ) || ( strlen( find ) == 0 ) || StringMatch( find, replacement ) )
 		return "" // cancel
 	endif
 	
+	updateSets -= 1
+	
 	SetNMstr( NMDF + "RenameWavesFind", find )
 	SetNMstr( NMDF + "RenameWavesReplacement", replacement )
+	SetNMvar( NMDF + "RenameWavesUpdateSets", updateSets )
 	
 	if ( StringMatch( search, "All" ) )
 	
@@ -2789,7 +2794,7 @@ Function /S NMRenameWavesCall( search [ promptStr ] )
 	
 	if ( selectedWaves )
 	
-		returnList = NMMainRename( find = find, replacement = replacement, history = 1 )
+		returnList = NMMainRename( find = find, replacement = replacement, updateSets = updateSets, history = 1 )
 		
 	else
 		
@@ -2874,7 +2879,7 @@ Function /S NMMainRename( [ folderList, wavePrefixList, chanSelectList, waveSele
 	
 	String find // string to find in wave name ( must specify )
 	String replacement // replace with this string ( must specify )
-	Variable updateSets // also change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes
+	Variable updateSets // also change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes // channels, Sets, Groups, etc
 	
 	STRUCT NMLoopExecStruct nm
 	NMLoopExecStructNull( nm )
@@ -2932,7 +2937,7 @@ Function /S NMMainRename2( [ folder, wavePrefix, chanNum, waveSelect, find, repl
 	
 	String find // string to find in wave name
 	String replacement // replace with this string
-	Variable updateSets // also change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes
+	Variable updateSets // also change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes // channels, Sets, Groups, etc
 	
 	String fxn = "NMRename"
 	

@@ -1134,11 +1134,11 @@ End // NMSplit2D
 //****************************************************************
 //****************************************************************
 
-Function /S NMRenameWavesSafely( find, replacement, wList [ folder, updateSets, deprecation ] )
-	String find // search string
-	String replacement // replace string
+Function /S NMRenameWavesSafely( replaceThisStr, withThisStr, wList [ folder, updateSets, deprecation ] )
+	String replaceThisStr // see Igor's ReplaceString
+	String withThisStr // see Igor's ReplaceString
 	String wList, folder // see description at top
-	Variable updateSets // change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes
+	Variable updateSets // change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes // this can be SLOW
 	Variable deprecation
 	
 	String fxn = "NMRename"
@@ -1165,22 +1165,22 @@ Function /S NMRenameWavesSafely( find, replacement, wList [ folder, updateSets, 
 		updateSets = 1
 	endif
 	
-	if ( strlen( find ) == 0 )
-		return NM2ErrorStr( 21, "find", find )
+	if ( strlen( replaceThisStr ) == 0 )
+		return NM2ErrorStr( 21, "replaceThisStr", replaceThisStr )
 	endif
 	
-	return NMRenameWavesSafely2( nm, find, replacement, updateSets=updateSets )
+	return NMRenameWavesSafely2( nm, replaceThisStr, withThisStr, updateSets=updateSets )
 
 End // NMRenameWavesSafely
 
 //****************************************************************
 //****************************************************************
 
-Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] )
+Function /S NMRenameWavesSafely2( nm, replaceThisStr, withThisStr [ updateSets, history ] )
 	STRUCT NMParams &nm // uses nm.folder, nm.wList
-	String find // search string
-	String replacement // replace string
-	Variable updateSets // change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes
+	String replaceThisStr // see Igor's ReplaceString
+	String withThisStr // see Igor's ReplaceString
+	Variable updateSets // change wave names in prefix subfolder wave lists ( 0 ) no ( 1 ) yes // this can be SLOW
 	Variable history
 	
 	Variable wcnt, numWaves
@@ -1193,8 +1193,8 @@ Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] 
 	
 	SetNMstr( NMDF + "OutputWaveList", "" )
 	
-	if ( strlen( find ) == 0 )
-		return NM2ErrorStr( 21, "find", find )
+	if ( strlen( replaceThisStr ) == 0 )
+		return NM2ErrorStr( 21, "replaceThisStr", replaceThisStr )
 	endif
 	
 	if ( ParamIsDefault( updateSets ) )
@@ -1210,7 +1210,7 @@ Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] 
 	for ( wcnt = 0; wcnt < numWaves; wcnt += 1 )
 	
 		wName = StringFromList( wcnt, nm.wList )
-		newName = ReplaceString( find, wName, replacement )
+		newName = ReplaceString( replaceThisStr, wName, withThisStr )
 		
 		if ( StringMatch( wName, newName ) )
 			continue // no change
@@ -1220,7 +1220,7 @@ Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] 
 			NMDoAlert( "Abort: encountered name conflict with wave " + nm.folder + newName )
 			return ""
 		endif
-		
+		 
 		oldList += wName + ";"
 		newList += newName + ";"
 		
@@ -1244,7 +1244,7 @@ Function /S NMRenameWavesSafely2( nm, find, replacement [ updateSets, history ] 
 		
 		NMLoopWaveNote( newName, paramList )
 		
-		if ( updateSets )
+		if ( updateSets ) // this can be SLOW
 			NMPrefixFoldersRenameWave( wName, newName, folder=nm.folder )
 		endif
 		

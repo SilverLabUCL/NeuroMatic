@@ -731,7 +731,8 @@ Function /S ClampSaveFinish( folder )
 	
 	if (strlen(S_path) > 0)
 	
-		SetNMstr(cdf+"ClampPath", S_path)
+		// SetNMstr(cdf+"ClampPath", S_path) // removed 15 Feb 2024
+		// ClampSaveDataPath is created from "ClampPath" string variable, so this code is redundant
 		
 	elseif ((strlen(file) > 0) && (strlen(path) > 0))
 	

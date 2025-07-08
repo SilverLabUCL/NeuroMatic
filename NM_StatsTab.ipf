@@ -56,7 +56,8 @@
 Static Constant NumWindows = 10 // default number of Stats1 windows
 Static Constant RiseTimePbgn = 10
 Static Constant RiseTimePend = 90
-Static Constant DecayTimePercent = 63.2 // = 100 - 36.7879 = 100 * ( 1 - e^-1 )
+// Static Constant DecayTimePercent = 63.21 // = 100 - 36.7879 = 100 * ( 1 - e^-1 )  // rising exp
+Static Constant DecayTimePercent = 36.79 // = 100 * e^-1
 
 StrConstant NMStatsDF = "root:Packages:NeuroMatic:Stats:"
 StrConstant NMStats2FxnList = "Functions;---;Plot;Edit;Wave Stats;Print Note;Print Name;Histogram;Inequality <>=;Stability;Significant Difference;MPFA Stats; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;" // extra at end to create scrollbar
