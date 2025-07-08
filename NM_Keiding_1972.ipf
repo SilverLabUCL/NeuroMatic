@@ -1118,13 +1118,13 @@ Function NMKeidingGaussPhiCutoff( num_diam, diam3D_mean, diam3D_stdv, diam3D_typ
 	endif
 	
 	strswitch( diam3D_type )
-		case "true": // Equation 7
+		case "true": // Equation 8
 			k1 = 1.0430243
 			k2 = -1.5337296
 			k3 = -0.5168194
 			k5 = -17.105866
 			break
-		case "estimate": // Equation 8
+		case "estimate": // Equation 9
 			k1 = 0.9866808
 			k2 = -2.0708220
 			k3 = 0.1243357
@@ -1222,7 +1222,10 @@ Macro NM_Convert_Density_To_VF( density3D, diam3D_mean, diam3D_stdv )
 	
 	Variable VF = NM_Density2VF( density3D, diam3D_mean, diam3D_stdv )
 	
-	NMHistory( "Volume Fraction = " + num2str( VF ) )
+	String str
+	sprintf str, "%.4f", VF
+	
+	NMHistory( "Volume Fraction = " + str )
 	
 End // NM_Convert_Density_To_VF
 
@@ -1297,7 +1300,9 @@ Macro NM_Convert_VF_To_Density( volume_fraction, diam3D_mean, diam3D_stdv )
 	
 	Variable d = NM_VF2Density( volume_fraction, diam3D_mean, diam3D_stdv )
 	
-	NMHistory( "3D density = " + num2str( d ) )
+	String str
+	sprintf str, "%.4f", d
+	NMHistory( "3D density = " + str )
 	
 End // NM_Convert_VF_To_Density
 

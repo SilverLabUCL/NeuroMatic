@@ -7,7 +7,7 @@
 //****************************************************************
 //
 //	NeuroMatic: data aquisition, analyses and simulation software that runs with the Igor Pro environment
-//	Copyright (C) 2019 Jason Rothman
+//	Copyright (C) 2025 Jason Rothman
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -49,9 +49,9 @@
 //****************************************************************
 
 StrConstant NMPackage = "NeuroMatic"
-StrConstant NMVersionStr = "3.0s"
+StrConstant NMVersionStr = "3.0t"
 Static StrConstant NMHTTP = "http://www.neuromatic.thinkrandom.com/"
-Static StrConstant NMRights = "Copyright (c) 2024 The Silver Lab, UCL"
+Static StrConstant NMRights = "Copyright (c) 2025 The Silver Lab, UCL"
 Static StrConstant NMEmail = "Jason@ThinkRandom.com"
 Static StrConstant NMUCL = "UCL Neuroscience, Physiology and Pharmacology Department, London, UK"
 
@@ -444,7 +444,7 @@ Function ResetNM( killFirst [ quiet, history, oldVersionStr ] ) // use this func
 	Variable quiet
 	
 	Variable fatal, deprecations
-	String fList, vlist = ""
+	String fList, dstr, vlist = ""
 	
 	if ( history )
 		vlist = NMCmdNum( killFirst, "", integer = 1 )
@@ -502,10 +502,12 @@ Function ResetNM( killFirst [ quiet, history, oldVersionStr ] ) // use this func
 	NMProceduresHideUpdate()
 	NMMenuBuild()
 	
+	dstr = " (" + date() + ")"
+	
 	if ( ParamIsDefault( oldVersionStr ) || ( strlen( oldVersionStr ) == 0 ) )
-		NMHistory( "Initialized " + NMversion( short=1 ) )
+		NMHistory( "Initialized " + NMversion( short=1 ) + dstr )
 	else
-		NMHistory( NMCR + "Updated NeuroMatic from version " + oldVersionStr + " to " + NMVersionStr )
+		NMHistory( NMCR + "Updated NeuroMatic from version " + oldVersionStr + " to " + NMVersionStr + dstr )
 	endif
 	
 	return 0
@@ -1448,7 +1450,7 @@ Function KillNMPaths()
 		KillPath /Z SaveDataPath
 	endif
 	
-	PathInfo ClampPath
+	PathInfo ClampPath // deprecated, but try to kill anyway
 	
 	if ( V_flag == 1 )
 		NewPath /O/Q ClampPath, S_path

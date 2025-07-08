@@ -1946,68 +1946,6 @@ Function NMWaveOfPeriodicTimes( wName, interval, xbgn, xend )
 End // NMWaveOfPeriodicTimes
 
 //****************************************************************
-//
-//	RenameWaves()
-//	string replace name
-//
-//****************************************************************
-
-Function /S RenameWaves(findStr, repStr, wList)
-	String findStr // search string
-	String repStr // replace string
-	String wList // wave list (seperator ";")
-	
-	if (strlen(findStr) <= 0)
-		return ""
-	endif
-	
-	String wName, newName = "", outList = "", badList = wList
-	Variable wcnt, first = 1, kill
-	
-	if (ItemsInList(wList) == 0)
-		return ""
-	endif
-	
-	for (wcnt = 0; wcnt < ItemsInList(wList); wcnt += 1)
-	
-		wName = StringFromList(wcnt, wList)
-		
-		newName = ReplaceString(wName,findStr,repStr)
-		
-		if (StringMatch(newName, wName) == 1)
-			continue // no change
-		endif
-		
-		if ((WaveExists($newName) == 1) && (first == 1))
-			DoAlert 1, "Name Conflict: wave(s) already exist with new name. Do you want to over-write them?"
-			first = 0
-			if (V_Flag == 1)
-				kill = 1
-			endif
-		endif
-		
-		if ((WaveExists($newName) == 1) && (kill == 1) && (first == 0))
-			KillWaves /Z $newName
-		endif
-		
-		if ((WaveExists($wName) == 0) || (WaveExists($newName) == 1))
-			continue
-		endif
-
-		Rename $wName $newName
-		
-		outList = AddListItem(newName, outList, ";", inf)
-		badList = RemoveFromList(wName, badList)
-		
-	endfor
-	
-	//NMUtilityAlert("RenameWaves", badList)
-	
-	return outList
-
-End // RenameWaves
-
-//****************************************************************
 //****************************************************************
 
 Function /S NMMatrixArithmeticMake( matrixName, numRows )
@@ -4810,6 +4748,63 @@ Function /S NMInequalityFxn( greaterThan, lessThan ) // NOT USED
 	endif
 	
 End // NMInequalityFxn
+
+//****************************************************************
+//****************************************************************
+
+Function /S RenameWaves( replaceThisStr, withThisStr, wList )  // NOT USED
+	String replaceThisStr
+	String withThisStr
+	String wList
+	
+	if (strlen(replaceThisStr) <= 0)
+		return ""
+	endif
+	
+	String wName, newName = "", outList = "", badList = wList
+	Variable wcnt, first = 1, kill
+	
+	if (ItemsInList(wList) == 0)
+		return ""
+	endif
+	
+	for (wcnt = 0; wcnt < ItemsInList(wList); wcnt += 1)
+	
+		wName = StringFromList(wcnt, wList)
+		newName = ReplaceString( replaceThisStr, wName, withThisStr )
+		
+		if (StringMatch(newName, wName) == 1)
+			continue // no change
+		endif
+		
+		if ((WaveExists($newName) == 1) && (first == 1))
+			DoAlert 1, "Name Conflict: wave(s) already exist with new name. Do you want to over-write them?"
+			first = 0
+			if (V_Flag == 1)
+				kill = 1
+			endif
+		endif
+		
+		if ((WaveExists($newName) == 1) && (kill == 1) && (first == 0))
+			KillWaves /Z $newName
+		endif
+		
+		if ((WaveExists($wName) == 0) || (WaveExists($newName) == 1))
+			continue
+		endif
+
+		Rename $wName $newName
+		
+		outList = AddListItem(newName, outList, ";", inf)
+		badList = RemoveFromList(wName, badList)
+		
+	endfor
+	
+	//NMUtilityAlert("RenameWaves", badList)
+	
+	return outList
+
+End // RenameWaves
 
 //****************************************************************
 //****************************************************************

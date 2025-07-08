@@ -1219,11 +1219,10 @@ Function FileTab( enable ) // NM Clamp configure tab enable
 		
 		GroupBox CT1_DataGrp, win=$NMPanelName, title="Folder : "+GetDataFolder( 0 )
 		
-		PathInfo /S ClampPath
-
-		if ( strlen( S_path ) > 0 )
-			SetNMstr( NMClampDF + "ClampPath", S_path )
-		endif
+		// PathInfo /S ClampPath // old path that is not used anymore, see ClampPathsCheck()
+		// if ( strlen( S_path ) > 0 )
+		// 	SetNMstr( NMClampDF + "ClampPath", S_path )
+		// endif
 		
 		Variable saveFormat = NumVarOrDefault( NMClampDF + "SaveFormat", 2 )
 		Variable saveWhen = NumVarOrDefault( NMClampDF + "SaveWhen", 1 )

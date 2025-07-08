@@ -7695,12 +7695,12 @@ End // NMCopyWavesTo
 
 //*********************************************
 
-Function /S RenameWavesx(findStr, repStr, wList)
-	String findStr
-	String repStr
+Function /S RenameWavesx( replaceThisStr, withThisStr, wList )
+	String replaceThisStr
+	String withThisStr
 	String wList
 	
-	return NMRenameWavesSafely(findStr, repStr, wList, deprecation=1)
+	return NMRenameWavesSafely( replaceThisStr, withThisStr, wList, deprecation=1 )
 
 End // RenameWaves
 

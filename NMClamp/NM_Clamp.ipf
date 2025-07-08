@@ -243,7 +243,7 @@ Function NMClampCheck()
 	CheckNMstr( cdf+"FolderPrefix", ClampDateName() )	// data folder/file prefix name
 	CheckNMstr( cdf+"FolderNameDateFormat", DateFormat ) // data folder/file name data format ( see above )
 	
-	CheckNMstr( cdf+"ClampPath", "" )					// external save data path
+	CheckNMstr( cdf+"ClampPath", "" )					// external save data path, used for to create path ClampSaveDataPath
 	CheckNMstr( cdf+"DataPrefix", NMStrGet( "WavePrefix" ) )	// default data prefix name
 	CheckNMstr( cdf+"WavePrecision", "D" )			// wave precision ( "D" ) double ( "S" ) single
 	
@@ -371,7 +371,7 @@ Function ClampConfigsUpdate()
 		return 0 // already set
 	endif
 
-	String ClampPathStr = StrVarOrDefault( cdf+"ClampPath", "" )
+	// String ClampPathStr = StrVarOrDefault( cdf+"ClampPath", "" )
 	String StimPathStr = StrVarOrDefault( cdf+"StimPath", "" )
 	String sList = StrVarOrDefault( cdf+"OpenStimList", "All" )
 	
@@ -1177,7 +1177,7 @@ Function ClampAutoBackupNM()
 	Variable minutes = DateTime / 60
 	Variable backup = NumVarOrDefault( cdf+"BackUp", 20 ) // minutes
 	Variable lastbackup = NumVarOrDefault( cdf+"LastBackUp", Nan ) // minutes
-	String path = StrVarOrDefault( cdf+"ClampPath", "" )
+	// String path = StrVarOrDefault( cdf+"ClampPath", "" )
 	String folderPrefix = ClampFolderPrefix()
 	
 	if ( ( DataFolderExists( cdf ) == 0 ) || ( backup <= 0 ) || ( numtype( backup ) > 0 ) )

@@ -2911,7 +2911,11 @@ Function NMFitWave( [ history ] )
 	endif
 	
 	if ( StringMatch( fxn, "NMKeidingGauss" ) )
-		Execute /Z "NMKeidingGaussPhiCutoffEstimate(" + NMQuotes( NMFitWavePath( "coef" ) ) + ")"
+		if ( ( FT_hold[ 0 ] == 1 ) || ( FT_hold[ 1 ] == 1 ) || ( FT_hold[ 2 ] == 1 ) )
+			// do nothing, phi-cutoff equation assumes all 3 parameters are free
+		else
+			Execute /Z "NMKeidingGaussPhiCutoffEstimate(" + NMQuotes( NMFitWavePath( "coef" ) ) + ")"
+		endif
 	endif
 	
 	return V_FitQuitReason
